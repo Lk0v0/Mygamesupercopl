@@ -22,10 +22,10 @@ jobs:
           distribution: 'temurin'
           java-version: '21'
 
-      - name: Setup Android SDK (API 36)
+      - name: Setup Android SDK (API 34)
         uses: android-actions/setup-android@v3
         with:
-          packages: 'platform-tools platforms;android-36 build-tools;36.0.0'
+          packages: 'platform-tools platforms;android-34 build-tools;34.0.0'
 
       - name: Accept Android SDK Licenses
         run: yes | sdkmanager --licenses > /dev/null 2>&1 || true
@@ -43,29 +43,16 @@ jobs:
           fi
           npx cap sync android
 
-      - name: Apply Game Icon to Android Resources
-        run: |
-          RES_DIR="android/app/src/main/res"
-          rm -rf "$RES_DIR/mipmap-anydpi-v26"
-          if [ -f "public/pwa-512x512.png" ]; then
-            for dir in mipmap-mdpi mipmap-hdpi mipmap-xhdpi mipmap-xxhdpi mipmap-xxxhdpi; do
-              mkdir -p "$RES_DIR/$dir"
-              cp public/pwa-512x512.png "$RES_DIR/$dir/ic_launcher.png"
-              cp public/pwa-512x512.png "$RES_DIR/$dir/ic_launcher_round.png"
-            done
-          fi
-
-      - name: Configure Keystore, Version Code & Signing
+      - name: Copy Release Keystore
         run: |
           mkdir -p android/app
           cp keystore/release.keystore android/app/release.keystore
+
+      - name: Inject Signing Config & Version Code into Gradle
+        run: |
           node -e '
           const fs = require("fs");
           const gradlePath = "android/app/build.gradle";
-          if (!fs.existsSync(gradlePath)) {
-            console.error("build.gradle not found at " + gradlePath);
-            process.exit(1);
-          }
           let gradle = fs.readFileSync(gradlePath, "utf8");
 
           const runNumber = process.env.GITHUB_RUN_NUMBER || "1";
@@ -75,15 +62,9 @@ jobs:
           gradle = gradle.replace(/versionCode\s+\d+/, "versionCode " + autoVersionCode);
           gradle = gradle.replace(/versionName\s+"[^"]+"/, "versionName \"" + autoVersionName + "\"");
 
-          const signingConfigBlock = `
+          const signingBlock = `
     signingConfigs {
         release {
-            storeFile file("release.keystore")
-            storePassword "zombieshooter123"
-            keyAlias "zombieshooter"
-            keyPassword "zombieshooter123"
-        }
-        debug {
             storeFile file("release.keystore")
             storePassword "zombieshooter123"
             keyAlias "zombieshooter"
@@ -93,31 +74,28 @@ jobs:
 `;
 
           if (!gradle.includes("signingConfigs")) {
-            gradle = gradle.replace(/buildTypes\s*\{/, signingConfigBlock + "\n    buildTypes {");
+            gradle = gradle.replace(/buildTypes\s*\{/, signingBlock + "\n    buildTypes {");
           }
 
-          if (!gradle.includes("signingConfig signingConfigs.release")) {
-            gradle = gradle.replace(/buildTypes\s*\{/, "buildTypes {\n        debug {\n            signingConfig signingConfigs.release\n        }");
-            gradle = gradle.replace(/release\s*\{/, "release {\n            signingConfig signingConfigs.release");
-          }
+          gradle = gradle.replace(/release\s*\{/, "release {\n        signingConfig signingConfigs.release");
 
           fs.writeFileSync(gradlePath, gradle, "utf8");
-          console.log("android/app/build.gradle successfully updated with persistent keystore and versionCode!");
+          console.log("Gradle updated successfully with signing config!");
           '
         env:
           GITHUB_RUN_NUMBER: ${{ github.run_number }}
 
-      - name: Build Debug APK
+      - name: Build Release APK
         run: |
           cd android
           chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon --stacktrace
+          ./gradlew assembleRelease --no-daemon --stacktrace
 
-      - name: Prepare APKs for Distribution
+      - name: Prepare APK for Distribution
         run: |
           mkdir -p dist-apk
-          if [ -f "android/app/build/outputs/apk/debug/app-debug.apk" ]; then
-            cp android/app/build/outputs/apk/debug/app-debug.apk dist-apk/ZombieShooter2-v${{ github.run_number }}.apk
+          if [ -f "android/app/build/outputs/apk/release/app-release.apk" ]; then
+            cp android/app/build/outputs/apk/release/app-release.apk dist-apk/ZombieShooter2-v${{ github.run_number }}.apk
           fi
 
       - name: Upload APK Artifact
