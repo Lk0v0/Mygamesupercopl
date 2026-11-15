@@ -1,0 +1,207 @@
+@import "tailwindcss";
+
+@layer base {
+  body {
+    font-family: 'Outfit', system-ui, -apple-system, sans-serif;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: manipulation;
+  }
+}
+
+.font-display {
+  font-family: 'Chakra Petch', 'Outfit', sans-serif;
+}
+
+.font-mono-numbers {
+  font-family: 'JetBrains Mono', monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+@keyframes pulse-subtle {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.85; transform: scale(1.02); }
+}
+
+.animate-pulse-subtle {
+  animation: pulse-subtle 2.5s infinite ease-in-out;
+}
+
+/* ============================================================
+   LEVEL-UP SELECTOR ANIMATIONS
+   ============================================================ */
+
+@keyframes lvl-backdrop-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes lvl-banner-slam {
+  0% { opacity: 0; transform: translateY(-22px) scale(0.92); filter: blur(4px); }
+  65% { opacity: 1; transform: translateY(2px) scale(1.02); filter: blur(0px); }
+  100% { opacity: 1; transform: translateY(0) scale(1); filter: blur(0px); }
+}
+
+@keyframes lvl-card-enter {
+  0% { opacity: 0; transform: translateY(28px) scale(0.92); }
+  65% { opacity: 1; transform: translateY(-4px) scale(1.015); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes lvl-reroll-shuffle {
+  0% { opacity: 0; transform: perspective(900px) rotateY(75deg) scale(0.88); }
+  60% { opacity: 1; transform: perspective(900px) rotateY(-8deg) scale(1.02); }
+  100% { opacity: 1; transform: perspective(900px) rotateY(0deg) scale(1); }
+}
+
+@keyframes lvl-selected-blast {
+  0% { transform: scale(1); filter: brightness(1); }
+  45% { transform: scale(1.05); filter: brightness(1.35); }
+  100% { transform: scale(1.08); opacity: 0; filter: brightness(1.6); }
+}
+
+.animate-lvl-backdrop {
+  animation: lvl-backdrop-in 0.28s ease-out forwards;
+}
+
+.animate-lvl-banner {
+  animation: lvl-banner-slam 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.animate-lvl-card {
+  animation: lvl-card-enter 0.48s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.animate-lvl-reroll {
+  animation: lvl-reroll-shuffle 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.animate-lvl-selected {
+  animation: lvl-selected-blast 0.24s ease-out forwards;
+}
+
+/* ============================================================
+   MYTHIC AWAKENING & TRANSCENDENT CARD ANIMATIONS
+   ============================================================ */
+
+@keyframes mythic-spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes mythic-spin-reverse {
+  from { transform: rotate(360deg); }
+  to { transform: rotate(0deg); }
+}
+
+@keyframes mythic-rift-tear {
+  0% { transform: scaleX(0.02) scaleY(0.4); opacity: 0; }
+  35% { transform: scaleX(1.0) scaleY(1.2); opacity: 1; }
+  75% { transform: scaleX(1.18) scaleY(0.75); opacity: 0.95; }
+  100% { transform: scaleX(2.4) scaleY(8.0); opacity: 0; }
+}
+
+@keyframes mythic-core-implode {
+  0% { transform: scale(0.2) rotate(0deg); opacity: 0; }
+  45% { transform: scale(1.18) rotate(160deg); opacity: 1; }
+  80% { transform: scale(0.84) rotate(310deg); opacity: 1; }
+  100% { transform: scale(3.2) rotate(450deg); opacity: 0; }
+}
+
+@keyframes mythic-shockwave {
+  0% { transform: scale(0.12); opacity: 1; }
+  100% { transform: scale(3.2); opacity: 0; }
+}
+
+@keyframes mythic-flash-fade {
+  0% { opacity: 0.72; }
+  100% { opacity: 0; }
+}
+
+@keyframes mythic-card-reveal {
+  0% { transform: translateY(42px) scale(0.82); opacity: 0; filter: brightness(1.6); }
+  60% { transform: translateY(-6px) scale(1.03); opacity: 1; filter: brightness(1.15); }
+  100% { transform: translateY(0) scale(1); opacity: 1; filter: brightness(1); }
+}
+
+@keyframes mythic-aurora-sweep {
+  0% { transform: translateX(-140%) skewX(-20deg); }
+  100% { transform: translateX(260%) skewX(-20deg); }
+}
+
+@keyframes mythic-holo-pan {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes mythic-float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-6px); }
+}
+
+.animate-mythic-spin {
+  animation: mythic-spin-slow 12s linear infinite;
+}
+
+.animate-mythic-spin-fast {
+  animation: mythic-spin-slow 4.5s linear infinite;
+}
+
+.animate-mythic-spin-reverse {
+  animation: mythic-spin-reverse 7.5s linear infinite;
+}
+
+.animate-mythic-rift {
+  animation: mythic-rift-tear 0.75s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-mythic-core-charge {
+  animation: mythic-core-implode 1.15s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-mythic-shockwave {
+  animation: mythic-shockwave 1.05s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-mythic-flash {
+  animation: mythic-flash-fade 0.55s ease-out forwards;
+}
+
+.animate-mythic-card-reveal {
+  animation: mythic-card-reveal 0.62s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.animate-mythic-aurora {
+  animation: mythic-aurora-sweep 2.4s ease-in-out infinite;
+}
+
+.animate-mythic-holo {
+  background-size: 220% 220%;
+  animation: mythic-holo-pan 4s ease infinite;
+}
+
+.animate-mythic-float {
+  animation: mythic-float 3.0s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-lvl-backdrop,
+  .animate-lvl-banner,
+  .animate-lvl-card,
+  .animate-lvl-reroll,
+  .animate-lvl-selected,
+  .animate-mythic-spin,
+  .animate-mythic-spin-fast,
+  .animate-mythic-spin-reverse,
+  .animate-mythic-rift,
+  .animate-mythic-core-charge,
+  .animate-mythic-shockwave,
+  .animate-mythic-flash,
+  .animate-mythic-card-reveal,
+  .animate-mythic-aurora,
+  .animate-mythic-holo,
+  .animate-mythic-float {
+    animation: none !important;
+  }
+}

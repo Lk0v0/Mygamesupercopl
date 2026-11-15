@@ -1,0 +1,8 @@
+{
+  "name": "Zombie Shooter 2D",
+  "description": "Um emocionante jogo de tiro top-down 2D para dispositivos móveis com joysticks virtuais, ondas de zumbis, upgrades e efeitos visuais incríveis.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
