@@ -107,18 +107,16 @@ jobs:
         env:
           GITHUB_RUN_NUMBER: ${{ github.run_number }}
 
-      - name: Build Signed APK
+      - name: Build Debug APK
         run: |
           cd android
           chmod +x gradlew
-          ./gradlew assembleRelease assembleDebug --no-daemon --stacktrace
+          ./gradlew assembleDebug --no-daemon --stacktrace
 
       - name: Prepare APKs for Distribution
         run: |
           mkdir -p dist-apk
-          if [ -f "android/app/build/outputs/apk/release/app-release.apk" ]; then
-            cp android/app/build/outputs/apk/release/app-release.apk dist-apk/ZombieShooter2-v${{ github.run_number }}.apk
-          elif [ -f "android/app/build/outputs/apk/debug/app-debug.apk" ]; then
+          if [ -f "android/app/build/outputs/apk/debug/app-debug.apk" ]; then
             cp android/app/build/outputs/apk/debug/app-debug.apk dist-apk/ZombieShooter2-v${{ github.run_number }}.apk
           fi
 
