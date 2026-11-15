@@ -111,11 +111,11 @@ export const PrestigeScreen: React.FC<PrestigeScreenProps> = ({
   };
 
   return (
-    <div className="absolute inset-0 z-50 flex items-center justify-center bg-slate-950/95 backdrop-blur-xl p-3 sm:p-6 overflow-hidden select-none">
-      <div className="w-full max-w-5xl h-[92vh] bg-slate-900/95 border border-white/10 rounded-2xl flex flex-col overflow-hidden shadow-2xl">
+    <div className="absolute inset-0 z-50 flex items-center justify-center bg-slate-950/95 p-2 sm:p-4 overflow-hidden select-none">
+      <div className="w-full max-w-5xl h-[94dvh] bg-slate-900 border border-white/10 rounded-2xl flex flex-col overflow-hidden shadow-2xl">
         {/* Top Header */}
-        <header className="px-5 sm:px-7 py-4 border-b border-white/10 flex flex-wrap items-center justify-between gap-4 shrink-0">
-          <div className="flex items-center gap-3">
+        <header className="px-4 sm:px-6 py-2.5 sm:py-3.5 border-b border-white/10 flex flex-wrap items-center justify-between gap-2 sm:gap-4 shrink-0">
+          <div className="flex items-center gap-2.5">
             <button
               onClick={() => {
                 sound.playClick();
@@ -127,10 +127,10 @@ export const PrestigeScreen: React.FC<PrestigeScreenProps> = ({
               <ArrowLeft className="w-4 h-4" />
             </button>
             <div>
-              <h2 className="text-lg sm:text-xl font-display font-bold text-white tracking-tight">
+              <h2 className="text-base sm:text-xl font-display font-bold text-white tracking-tight">
                 Prestígio & Loja de Tokens
               </h2>
-              <div className="flex items-center gap-2 text-xs text-slate-400 font-mono">
+              <div className="flex items-center gap-2 text-[11px] sm:text-xs text-slate-400 font-mono">
                 <span>Grau P{prestigeLevel}/{MAX_PRESTIGE}</span>
                 <span aria-hidden="true">·</span>
                 <span>+{bonuses.damageBonusPct}% Dano</span>
@@ -140,7 +140,7 @@ export const PrestigeScreen: React.FC<PrestigeScreenProps> = ({
             </div>
           </div>
 
-          <div className="flex items-center gap-4 text-xs font-mono">
+          <div className="flex items-center gap-3 text-xs font-mono">
             <div className="flex items-center gap-1.5 text-amber-300 font-bold tabular-nums">
               <Coins className="w-4 h-4 text-amber-400" />
               <span>{coins.toLocaleString()} CRED</span>
@@ -154,33 +154,33 @@ export const PrestigeScreen: React.FC<PrestigeScreenProps> = ({
         </header>
 
         {/* Segmented Navigation Tabs */}
-        <div className="px-5 sm:px-7 py-3 border-b border-white/10 flex items-center justify-between gap-3 shrink-0 bg-slate-950/40">
+        <div className="px-4 sm:px-6 py-2 border-b border-white/10 flex items-center justify-between gap-3 shrink-0 bg-slate-950/50 overflow-x-auto">
           <div className="flex items-center gap-1 p-1 bg-slate-950 border border-white/10 rounded-lg">
             <button
               onClick={() => {
                 sound.playClick();
                 setActiveTab('PRESTIGE');
               }}
-              className={`px-4 py-2 text-xs font-semibold rounded-md transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
+              className={`px-3 sm:px-4 py-1.5 text-xs font-semibold rounded-md transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
                 activeTab === 'PRESTIGE'
                   ? 'bg-amber-500 text-slate-950'
                   : 'text-slate-400 hover:text-white'
               }`}
             >
-              Ascensão de Prestígio ({prestigeLevel}/{MAX_PRESTIGE})
+              Ascensão ({prestigeLevel}/{MAX_PRESTIGE})
             </button>
             <button
               onClick={() => {
                 sound.playClick();
                 setActiveTab('TOKEN_SHOP');
               }}
-              className={`px-4 py-2 text-xs font-semibold rounded-md transition-colors whitespace-nowrap shrink-0 cursor-pointer flex items-center gap-2 ${
+              className={`px-3 sm:px-4 py-1.5 text-xs font-semibold rounded-md transition-colors whitespace-nowrap shrink-0 cursor-pointer flex items-center gap-2 ${
                 activeTab === 'TOKEN_SHOP'
                   ? 'bg-fuchsia-500 text-slate-950'
                   : 'text-slate-400 hover:text-white'
               }`}
             >
-              <span>Loja de Tokens (5 Upgrades)</span>
+              <span>Loja de Tokens (5)</span>
               {tokens > 0 && (
                 <span className="font-mono font-bold">· {tokens}</span>
               )}
@@ -195,11 +195,11 @@ export const PrestigeScreen: React.FC<PrestigeScreenProps> = ({
         </div>
 
         {/* Content Body */}
-        <div className="flex-1 overflow-y-auto p-5 sm:p-7">
+        <div className="flex-1 overflow-y-auto p-3.5 sm:p-6">
           {activeTab === 'PRESTIGE' ? (
-            <div className="flex flex-col gap-6 max-w-4xl mx-auto">
+            <div className="flex flex-col gap-4 sm:gap-6 max-w-4xl mx-auto">
               {/* Primary Ascension Card */}
-              <div className="bg-slate-950/70 border border-white/10 rounded-xl p-6 flex flex-col md:flex-row md:items-center justify-between gap-6">
+              <div className="bg-slate-950/75 border border-white/10 rounded-xl p-4 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 sm:gap-6">
                 <div className="flex-1 space-y-3">
                   <div className="flex items-center gap-2.5">
                     <Crown className="w-5 h-5 text-amber-400" />
@@ -347,7 +347,7 @@ export const PrestigeScreen: React.FC<PrestigeScreenProps> = ({
               </div>
 
               {/* 5 Token Upgrades Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 {TOKEN_UPGRADES.map((upg) => {
                   const Icon = getTokenUpgradeIcon(upg.id);
                   const level = tokenUpgrades[upg.id] || 0;
@@ -357,7 +357,7 @@ export const PrestigeScreen: React.FC<PrestigeScreenProps> = ({
                   return (
                     <div
                       key={upg.id}
-                      className="bg-slate-950/70 border border-white/10 rounded-xl p-5 flex flex-col justify-between gap-4"
+                      className="bg-slate-950/75 border border-white/10 rounded-xl p-3.5 sm:p-5 flex flex-col justify-between gap-3 sm:gap-4"
                     >
                       <div className="space-y-3">
                         <div className="flex items-start justify-between gap-3">

@@ -279,23 +279,22 @@ export const MobileControls: React.FC<MobileControlsProps> = ({
 
       {/* ======================================================== */}
       {/* 1. DYNAMIC LEFT TOUCH ZONE (MOVEMENT)                     */}
-      {/* Spans the entire left half from below the top HUD         */}
       {/* ======================================================== */}
       <div
-        className="absolute top-20 bottom-0 left-0 w-1/2 pointer-events-auto"
+        className="absolute top-12 bottom-0 left-0 w-1/2 pointer-events-auto"
         onTouchStart={handleLeftZoneTouchStart}
         style={{ touchAction: 'none' }}
       >
         {/* Subtle resting guide anchor when idle (Mobile only) */}
         {!leftTouchActive && isTouchDevice && (
-          <div className="absolute bottom-8 left-8 flex flex-col items-center pointer-events-none opacity-40 transition-opacity">
-            <div className="w-20 h-20 rounded-full border border-cyan-400/35 flex items-center justify-center bg-slate-950/30 backdrop-blur-[2px] relative shadow-[0_0_15px_rgba(6,182,212,0.2)]">
-              <div className="w-8 h-8 rounded-full bg-cyan-500/20 border border-cyan-400/50 flex items-center justify-center animate-pulse">
-                <div className="w-2.5 h-2.5 rounded-full bg-cyan-300 shadow-[0_0_8px_#22d3ee]" />
+          <div className="absolute bottom-3 left-3 sm:bottom-8 sm:left-8 flex flex-col items-center pointer-events-none opacity-45 transition-opacity">
+            <div className="w-14 h-14 sm:w-20 sm:h-20 rounded-full border border-cyan-400/40 flex items-center justify-center bg-slate-950/50 relative">
+              <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-cyan-500/20 border border-cyan-400/50 flex items-center justify-center animate-pulse">
+                <div className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-cyan-300" />
               </div>
-              <div className="absolute inset-2 rounded-full border border-dashed border-cyan-400/20" />
+              <div className="absolute inset-1.5 sm:inset-2 rounded-full border border-dashed border-cyan-400/20" />
             </div>
-            <span className="text-[8px] font-mono font-bold tracking-widest text-cyan-300/70 uppercase mt-1.5">
+            <span className="text-[7.5px] sm:text-[8px] font-mono font-bold tracking-widest text-cyan-300/75 uppercase mt-1">
               Mover
             </span>
           </div>
@@ -311,12 +310,12 @@ export const MobileControls: React.FC<MobileControlsProps> = ({
             }}
           >
             {/* Outer Base Ring */}
-            <div className="w-32 h-32 rounded-full bg-slate-950/85 backdrop-blur-xl border-2 border-cyan-400 shadow-[0_0_30px_rgba(6,182,212,0.65)] flex items-center justify-center relative">
+            <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-full bg-slate-950/85 border-2 border-cyan-400 shadow-[0_0_20px_rgba(6,182,212,0.5)] flex items-center justify-center relative">
               {/* Radial crosshairs */}
-              <div className="absolute inset-4 rounded-full border border-cyan-400/30" />
+              <div className="absolute inset-3.5 sm:inset-4 rounded-full border border-cyan-400/30" />
               <div className="absolute top-1 bottom-1 w-0.5 bg-cyan-400/20" />
               <div className="absolute left-1 right-1 h-0.5 bg-cyan-400/20" />
-              <div className="w-2.5 h-2.5 rounded-full bg-cyan-400/60 shadow-[0_0_6px_#22d3ee]" />
+              <div className="w-2.5 h-2.5 rounded-full bg-cyan-400/60" />
 
               {/* Vector trail from center to knob */}
               {Math.hypot(leftKnob.x, leftKnob.y) > 6 && (
@@ -331,13 +330,13 @@ export const MobileControls: React.FC<MobileControlsProps> = ({
 
               {/* Movable Knob */}
               <div
-                className="w-14 h-14 rounded-full bg-gradient-to-tr from-cyan-600 via-sky-500 to-blue-500 border-2 border-white shadow-[0_0_15px_rgba(6,182,212,0.8)] flex items-center justify-center absolute"
+                className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-gradient-to-tr from-cyan-600 via-sky-500 to-blue-500 border-2 border-white flex items-center justify-center absolute"
                 style={{
                   transform: `translate3d(${leftKnob.x}px, ${leftKnob.y}px, 0)`,
                   willChange: 'transform',
                 }}
               >
-                <div className="w-4 h-4 rounded-full bg-white/90 shadow-sm" />
+                <div className="w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full bg-white/90" />
               </div>
             </div>
           </div>
@@ -346,24 +345,23 @@ export const MobileControls: React.FC<MobileControlsProps> = ({
 
       {/* ======================================================== */}
       {/* 2. DYNAMIC RIGHT TOUCH ZONE (AIM & SHOOT)                 */}
-      {/* Spans the entire right half from below the top HUD        */}
       {/* ======================================================== */}
       <div
-        className="absolute top-20 bottom-0 right-0 w-1/2 pointer-events-auto"
+        className="absolute top-12 bottom-0 right-0 w-1/2 pointer-events-auto"
         onTouchStart={handleRightZoneTouchStart}
         style={{ touchAction: 'none' }}
       >
         {/* Subtle resting guide anchor when idle (Mobile only) */}
         {!rightTouchActive && isTouchDevice && (
-          <div className="absolute bottom-8 right-8 flex flex-col items-center pointer-events-none opacity-40 transition-opacity">
-            <div className="w-20 h-20 rounded-full border border-rose-400/35 flex items-center justify-center bg-slate-950/30 backdrop-blur-[2px] relative shadow-[0_0_15px_rgba(244,63,94,0.2)]">
-              <div className="w-8 h-8 rounded-full bg-rose-500/20 border border-rose-400/50 flex items-center justify-center animate-pulse">
-                <Crosshair className="w-4 h-4 text-rose-300" />
+          <div className="absolute bottom-3 right-3 sm:bottom-8 sm:right-8 flex flex-col items-center pointer-events-none opacity-45 transition-opacity">
+            <div className="w-14 h-14 sm:w-20 sm:h-20 rounded-full border border-rose-400/40 flex items-center justify-center bg-slate-950/50 relative">
+              <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-rose-500/20 border border-rose-400/50 flex items-center justify-center animate-pulse">
+                <Crosshair className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-rose-300" />
               </div>
-              <div className="absolute inset-2 rounded-full border border-dashed border-rose-400/20" />
+              <div className="absolute inset-1.5 sm:inset-2 rounded-full border border-dashed border-rose-400/20" />
             </div>
-            <span className="text-[8px] font-mono font-bold tracking-widest text-rose-300/70 uppercase mt-1.5">
-              Mirar & Atirar
+            <span className="text-[7.5px] sm:text-[8px] font-mono font-bold tracking-widest text-rose-300/75 uppercase mt-1">
+              Mirar
             </span>
           </div>
         )}
@@ -378,10 +376,10 @@ export const MobileControls: React.FC<MobileControlsProps> = ({
             }}
           >
             {/* Outer Base Ring */}
-            <div className="w-32 h-32 rounded-full bg-slate-950/85 backdrop-blur-xl border-2 border-rose-400 shadow-[0_0_30px_rgba(244,63,94,0.65)] flex items-center justify-center relative">
+            <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-full bg-slate-950/85 border-2 border-rose-400 shadow-[0_0_20px_rgba(244,63,94,0.5)] flex items-center justify-center relative">
               {/* Aiming Reticle Circle */}
-              <div className="absolute inset-4 rounded-full border border-rose-400/30" />
-              <div className="w-2.5 h-2.5 rounded-full bg-rose-400/60 shadow-[0_0_6px_#f43f5e]" />
+              <div className="absolute inset-3.5 sm:inset-4 rounded-full border border-rose-400/30" />
+              <div className="w-2.5 h-2.5 rounded-full bg-rose-400/60" />
 
               {/* Aiming Laser Line Indicator extending toward target */}
               {rightAimDist > 8 && (
@@ -399,13 +397,13 @@ export const MobileControls: React.FC<MobileControlsProps> = ({
 
               {/* Movable Knob */}
               <div
-                className="w-14 h-14 rounded-full bg-gradient-to-tr from-rose-600 via-red-500 to-pink-500 border-2 border-white shadow-[0_0_15px_rgba(244,63,94,0.8)] flex items-center justify-center absolute"
+                className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-gradient-to-tr from-rose-600 via-red-500 to-pink-500 border-2 border-white flex items-center justify-center absolute"
                 style={{
                   transform: `translate3d(${rightKnob.x}px, ${rightKnob.y}px, 0)`,
                   willChange: 'transform',
                 }}
               >
-                <div className="w-4 h-4 rounded-full bg-white/90 shadow-sm" />
+                <div className="w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full bg-white/90" />
               </div>
             </div>
           </div>
@@ -416,7 +414,7 @@ export const MobileControls: React.FC<MobileControlsProps> = ({
       {/* 3. TACTICAL WARP / MODO FÚRIA + MASTERY SKILL BUTTONS    */}
       {/* ======================================================== */}
       {isShip && (
-        <div className="absolute bottom-32 right-6 md:bottom-36 md:right-10 flex items-end gap-3 pointer-events-auto z-50">
+        <div className="absolute bottom-20 right-3 sm:bottom-28 sm:right-8 flex items-end gap-2 sm:gap-3 pointer-events-auto z-50">
           {/* Mastery Active Skill Button (Unlocked via Ship Skill Tree) */}
           {hasMasterySkill && onTriggerMasterySkill && (
             <div className="flex flex-col items-center gap-1">
@@ -436,14 +434,14 @@ export const MobileControls: React.FC<MobileControlsProps> = ({
                   if (masteryCooldown <= 0) onTriggerMasterySkill();
                 }}
                 onContextMenu={(e) => e.preventDefault()}
-                className={`relative w-14 h-14 rounded-full flex flex-col items-center justify-center backdrop-blur-xl border-2 transition-all select-none touch-none ${
+                className={`relative w-12 h-12 sm:w-14 sm:h-14 rounded-full flex flex-col items-center justify-center border-2 transition-all select-none touch-none ${
                   masteryCooldown <= 0
                     ? isRei
-                      ? 'bg-red-950/90 border-red-400 text-red-100 shadow-[0_0_20px_rgba(239,68,68,0.65)] active:scale-95 cursor-pointer'
+                      ? 'bg-red-950/95 border-red-400 text-red-100 active:scale-95 cursor-pointer'
                       : isInterceptor
-                      ? 'bg-emerald-950/90 border-emerald-400 text-emerald-100 shadow-[0_0_20px_rgba(16,185,129,0.65)] active:scale-95 cursor-pointer'
-                      : 'bg-cyan-950/90 border-cyan-400 text-cyan-100 shadow-[0_0_20px_rgba(34,211,238,0.65)] active:scale-95 cursor-pointer'
-                    : 'bg-slate-950/80 border-white/15 text-slate-500 cursor-not-allowed'
+                      ? 'bg-emerald-950/95 border-emerald-400 text-emerald-100 active:scale-95 cursor-pointer'
+                      : 'bg-cyan-950/95 border-cyan-400 text-cyan-100 active:scale-95 cursor-pointer'
+                    : 'bg-slate-950/85 border-white/15 text-slate-500 cursor-not-allowed'
                 }`}
                 title={masterySkillName}
               >
@@ -496,14 +494,14 @@ export const MobileControls: React.FC<MobileControlsProps> = ({
               if (isPressingWarpRef.current) stopWarp();
             }}
             onContextMenu={(e) => e.preventDefault()}
-            className={`relative w-20 h-20 rounded-full flex flex-col items-center justify-center cursor-pointer transition-all duration-150 select-none touch-none ${
+            className={`relative w-16 h-16 sm:w-20 sm:h-20 rounded-full flex flex-col items-center justify-center cursor-pointer transition-all duration-150 select-none touch-none ${
               warpActive
                 ? isRei
-                  ? 'scale-105 shadow-[0_0_35px_rgba(239,68,68,0.9)] animate-pulse'
-                  : 'scale-105 shadow-[0_0_35px_rgba(6,182,212,0.9)] animate-pulse'
+                  ? 'scale-105 animate-pulse'
+                  : 'scale-105 animate-pulse'
                 : warpChargeProgress > 0.05
-                  ? 'scale-105 shadow-[0_0_25px_rgba(245,158,11,0.7)]'
-                  : 'hover:scale-102 active:scale-95 shadow-[0_0_20px_rgba(0,0,0,0.6)]'
+                  ? 'scale-105'
+                  : 'hover:scale-102 active:scale-95'
             }`}
             title={
               isRei
@@ -555,7 +553,7 @@ export const MobileControls: React.FC<MobileControlsProps> = ({
 
             {/* Inner Tactile Button Body */}
             <div
-              className={`w-[66px] h-[66px] rounded-full flex flex-col items-center justify-center backdrop-blur-xl border-2 transition-colors relative overflow-hidden ${
+              className={`w-[54px] h-[54px] sm:w-[66px] sm:h-[66px] rounded-full flex flex-col items-center justify-center border-2 transition-colors relative overflow-hidden ${
                 warpActive
                   ? isRei
                     ? 'bg-gradient-to-tr from-red-950 via-red-900 to-amber-950 border-red-400 text-white shadow-inner'
@@ -618,7 +616,7 @@ export const MobileControls: React.FC<MobileControlsProps> = ({
 
           {/* Micro status badge below the button */}
           <div
-            className={`px-2 py-0.5 rounded-full text-[7.5px] font-mono font-bold tracking-wider uppercase border backdrop-blur-md shadow-md ${
+            className={`px-2 py-0.5 rounded-full text-[7px] sm:text-[7.5px] font-mono font-bold tracking-wider uppercase border shadow-md ${
               warpActive
                 ? isRei
                   ? 'bg-red-950/90 border-red-500/60 text-red-200 animate-pulse'
@@ -645,7 +643,7 @@ export const MobileControls: React.FC<MobileControlsProps> = ({
 
       {/* Iron Man Mode Toggle Button (Repulsor <-> Laser) */}
       {isIronMan && onToggleIronManMode && (
-        <div className="absolute bottom-32 right-6 md:bottom-36 md:right-10 flex flex-col items-center gap-1.5 pointer-events-auto z-50">
+        <div className="absolute bottom-20 right-3 sm:bottom-28 sm:right-8 flex flex-col items-center gap-1 pointer-events-auto z-50">
           <button
             id="mobile-ironman-mode-button"
             onTouchStart={(e) => {
@@ -660,30 +658,30 @@ export const MobileControls: React.FC<MobileControlsProps> = ({
               onToggleIronManMode();
             }}
             onContextMenu={(e) => e.preventDefault()}
-            className={`w-20 h-20 rounded-full flex flex-col items-center justify-center backdrop-blur-xl border-2 transition-all active:scale-95 select-none touch-none shadow-lg cursor-pointer ${
+            className={`w-16 h-16 sm:w-20 sm:h-20 rounded-full flex flex-col items-center justify-center border-2 transition-all active:scale-95 select-none touch-none shadow-lg cursor-pointer ${
               ironManMode === 'LASER'
-                ? 'bg-gradient-to-tr from-red-950/95 via-red-900/90 to-amber-950/95 border-amber-400 text-amber-100 shadow-[0_0_26px_rgba(239,68,68,0.75)]'
-                : 'bg-gradient-to-tr from-sky-950/95 via-cyan-950/90 to-slate-950/95 border-cyan-400 text-cyan-100 shadow-[0_0_26px_rgba(56,189,248,0.75)]'
+                ? 'bg-gradient-to-tr from-red-950 via-red-900 to-amber-950 border-amber-400 text-amber-100'
+                : 'bg-gradient-to-tr from-sky-950 via-cyan-950 to-slate-950 border-cyan-400 text-cyan-100'
             }`}
             title="Alternar Modo Repulsor / Laser"
           >
             {ironManMode === 'LASER' ? (
               <>
-                <Flame className="w-6 h-6 text-amber-300" />
-                <span className="text-[8.5px] font-mono font-black uppercase tracking-wider mt-0.5 text-white">
+                <Flame className="w-5 h-5 sm:w-6 sm:h-6 text-amber-300" />
+                <span className="text-[8px] sm:text-[8.5px] font-mono font-black uppercase tracking-wider mt-0.5 text-white">
                   LASER
                 </span>
               </>
             ) : (
               <>
-                <Zap className="w-6 h-6 text-cyan-300" />
-                <span className="text-[8px] font-mono font-black uppercase tracking-wider mt-0.5 text-white">
+                <Zap className="w-5 h-5 sm:w-6 sm:h-6 text-cyan-300" />
+                <span className="text-[8px] sm:text-[8.5px] font-mono font-black uppercase tracking-wider mt-0.5 text-white">
                   REPULSOR
                 </span>
               </>
             )}
           </button>
-          <span className="px-2 py-0.5 rounded-full text-[7.5px] font-mono font-bold tracking-wider uppercase border border-white/15 bg-slate-950/85 text-slate-300">
+          <span className="px-2 py-0.5 rounded-full text-[7px] sm:text-[7.5px] font-mono font-bold tracking-wider uppercase border border-white/15 bg-slate-950/90 text-slate-300">
             TROCAR MODO
           </span>
         </div>
@@ -691,7 +689,7 @@ export const MobileControls: React.FC<MobileControlsProps> = ({
 
       {/* Ice & Fire Dragon Tactical Buttons (Switch Fire/Ice + Mega Purple Fusion) */}
       {isIceFireDragon && (
-        <div className="absolute bottom-32 right-6 md:bottom-36 md:right-10 flex items-end gap-3 pointer-events-auto z-50">
+        <div className="absolute bottom-20 right-3 sm:bottom-28 sm:right-8 flex items-end gap-2 sm:gap-3 pointer-events-auto z-50">
           {/* Switch Dragon Button (Fire <-> Ice) */}
           {!iceFireMerged && onSwitchIceFireDragon && (
             <div className="flex flex-col items-center gap-1">
@@ -709,30 +707,30 @@ export const MobileControls: React.FC<MobileControlsProps> = ({
                   onSwitchIceFireDragon();
                 }}
                 onContextMenu={(e) => e.preventDefault()}
-                className={`w-16 h-16 rounded-full flex flex-col items-center justify-center backdrop-blur-xl border-2 transition-all active:scale-95 select-none touch-none shadow-lg cursor-pointer ${
+                className={`w-13 h-13 sm:w-16 sm:h-16 rounded-full flex flex-col items-center justify-center border-2 transition-all active:scale-95 select-none touch-none shadow-lg cursor-pointer ${
                   iceFireActiveDragon === 'FIRE'
-                    ? 'bg-gradient-to-tr from-red-950/95 via-orange-950/90 to-amber-950/95 border-orange-400 text-amber-100 shadow-[0_0_22px_rgba(249,115,22,0.75)]'
-                    : 'bg-gradient-to-tr from-sky-950/95 via-cyan-950/90 to-slate-950/95 border-sky-400 text-sky-100 shadow-[0_0_22px_rgba(56,189,248,0.75)]'
+                    ? 'bg-gradient-to-tr from-red-950 via-orange-950 to-amber-950 border-orange-400 text-amber-100'
+                    : 'bg-gradient-to-tr from-sky-950 via-cyan-950 to-slate-950 border-sky-400 text-sky-100'
                 }`}
                 title="Trocar Dragão Atacante (Fogo / Gelo)"
               >
                 {iceFireActiveDragon === 'FIRE' ? (
                   <>
-                    <Flame className="w-5 h-5 text-orange-300" />
-                    <span className="text-[8px] font-mono font-black uppercase tracking-wider mt-0.5 text-white">
+                    <Flame className="w-4 h-4 sm:w-5 sm:h-5 text-orange-300" />
+                    <span className="text-[7.5px] sm:text-[8px] font-mono font-black uppercase tracking-wider mt-0.5 text-white">
                       FOGO
                     </span>
                   </>
                 ) : (
                   <>
-                    <Snowflake className="w-5 h-5 text-sky-300" />
-                    <span className="text-[8px] font-mono font-black uppercase tracking-wider mt-0.5 text-white">
+                    <Snowflake className="w-4 h-4 sm:w-5 sm:h-5 text-sky-300" />
+                    <span className="text-[7.5px] sm:text-[8px] font-mono font-black uppercase tracking-wider mt-0.5 text-white">
                       GELO
                     </span>
                   </>
                 )}
               </button>
-              <span className="px-2 py-0.5 rounded-full text-[7px] font-mono font-bold tracking-wider uppercase border border-white/15 bg-slate-950/85 text-slate-300">
+              <span className="px-2 py-0.5 rounded-full text-[7px] font-mono font-bold tracking-wider uppercase border border-white/15 bg-slate-950/90 text-slate-300">
                 TROCAR
               </span>
             </div>
@@ -759,12 +757,12 @@ export const MobileControls: React.FC<MobileControlsProps> = ({
                   }
                 }}
                 onContextMenu={(e) => e.preventDefault()}
-                className={`w-20 h-20 rounded-full flex flex-col items-center justify-center backdrop-blur-xl border-2 transition-all active:scale-95 select-none touch-none shadow-lg ${
+                className={`w-16 h-16 sm:w-20 sm:h-20 rounded-full flex flex-col items-center justify-center border-2 transition-all active:scale-95 select-none touch-none shadow-lg ${
                   iceFireMerged
-                    ? 'bg-gradient-to-tr from-purple-950/95 via-fuchsia-900/90 to-purple-900/95 border-fuchsia-300 text-fuchsia-100 shadow-[0_0_28px_rgba(217,70,239,0.85)] animate-pulse cursor-default'
+                    ? 'bg-gradient-to-tr from-purple-950 via-fuchsia-900 to-purple-900 border-fuchsia-300 text-fuchsia-100 animate-pulse cursor-default'
                     : iceFireCooldown <= 0
-                      ? 'bg-gradient-to-tr from-purple-950/95 via-violet-900/90 to-slate-950/95 border-purple-400 text-purple-100 shadow-[0_0_24px_rgba(168,85,247,0.75)] cursor-pointer'
-                      : 'bg-slate-950/80 border-white/15 text-slate-400 cursor-default'
+                      ? 'bg-gradient-to-tr from-purple-950 via-violet-900 to-slate-950 border-purple-400 text-purple-100 cursor-pointer'
+                      : 'bg-slate-950/85 border-white/15 text-slate-400 cursor-default'
                 }`}
                 title="Fundir Fogo + Gelo no Mega Dragão Roxo"
               >

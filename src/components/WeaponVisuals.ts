@@ -385,16 +385,11 @@ export function renderPlayerWeapon(
       ctx.stroke();
 
       // Pulsing illuminated Plasma Core Chamber
-      const corePulse = 0.7 + Math.sin(time / 90) * 0.3;
-      ctx.save();
-      ctx.shadowColor = '#38bdf8';
-      ctx.shadowBlur = 10 * corePulse;
       ctx.fillStyle = '#38bdf8';
       ctx.fillRect(14, -2.5, 9, 5);
       // Inner hot-white filament
       ctx.fillStyle = '#ffffff';
       ctx.fillRect(16, -1, 5, 2);
-      ctx.restore();
 
       // Dual electromagnetic accelerator rails
       ctx.fillStyle = '#38bdf8';
@@ -407,11 +402,8 @@ export function renderPlayerWeapon(
 
       // Lively crackling electrical arc between rail prongs
       if (Math.random() < 0.85) {
-        ctx.save();
         ctx.strokeStyle = '#e0f2fe';
         ctx.lineWidth = 1.2;
-        ctx.shadowColor = '#38bdf8';
-        ctx.shadowBlur = 6;
         const midX = 35 + (Math.random() * 4 - 2);
         const midY = Math.random() * 3 - 1.5;
         ctx.beginPath();
@@ -419,7 +411,6 @@ export function renderPlayerWeapon(
         ctx.lineTo(midX, midY);
         ctx.lineTo(38, 3);
         ctx.stroke();
-        ctx.restore();
       }
       break;
     }
@@ -576,9 +567,6 @@ export function renderPlayerWeapon(
       // Active flickering pilot light flame
       const flameFlicker = Math.sin(time / 40) * 1.5 + (Math.random() * 2 - 1);
       const flameLength = 6 + flameFlicker;
-      ctx.save();
-      ctx.shadowColor = '#ff5500';
-      ctx.shadowBlur = 8;
       ctx.fillStyle = '#ff5500';
       ctx.beginPath();
       ctx.moveTo(39, -2);
@@ -594,7 +582,6 @@ export function renderPlayerWeapon(
       ctx.lineTo(39, 1);
       ctx.closePath();
       ctx.fill();
-      ctx.restore();
       break;
     }
 
@@ -618,10 +605,6 @@ export function renderPlayerWeapon(
       ctx.stroke();
 
       // Central Pulsating Angular Diamond Crystal Core (NO CIRCULAR ORB)
-      const crystalPulse = 0.8 + Math.sin(time / 80) * 0.2;
-      ctx.save();
-      ctx.shadowColor = '#00ffcc';
-      ctx.shadowBlur = 12 * crystalPulse;
       ctx.fillStyle = '#00ffcc';
       ctx.beginPath();
       ctx.moveTo(10, 0);
@@ -633,7 +616,6 @@ export function renderPlayerWeapon(
       // Hot white core slit
       ctx.fillStyle = '#ffffff';
       ctx.fillRect(15, -1, 2, 2);
-      ctx.restore();
 
       // Angular Chromium Energy Focus Vanes (NO ELLIPSES)
       ctx.fillStyle = '#22d3ee';
@@ -669,10 +651,6 @@ export function renderPlayerWeapon(
       ctx.stroke();
 
       // 3 Radioactive Alien Crystals protruding from spine
-      const crystalPulse = 0.8 + Math.sin(time / 110) * 0.2;
-      ctx.save();
-      ctx.shadowColor = '#39ff14';
-      ctx.shadowBlur = 10 * crystalPulse;
       ctx.fillStyle = '#39ff14';
 
       // Crystal 1
@@ -698,7 +676,6 @@ export function renderPlayerWeapon(
       ctx.lineTo(35, -3);
       ctx.closePath();
       ctx.fill();
-      ctx.restore();
 
       // Muzzle focusing prism with neon green aura
       ctx.fillStyle = '#39ff14';
@@ -722,10 +699,6 @@ export function renderPlayerWeapon(
       ctx.stroke();
 
       // Glowing Neon-Magenta Radiator Fins
-      const heatGlow = 0.85 + Math.sin(time / 70) * 0.15;
-      ctx.save();
-      ctx.shadowColor = '#ff0055';
-      ctx.shadowBlur = 10 * heatGlow;
       ctx.fillStyle = '#ff0055';
       ctx.fillRect(8, -5, 14, 1.5);
       ctx.fillRect(8, 3.5, 14, 1.5);
@@ -734,7 +707,6 @@ export function renderPlayerWeapon(
       ctx.fillRect(11, -2, 6, 4);
       ctx.fillStyle = '#ffffff';
       ctx.fillRect(13, -1, 2, 2);
-      ctx.restore();
 
       // Revolving Quad-Prism Laser Assembly
       const lRot = time * 0.05;
@@ -852,27 +824,34 @@ export function renderPlayerWeapon(
       ctx.fill();
       ctx.stroke();
 
-      // Left Fire Ruby + Right Ice Sapphire twin orbs orbiting crest tip
+      // Left Fire Ruby + Right Ice Sapphire twin orbs orbiting crest tip (fast glow halos)
+      ctx.fillStyle = 'rgba(249, 115, 22, 0.35)';
+      ctx.beginPath();
+      ctx.arc(23, -4.5, 4.4 * pulse, 0, Math.PI * 2);
+      ctx.fill();
       ctx.fillStyle = '#f97316';
-      ctx.shadowColor = '#f97316';
-      ctx.shadowBlur = 6;
       ctx.beginPath();
       ctx.arc(23, -4.5, 2.8 * pulse, 0, Math.PI * 2);
       ctx.fill();
 
+      ctx.fillStyle = 'rgba(56, 189, 248, 0.35)';
+      ctx.beginPath();
+      ctx.arc(23, 4.5, 4.4 * pulse, 0, Math.PI * 2);
+      ctx.fill();
       ctx.fillStyle = '#38bdf8';
-      ctx.shadowColor = '#38bdf8';
       ctx.beginPath();
       ctx.arc(23, 4.5, 2.8 * pulse, 0, Math.PI * 2);
       ctx.fill();
 
       // Central Violet Dragon Core gem
+      ctx.fillStyle = 'rgba(168, 85, 247, 0.4)';
+      ctx.beginPath();
+      ctx.arc(26, 0, 5.0, 0, Math.PI * 2);
+      ctx.fill();
       ctx.fillStyle = '#f5d0fe';
-      ctx.shadowColor = '#a855f7';
       ctx.beginPath();
       ctx.arc(26, 0, 3.2, 0, Math.PI * 2);
       ctx.fill();
-      ctx.shadowBlur = 0;
       break;
     }
 
@@ -908,18 +887,14 @@ export function renderBulletVisual(
     const rot = time / 80;
 
     // Outer Cosmic Nebula Aura
-    ctx.shadowColor = '#38bdf8';
-    ctx.shadowBlur = 24;
-    ctx.fillStyle = 'rgba(56, 189, 248, 0.35)';
+    ctx.fillStyle = 'rgba(56, 189, 248, 0.28)';
     ctx.beginPath();
-    ctx.arc(0, 0, b.radius * 2.2, 0, Math.PI * 2);
+    ctx.arc(0, 0, b.radius * 2.4, 0, Math.PI * 2);
     ctx.fill();
 
     // Dual Galaxy Spiral Arms
     ctx.strokeStyle = '#f43f5e';
     ctx.lineWidth = 2.5;
-    ctx.shadowColor = '#f43f5e';
-    ctx.shadowBlur = 12;
     for (let i = 0; i < 2; i++) {
       const armAng = rot + i * Math.PI;
       ctx.beginPath();
@@ -938,8 +913,6 @@ export function renderBulletVisual(
     ctx.save();
     ctx.rotate(rot * 2);
     ctx.fillStyle = '#ffffff';
-    ctx.shadowColor = '#ffffff';
-    ctx.shadowBlur = 16;
     ctx.beginPath();
     ctx.moveTo(b.radius * 1.5, 0);
     ctx.lineTo(b.radius * 0.3, b.radius * 0.3);
@@ -965,8 +938,15 @@ export function renderBulletVisual(
 
     // Rocket Solid-Fuel Flame Exhaust Tail with Mach Shockwaves
     const flameLen = 18 + Math.random() * 10;
-    ctx.shadowColor = '#38bdf8';
-    ctx.shadowBlur = 18;
+
+    // Outer Azure Flame Halo
+    ctx.fillStyle = 'rgba(56, 189, 248, 0.3)';
+    ctx.beginPath();
+    ctx.moveTo(-14, -8);
+    ctx.lineTo(-18 - flameLen, 0);
+    ctx.lineTo(-14, 8);
+    ctx.closePath();
+    ctx.fill();
 
     // Outer Azure Flame Expansion
     ctx.fillStyle = '#0284c7';
@@ -1060,11 +1040,8 @@ export function renderBulletVisual(
 
     // Dynamic Projected Ground Laser Targeting Reticle & Crosshairs
     const reticlePulse = 0.5 + Math.sin(time * 0.012) * 0.5;
-    ctx.save();
-    ctx.strokeStyle = `rgba(244, 63, 94, ${0.45 + reticlePulse * 0.45})`;
-    ctx.shadowColor = '#f43f5e';
-    ctx.shadowBlur = 12;
-    ctx.lineWidth = 1.4;
+    ctx.strokeStyle = `rgba(244, 63, 94, ${(0.45 + reticlePulse * 0.45).toFixed(2)})`;
+    ctx.lineWidth = 1.6;
 
     // Expanding Ground Laser Ring
     ctx.beginPath();
@@ -1082,14 +1059,11 @@ export function renderBulletVisual(
     ctx.moveTo(0, 24);
     ctx.lineTo(0, 30);
     ctx.stroke();
-    ctx.restore();
 
     // Heavy Aerodynamic Stealth Bomb Body (Matte Carbon Obsidian)
-    ctx.shadowColor = '#f43f5e';
-    ctx.shadowBlur = 16;
     ctx.fillStyle = '#090d16';
     ctx.strokeStyle = '#f43f5e';
-    ctx.lineWidth = 1.5;
+    ctx.lineWidth = 1.8;
 
     ctx.beginPath();
     ctx.moveTo(15, 0); // Pointed armor-piercing penetrator nose
@@ -1135,32 +1109,24 @@ export function renderBulletVisual(
 
   // 0a. HOMING VOID LANCE (Mythic Void Monarch Drones)
   if (b.isVoidLance) {
-    const moveAngle = Math.hypot(b.vx, b.vy) > 1 ? Math.atan2(b.vy, b.vx) : b.ownerAngle;
+    const moveAngle = (b.vx * b.vx + b.vy * b.vy) > 1 ? Math.atan2(b.vy, b.vx) : b.ownerAngle;
     ctx.save();
     ctx.translate(scrX, scrY);
     ctx.rotate(moveAngle);
     ctx.globalCompositeOperation = 'lighter';
 
-    ctx.shadowColor = '#c084fc';
-    ctx.shadowBlur = 14;
-
-    // Tapered void wake tail
-    const wakeGrad = ctx.createLinearGradient(-22, 0, 10, 0);
-    wakeGrad.addColorStop(0, 'rgba(168, 85, 247, 0)');
-    wakeGrad.addColorStop(0.55, 'rgba(192, 132, 252, 0.75)');
-    wakeGrad.addColorStop(1, '#ffffff');
-    ctx.fillStyle = wakeGrad;
+    ctx.fillStyle = 'rgba(192, 132, 252, 0.55)';
     ctx.beginPath();
     ctx.moveTo(-22, 0);
-    ctx.lineTo(-2, -4.5);
-    ctx.lineTo(12, 0);
-    ctx.lineTo(-2, 4.5);
+    ctx.lineTo(-2, -5.5);
+    ctx.lineTo(13, 0);
+    ctx.lineTo(-2, 5.5);
     ctx.closePath();
     ctx.fill();
 
     // Hot white spear filament
     ctx.strokeStyle = '#ffffff';
-    ctx.lineWidth = 1.8;
+    ctx.lineWidth = 2;
     ctx.beginPath();
     ctx.moveTo(-10, 0);
     ctx.lineTo(11, 0);
@@ -1172,13 +1138,11 @@ export function renderBulletVisual(
 
   // 0b. KINETIC SHRAPNEL SHARD (Doutrina de Estilhaços)
   if (b.isShrapnel) {
-    const moveAngle = Math.hypot(b.vx, b.vy) > 1 ? Math.atan2(b.vy, b.vx) : b.ownerAngle;
+    const moveAngle = (b.vx * b.vx + b.vy * b.vy) > 1 ? Math.atan2(b.vy, b.vx) : b.ownerAngle;
     ctx.save();
     ctx.translate(scrX, scrY);
     ctx.rotate(moveAngle);
     ctx.fillStyle = '#f97316';
-    ctx.shadowColor = '#fb923c';
-    ctx.shadowBlur = 10;
     ctx.beginPath();
     ctx.moveTo(-7, -2.5);
     ctx.lineTo(8, 0);
@@ -1196,24 +1160,20 @@ export function renderBulletVisual(
     return;
   }
 
-  // 0c. INTERCEPTOR RAPID PLASMA ORBS
+  // 0c. INTERCEPTOR RAPID PLASMA ORBS (Fast, zero per-orb gradient allocation)
   if (b.isOrb) {
-    const moveAngle = Math.hypot(b.vx, b.vy) > 1 ? Math.atan2(b.vy, b.vx) : b.ownerAngle;
+    const moveAngle = (b.vx * b.vx + b.vy * b.vy) > 1 ? Math.atan2(b.vy, b.vx) : b.ownerAngle;
     const orbColor = b.color || '#00f5d4';
     const orbR = Math.max(4.5, b.radius || 5.5);
 
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
 
-    // High-speed directional plasma wake
-    const wakeLen = orbR * 3.4;
+    const wakeLen = orbR * 3.2;
     const wakeX = scrX - Math.cos(moveAngle) * wakeLen;
     const wakeY = scrY - Math.sin(moveAngle) * wakeLen;
-    const wakeGrad = ctx.createLinearGradient(wakeX, wakeY, scrX, scrY);
-    wakeGrad.addColorStop(0, 'rgba(0, 0, 0, 0)');
-    wakeGrad.addColorStop(0.6, orbColor);
-    wakeGrad.addColorStop(1, '#ffffff');
-    ctx.strokeStyle = wakeGrad;
+    ctx.strokeStyle = orbColor;
+    ctx.globalAlpha = 0.55;
     ctx.lineWidth = orbR * 1.15;
     ctx.lineCap = 'round';
     ctx.beginPath();
@@ -1221,17 +1181,13 @@ export function renderBulletVisual(
     ctx.lineTo(scrX, scrY);
     ctx.stroke();
 
-    // Outer luminous energy aura
-    const auraGrad = ctx.createRadialGradient(scrX, scrY, orbR * 0.2, scrX, scrY, orbR * 2.1);
-    auraGrad.addColorStop(0, '#ffffff');
-    auraGrad.addColorStop(0.35, orbColor);
-    auraGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
-    ctx.fillStyle = auraGrad;
+    ctx.globalAlpha = 0.35;
+    ctx.fillStyle = orbColor;
     ctx.beginPath();
-    ctx.arc(scrX, scrY, orbR * 2.1, 0, Math.PI * 2);
+    ctx.arc(scrX, scrY, orbR * 1.9, 0, Math.PI * 2);
     ctx.fill();
 
-    // Solid plasma orb shell + incandescent core
+    ctx.globalAlpha = 1;
     ctx.fillStyle = orbColor;
     ctx.beginPath();
     ctx.arc(scrX, scrY, orbR * 0.9, 0, Math.PI * 2);
@@ -1254,8 +1210,14 @@ export function renderBulletVisual(
 
     // Rocket exhaust flame trail (pulsating orange/yellow)
     const flameLen = 14 + Math.sin(time / 20) * 4 + Math.random() * 4;
-    ctx.shadowColor = '#f97316';
-    ctx.shadowBlur = 12;
+    ctx.fillStyle = 'rgba(249, 115, 22, 0.35)';
+    ctx.beginPath();
+    ctx.moveTo(-6, -6.5);
+    ctx.lineTo(-9 - flameLen, 0);
+    ctx.lineTo(-6, 6.5);
+    ctx.closePath();
+    ctx.fill();
+
     ctx.fillStyle = '#f97316';
     ctx.beginPath();
     ctx.moveTo(-6, -4);
@@ -1311,7 +1273,6 @@ export function renderBulletVisual(
 
   // 2. FLAMETHROWER HITBOX STREAK (actual continuous fire stream is rendered by renderFlamethrowerStream)
   if (b.isFlame) {
-    // Only render subtle incandescent spark streaks along trajectory; zero circular blobs
     const flameRatio = Math.max(0, Math.min(1, b.distanceTraveled / b.maxDistance));
     const fade = Math.max(0, 1 - flameRatio);
     if (fade <= 0.05 || (Math.floor(b.x + b.y) & 1) !== 0) return;
@@ -1335,19 +1296,26 @@ export function renderBulletVisual(
   // 3. LASER MINIGUN HYPER-BEAM / F-22 VULCAN SUPERSONIC TRACER
   if (b.isLaser) {
     const trailTime = 0.035;
-    const trailX = b.x - b.vx * trailTime;
-    const trailY = b.y - b.vy * trailTime;
+    const trailX = b.x - b.vx * trailTime - camX;
+    const trailY = b.y - b.vy * trailTime - camY;
 
     ctx.save();
     const laserColor = b.color || '#ff0055';
-    // Intense outer laser / tracer glow
-    ctx.shadowColor = laserColor;
-    ctx.shadowBlur = 16;
-    ctx.strokeStyle = laserColor;
-    ctx.lineWidth = 6;
     ctx.lineCap = 'round';
+    // Fast wide glow pass (replaces expensive shadowBlur)
+    ctx.globalAlpha = 0.32;
+    ctx.strokeStyle = laserColor;
+    ctx.lineWidth = 11;
     ctx.beginPath();
-    ctx.moveTo(trailX - camX, trailY - camY);
+    ctx.moveTo(trailX, trailY);
+    ctx.lineTo(scrX, scrY);
+    ctx.stroke();
+
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = laserColor;
+    ctx.lineWidth = 5.5;
+    ctx.beginPath();
+    ctx.moveTo(trailX, trailY);
     ctx.lineTo(scrX, scrY);
     ctx.stroke();
 
@@ -1355,7 +1323,7 @@ export function renderBulletVisual(
     ctx.strokeStyle = '#ffffff';
     ctx.lineWidth = 2.2;
     ctx.beginPath();
-    ctx.moveTo(trailX - camX, trailY - camY);
+    ctx.moveTo(trailX, trailY);
     ctx.lineTo(scrX, scrY);
     ctx.stroke();
 
@@ -1369,10 +1337,19 @@ export function renderBulletVisual(
     ctx.translate(scrX, scrY);
     ctx.rotate(b.ownerAngle);
 
-    // Glowing energy diamond bolt
-    ctx.shadowColor = b.color;
-    ctx.shadowBlur = 12;
+    // Outer translucent aura diamond
+    ctx.globalAlpha = 0.35;
     ctx.fillStyle = b.color;
+    ctx.beginPath();
+    ctx.moveTo(-b.radius * 2.1, 0);
+    ctx.lineTo(0, -b.radius * 1.25);
+    ctx.lineTo(b.radius * 2.1, 0);
+    ctx.lineTo(0, b.radius * 1.25);
+    ctx.closePath();
+    ctx.fill();
+
+    // Solid energy diamond bolt
+    ctx.globalAlpha = 1;
     ctx.beginPath();
     ctx.moveTo(-b.radius * 1.6, 0);
     ctx.lineTo(0, -b.radius * 0.8);
@@ -1396,12 +1373,10 @@ export function renderBulletVisual(
   // 5. PLASMA ION SURGE
   if (b.color === '#38bdf8' && b.radius >= 8) {
     ctx.save();
-    ctx.shadowColor = '#38bdf8';
-    ctx.shadowBlur = 18;
     // Outer cyan plasma field
-    ctx.fillStyle = 'rgba(56, 189, 248, 0.4)';
+    ctx.fillStyle = 'rgba(56, 189, 248, 0.34)';
     ctx.beginPath();
-    ctx.arc(scrX, scrY, b.radius * 1.3, 0, Math.PI * 2);
+    ctx.arc(scrX, scrY, b.radius * 1.65, 0, Math.PI * 2);
     ctx.fill();
 
     // Solid core
@@ -1424,19 +1399,26 @@ export function renderBulletVisual(
   const isSniper = b.weaponType === WeaponType.SNIPER;
   const isMagnum = b.weaponType === WeaponType.MAGNUM;
   const trailTime = isSniper ? 0.045 : isMagnum ? 0.032 : 0.024;
-  const trailX = b.x - b.vx * trailTime;
-  const trailY = b.y - b.vy * trailTime;
+  const trailX = b.x - b.vx * trailTime - camX;
+  const trailY = b.y - b.vy * trailTime - camY;
 
   ctx.save();
-  // Outer glowing tracer streak
+  ctx.lineCap = 'round';
+  // Fast outer halo stroke
+  ctx.globalAlpha = 0.3;
+  ctx.strokeStyle = b.color;
+  ctx.lineWidth = (isSniper ? b.radius * 3.4 : b.radius * 3.0);
+  ctx.beginPath();
+  ctx.moveTo(trailX, trailY);
+  ctx.lineTo(scrX, scrY);
+  ctx.stroke();
+
+  // Tracer streak
+  ctx.globalAlpha = 1;
   ctx.strokeStyle = b.color;
   ctx.lineWidth = isSniper ? b.radius * 2.1 : b.radius * 2;
-  ctx.lineCap = 'round';
-  ctx.shadowBlur = isSniper ? 14 : 8;
-  ctx.shadowColor = b.color;
-
   ctx.beginPath();
-  ctx.moveTo(trailX - camX, trailY - camY);
+  ctx.moveTo(trailX, trailY);
   ctx.lineTo(scrX, scrY);
   ctx.stroke();
 
@@ -1444,7 +1426,7 @@ export function renderBulletVisual(
   ctx.strokeStyle = '#ffffff';
   ctx.lineWidth = isSniper ? Math.max(2.4, b.radius) : Math.max(1.5, b.radius * 0.8);
   ctx.beginPath();
-  ctx.moveTo(trailX - camX, trailY - camY);
+  ctx.moveTo(trailX, trailY);
   ctx.lineTo(scrX, scrY);
   ctx.stroke();
 
@@ -1888,8 +1870,6 @@ export function renderDestructorShip(
   });
 
   // Main Swept Delta Wings & Armored Hull
-  ctx.shadowColor = warpActive ? '#c084fc' : '#06b6d4';
-  ctx.shadowBlur = warpActive ? 22 : 12;
   ctx.fillStyle = '#0f172a';
   ctx.strokeStyle = warpActive ? '#e879f9' : '#38bdf8';
   ctx.lineWidth = 2;
@@ -1909,7 +1889,6 @@ export function renderDestructorShip(
   ctx.closePath();
   ctx.fill();
   ctx.stroke();
-  ctx.shadowBlur = 0;
 
   // Inner Titanium Dorsal Armor Spine & Energy Conduits
   ctx.fillStyle = '#1e293b';
@@ -2015,12 +1994,13 @@ export function renderDestructorShip(
   // 4. Tactical Shield Ring around Destructor if active
   if (shield > 0) {
     ctx.save();
-    ctx.strokeStyle = 'rgba(34, 211, 238, 0.45)';
-    ctx.shadowColor = '#22d3ee';
-    ctx.shadowBlur = 14;
-    ctx.lineWidth = 3 + Math.sin(time / 150) * 1.1;
+    ctx.strokeStyle = 'rgba(34, 211, 238, 0.25)';
+    ctx.lineWidth = 7;
     ctx.beginPath();
     ctx.arc(screenX, screenY, 34, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.strokeStyle = 'rgba(34, 211, 238, 0.65)';
+    ctx.lineWidth = 2.6 + Math.sin(time / 150) * 1.0;
     ctx.stroke();
     ctx.restore();
   }
@@ -2064,13 +2044,10 @@ function renderShipWarpAccelerator(
 
   const gaugeRatio = warpActive ? Math.max(0, Math.min(1, warpRemainingRatio)) : chargeP;
   ctx.strokeStyle = warpActive ? warpHex : chargeP > 0.72 ? '#fef08a' : primaryHex;
-  ctx.shadowColor = warpActive ? warpHex : primaryHex;
-  ctx.shadowBlur = 14;
-  ctx.lineWidth = 3.2;
+  ctx.lineWidth = 3.4;
   ctx.beginPath();
   ctx.arc(0, 0, ringRadiusOuter, -Math.PI / 2, -Math.PI / 2 + gaugeRatio * Math.PI * 2);
   ctx.stroke();
-  ctx.shadowBlur = 0;
 
   ctx.globalCompositeOperation = 'lighter';
 
@@ -2217,8 +2194,6 @@ function renderShipWarpAccelerator(
       const ty = Math.sin(endA) * endR;
 
       ctx.strokeStyle = bi % 3 === 0 ? '#fca5a5' : '#ef4444';
-      ctx.shadowColor = '#dc2626';
-      ctx.shadowBlur = 12;
       ctx.lineWidth = warpActive ? 2.4 : 1.6;
       ctx.globalAlpha = 0.55 + redElectricityIntensity * 0.45;
       ctx.beginPath();
@@ -2241,7 +2216,6 @@ function renderShipWarpAccelerator(
       }
     }
     ctx.globalAlpha = 1;
-    ctx.shadowBlur = 0;
   }
 
   ctx.restore();
@@ -2419,8 +2393,6 @@ export function renderInterceptorShip(
   });
 
   // Long Swept Aerodynamic Wings + Needle Fuselage
-  ctx.shadowColor = warpActive ? '#e879f9' : '#10b981';
-  ctx.shadowBlur = warpActive ? 22 : 12;
   ctx.fillStyle = '#090d16';
   ctx.strokeStyle = warpActive ? '#e879f9' : '#34d399';
   ctx.lineWidth = 2;
@@ -2446,7 +2418,6 @@ export function renderInterceptorShip(
   ctx.closePath();
   ctx.fill();
   ctx.stroke();
-  ctx.shadowBlur = 0;
 
   // Inner Armor Spine
   ctx.fillStyle = '#111827';
@@ -2524,13 +2495,13 @@ export function renderInterceptorShip(
     if (isFiring) {
       ctx.save();
       ctx.globalCompositeOperation = 'lighter';
-      const mGrad = ctx.createRadialGradient(17, 0, 1, 17, 0, 11);
-      mGrad.addColorStop(0, '#ffffff');
-      mGrad.addColorStop(0.5, warpActive ? '#e879f9' : '#00f5d4');
-      mGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
-      ctx.fillStyle = mGrad;
+      ctx.fillStyle = warpActive ? 'rgba(232, 121, 249, 0.45)' : 'rgba(0, 245, 212, 0.45)';
       ctx.beginPath();
-      ctx.arc(17, 0, 11, 0, Math.PI * 2);
+      ctx.arc(17, 0, 10, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(17, 0, 4.5, 0, Math.PI * 2);
       ctx.fill();
       ctx.restore();
     }
@@ -2546,12 +2517,13 @@ export function renderInterceptorShip(
   // 4. Tactical Shield Ring
   if (shield > 0) {
     ctx.save();
-    ctx.strokeStyle = 'rgba(0, 245, 212, 0.45)';
-    ctx.shadowColor = '#00f5d4';
-    ctx.shadowBlur = 14;
-    ctx.lineWidth = 3 + Math.sin(time / 150) * 1.1;
+    ctx.strokeStyle = 'rgba(0, 245, 212, 0.24)';
+    ctx.lineWidth = 7;
     ctx.beginPath();
     ctx.arc(screenX, screenY, 38, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.strokeStyle = 'rgba(0, 245, 212, 0.6)';
+    ctx.lineWidth = 2.6 + Math.sin(time / 150) * 1.0;
     ctx.stroke();
     ctx.restore();
   }
@@ -2727,8 +2699,6 @@ export function renderReiShip(
   });
 
   // Colossal Imperial Dreadnought Hull
-  ctx.shadowColor = furyActive ? '#ef4444' : '#f59e0b';
-  ctx.shadowBlur = furyActive ? 28 : 15;
   ctx.fillStyle = '#14080b';
   ctx.strokeStyle = furyActive ? '#ef4444' : '#f59e0b';
   ctx.lineWidth = 2.5;
@@ -2750,7 +2720,6 @@ export function renderReiShip(
   ctx.closePath();
   ctx.fill();
   ctx.stroke();
-  ctx.shadowBlur = 0;
 
   // Inner Crimson & Gold Armor Crest
   ctx.fillStyle = '#240b10';
@@ -2835,14 +2804,14 @@ export function renderReiShip(
     if (isFiring) {
       ctx.save();
       ctx.globalCompositeOperation = 'lighter';
-      const bloomR = furyActive ? 19 : 13;
-      const mGrad = ctx.createRadialGradient(22, 0, 1, 22, 0, bloomR);
-      mGrad.addColorStop(0, '#ffffff');
-      mGrad.addColorStop(0.45, furyActive ? '#ef4444' : '#fbbf24');
-      mGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
-      ctx.fillStyle = mGrad;
+      const bloomR = furyActive ? 16 : 11;
+      ctx.fillStyle = furyActive ? 'rgba(239, 68, 68, 0.45)' : 'rgba(251, 191, 36, 0.45)';
       ctx.beginPath();
       ctx.arc(22, 0, bloomR, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(22, 0, bloomR * 0.42, 0, Math.PI * 2);
       ctx.fill();
       ctx.restore();
     }
@@ -2855,12 +2824,13 @@ export function renderReiShip(
   // 4. Imperial Shield Ring
   if (shield > 0) {
     ctx.save();
-    ctx.strokeStyle = furyActive ? 'rgba(239, 68, 68, 0.55)' : 'rgba(251, 191, 36, 0.45)';
-    ctx.shadowColor = furyActive ? '#ef4444' : '#fbbf24';
-    ctx.shadowBlur = 18;
-    ctx.lineWidth = 3.5 + Math.sin(time / 150) * 1.2;
+    ctx.strokeStyle = furyActive ? 'rgba(239, 68, 68, 0.25)' : 'rgba(251, 191, 36, 0.25)';
+    ctx.lineWidth = 8;
     ctx.beginPath();
     ctx.arc(screenX, screenY, 48, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.strokeStyle = furyActive ? 'rgba(239, 68, 68, 0.65)' : 'rgba(251, 191, 36, 0.55)';
+    ctx.lineWidth = 3 + Math.sin(time / 150) * 1.1;
     ctx.stroke();
     ctx.restore();
   }
@@ -2883,8 +2853,8 @@ export function renderReiQuadBeams(
   const easedCharge = 1 - Math.pow(1 - Math.max(0, Math.min(1, beamCharge)), 2.2);
   const widthRamp = 0.14 + 0.86 * easedCharge;
   const flicker = 0.9 + Math.sin(time * 0.095) * 0.1;
-  const outerColor = furyActive ? 'rgba(220, 38, 38, 0.48)' : 'rgba(245, 158, 11, 0.36)';
-  const midColor = furyActive ? 'rgba(239, 68, 68, 0.96)' : 'rgba(251, 191, 36, 0.88)';
+  const outerColor = furyActive ? 'rgba(220, 38, 38, 0.42)' : 'rgba(245, 158, 11, 0.34)';
+  const midColor = furyActive ? 'rgba(239, 68, 68, 0.94)' : 'rgba(251, 191, 36, 0.88)';
   const shadowCol = furyActive ? '#ef4444' : '#fbbf24';
 
   ctx.save();
@@ -2908,10 +2878,8 @@ export function renderReiQuadBeams(
     const ny = ux;
 
     // 1. Wide atmospheric crimson/gold glow sheath (ramps from thin to thick!)
-    ctx.shadowColor = shadowCol;
-    ctx.shadowBlur = (furyActive ? 32 : 20) * (0.4 + 0.6 * easedCharge);
     ctx.strokeStyle = outerColor;
-    ctx.lineWidth = (furyActive ? 42 : 20) * widthRamp * flicker;
+    ctx.lineWidth = (furyActive ? 46 : 24) * widthRamp * flicker;
     ctx.beginPath();
     ctx.moveTo(sx1, sy1);
     ctx.lineTo(sx2, sy2);
@@ -2926,8 +2894,7 @@ export function renderReiQuadBeams(
     ctx.stroke();
 
     // 3. Jagged red electricity helix crackling down the laser in Modo Fúria
-    ctx.shadowBlur = 0;
-    const steps = Math.min(34, Math.max(12, Math.floor(len / 32)));
+    const steps = Math.min(28, Math.max(10, Math.floor(len / 38)));
     ctx.strokeStyle = furyActive ? '#fca5a5' : 'rgba(254, 240, 138, 0.8)';
     ctx.lineWidth = (furyActive ? 3.0 : 2.0) * (0.35 + 0.65 * easedCharge);
     ctx.beginPath();
@@ -2952,15 +2919,17 @@ export function renderReiQuadBeams(
     ctx.lineTo(sx2, sy2);
     ctx.stroke();
 
-    // 5. Muzzle bloom
-    const mR = (furyActive ? 30 : 18) * (0.45 + 0.55 * widthRamp) * flicker;
-    const mGrad = ctx.createRadialGradient(sx1, sy1, 2, sx1, sy1, mR);
-    mGrad.addColorStop(0, '#ffffff');
-    mGrad.addColorStop(0.45, shadowCol);
-    mGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
-    ctx.fillStyle = mGrad;
+    // 5. Fast Muzzle bloom
+    const mR = (furyActive ? 26 : 16) * (0.45 + 0.55 * widthRamp) * flicker;
+    ctx.fillStyle = shadowCol;
+    ctx.globalAlpha = 0.45;
     ctx.beginPath();
     ctx.arc(sx1, sy1, mR, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.arc(sx1, sy1, mR * 0.4, 0, Math.PI * 2);
     ctx.fill();
   }
 
@@ -3010,10 +2979,8 @@ export function renderDestructorTwinBeams(
     const ny = ux;
 
     // 1. Wide atmospheric glow sheath (starts thin, swells to full thickness)
-    ctx.shadowColor = shadowCol;
-    ctx.shadowBlur = 22 * (0.4 + 0.6 * easedCharge);
     ctx.strokeStyle = outerColor;
-    ctx.lineWidth = (warpActive ? 24 : 20) * widthRamp * flicker;
+    ctx.lineWidth = (warpActive ? 28 : 24) * widthRamp * flicker;
     ctx.beginPath();
     ctx.moveTo(sx1, sy1);
     ctx.lineTo(sx2, sy2);
@@ -3028,8 +2995,7 @@ export function renderDestructorTwinBeams(
     ctx.stroke();
 
     // 3. Traveling energy wave along beam
-    ctx.shadowBlur = 0;
-    const steps = Math.min(36, Math.max(12, Math.floor(len / 28)));
+    const steps = Math.min(30, Math.max(10, Math.floor(len / 34)));
     ctx.strokeStyle = warpActive ? 'rgba(254, 240, 138, 0.72)' : 'rgba(165, 243, 252, 0.72)';
     ctx.lineWidth = 2.0 * (0.4 + 0.6 * widthRamp);
     ctx.beginPath();
@@ -3052,24 +3018,20 @@ export function renderDestructorTwinBeams(
     ctx.lineTo(sx2, sy2);
     ctx.stroke();
 
-    // 5. Muzzle ignition bloom
-    const mGrad = ctx.createRadialGradient(sx1, sy1, 2, sx1, sy1, 18 * (0.5 + 0.5 * widthRamp) * flicker);
-    mGrad.addColorStop(0, '#ffffff');
-    mGrad.addColorStop(0.45, shadowCol);
-    mGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
-    ctx.fillStyle = mGrad;
+    // 5 & 6. Muzzle and endpoint bloom
+    const mr = 16 * (0.5 + 0.5 * widthRamp) * flicker;
+    const er = 20 * widthRamp * flicker;
+    ctx.fillStyle = shadowCol;
+    ctx.globalAlpha = 0.45;
     ctx.beginPath();
-    ctx.arc(sx1, sy1, 18 * (0.5 + 0.5 * widthRamp) * flicker, 0, Math.PI * 2);
+    ctx.arc(sx1, sy1, mr, 0, Math.PI * 2);
+    ctx.arc(sx2, sy2, er, 0, Math.PI * 2);
     ctx.fill();
-
-    // 6. Terminal endpoint bloom
-    const eGrad = ctx.createRadialGradient(sx2, sy2, 2, sx2, sy2, 22 * widthRamp * flicker);
-    eGrad.addColorStop(0, '#ffffff');
-    eGrad.addColorStop(0.45, shadowCol);
-    eGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
-    ctx.fillStyle = eGrad;
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = '#ffffff';
     ctx.beginPath();
-    ctx.arc(sx2, sy2, 22 * widthRamp * flicker, 0, Math.PI * 2);
+    ctx.arc(sx1, sy1, mr * 0.42, 0, Math.PI * 2);
+    ctx.arc(sx2, sy2, er * 0.42, 0, Math.PI * 2);
     ctx.fill();
   };
 
@@ -3119,10 +3081,8 @@ export function renderSingleExtraLaserBeam(
   ctx.globalCompositeOperation = 'lighter';
   ctx.lineCap = 'round';
 
-  ctx.shadowColor = coreColor;
-  ctx.shadowBlur = 26 * (0.4 + 0.6 * easedCharge);
   ctx.strokeStyle = outerColor;
-  ctx.lineWidth = 26 * wRamp * flicker;
+  ctx.lineWidth = 30 * wRamp * flicker;
   ctx.beginPath();
   ctx.moveTo(sx1, sy1);
   ctx.lineTo(sx2, sy2);
@@ -3135,8 +3095,7 @@ export function renderSingleExtraLaserBeam(
   ctx.lineTo(sx2, sy2);
   ctx.stroke();
 
-  ctx.shadowBlur = 0;
-  const steps = Math.min(30, Math.max(10, Math.floor(len / 34)));
+  const steps = Math.min(26, Math.max(10, Math.floor(len / 38)));
   ctx.strokeStyle = 'rgba(255,255,255,0.72)';
   ctx.lineWidth = 2.0 * (0.4 + 0.6 * easedCharge);
   ctx.beginPath();
@@ -3158,13 +3117,15 @@ export function renderSingleExtraLaserBeam(
   ctx.lineTo(sx2, sy2);
   ctx.stroke();
 
-  const eGrad = ctx.createRadialGradient(sx2, sy2, 2, sx2, sy2, 24 * wRamp * flicker);
-  eGrad.addColorStop(0, '#ffffff');
-  eGrad.addColorStop(0.45, coreColor);
-  eGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
-  ctx.fillStyle = eGrad;
+  ctx.fillStyle = coreColor;
+  ctx.globalAlpha = 0.45;
   ctx.beginPath();
-  ctx.arc(sx2, sy2, 24 * wRamp * flicker, 0, Math.PI * 2);
+  ctx.arc(sx2, sy2, 22 * wRamp * flicker, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = '#ffffff';
+  ctx.beginPath();
+  ctx.arc(sx2, sy2, 9 * wRamp * flicker, 0, Math.PI * 2);
   ctx.fill();
 
   ctx.restore();
@@ -3358,8 +3319,6 @@ export function renderMythicSingularityBlades(
     ctx.translate(bx, by);
     ctx.rotate(a + Math.PI / 2 + Math.sin(time * 0.01 + i) * 0.15);
 
-    ctx.shadowColor = '#38bdf8';
-    ctx.shadowBlur = 14;
     ctx.fillStyle = '#0f172a';
     ctx.strokeStyle = '#38bdf8';
     ctx.lineWidth = 1.8;
@@ -3417,10 +3376,7 @@ export function renderMythicVoidDrones(
 
     // Void thruster glow
     ctx.globalCompositeOperation = 'lighter';
-    const thrustGrad = ctx.createLinearGradient(-8, 0, -20, 0);
-    thrustGrad.addColorStop(0, '#e879f9');
-    thrustGrad.addColorStop(1, 'rgba(168, 85, 247, 0)');
-    ctx.fillStyle = thrustGrad;
+    ctx.fillStyle = 'rgba(232, 121, 249, 0.7)';
     ctx.beginPath();
     ctx.moveTo(-8, -3);
     ctx.lineTo(-20, 0);
@@ -3430,8 +3386,6 @@ export function renderMythicVoidDrones(
 
     // Sleek angular void hunter chassis
     ctx.globalCompositeOperation = 'source-over';
-    ctx.shadowColor = '#c084fc';
-    ctx.shadowBlur = 12;
     ctx.fillStyle = '#0f172a';
     ctx.strokeStyle = '#c084fc';
     ctx.lineWidth = 1.6;
@@ -3491,23 +3445,20 @@ export function renderEastDragonFireBeam(
   ctx.lineJoin = 'round';
 
   // 1. Wide scorching atmospheric crimson-orange heat aura
-  ctx.shadowColor = '#f97316';
-  ctx.shadowBlur = 32;
-  ctx.strokeStyle = 'rgba(220, 38, 38, 0.36)';
-  ctx.lineWidth = 34 * flicker;
+  ctx.strokeStyle = 'rgba(220, 38, 38, 0.34)';
+  ctx.lineWidth = 38 * flicker;
   ctx.beginPath();
   ctx.moveTo(sx1, sy1);
   ctx.lineTo(sx2, sy2);
   ctx.stroke();
 
   // 2. Living wavy flame silhouette ribbon racing along the laser beam
-  const steps = Math.min(48, Math.max(18, Math.floor(len / 22)));
+  const steps = Math.min(34, Math.max(14, Math.floor(len / 30)));
   const topPts: { x: number; y: number }[] = [];
   const botPts: { x: number; y: number }[] = [];
   for (let s = 0; s <= steps; s++) {
     const f = s / steps;
     const d = f * len;
-    // Taper slightly near muzzle, flare smoothly along travel
     const baseHalfW = (11 + Math.sin(f * Math.PI) * 5) * flicker;
     const wave1 = Math.sin(d * 0.045 - time * 0.055) * 5.2;
     const wave2 = Math.cos(d * 0.085 - time * 0.082 + 1.1) * 3.1;
@@ -3523,7 +3474,6 @@ export function renderEastDragonFireBeam(
   flameGrad.addColorStop(0.75, 'rgba(239, 68, 68, 0.68)');
   flameGrad.addColorStop(1, 'rgba(185, 28, 28, 0.25)');
 
-  ctx.shadowBlur = 18;
   ctx.fillStyle = flameGrad;
   ctx.beginPath();
   ctx.moveTo(topPts[0].x, topPts[0].y);
@@ -3537,7 +3487,6 @@ export function renderEastDragonFireBeam(
   ctx.fill();
 
   // 3. Swirling helical fire-tongues twisting down the laser shaft
-  ctx.shadowBlur = 0;
   for (let h = 0; h < 2; h++) {
     const phase = h * Math.PI;
     ctx.strokeStyle = h === 0 ? 'rgba(253, 224, 71, 0.78)' : 'rgba(251, 146, 60, 0.72)';
@@ -3556,8 +3505,6 @@ export function renderEastDragonFireBeam(
   }
 
   // 4. Crisp continuous high-energy molten gold laser core
-  ctx.shadowColor = '#fbbf24';
-  ctx.shadowBlur = 14;
   ctx.strokeStyle = 'rgba(251, 191, 36, 0.96)';
   ctx.lineWidth = 10.5 * flicker;
   ctx.beginPath();
@@ -3566,7 +3513,6 @@ export function renderEastDragonFireBeam(
   ctx.stroke();
 
   // 5. Blinding white-hot thermal laser core line
-  ctx.shadowBlur = 0;
   ctx.strokeStyle = '#fffbeb';
   ctx.lineWidth = 4.5 * flicker;
   ctx.beginPath();
@@ -3595,27 +3541,25 @@ export function renderEastDragonFireBeam(
   ctx.closePath();
   ctx.fill();
 
-  const mR = 26 * flicker;
-  const mGrad = ctx.createRadialGradient(sx1, sy1, 2, sx1, sy1, mR);
-  mGrad.addColorStop(0, '#ffffff');
-  mGrad.addColorStop(0.32, '#fde047');
-  mGrad.addColorStop(0.68, '#f97316');
-  mGrad.addColorStop(1, 'rgba(220, 38, 38, 0)');
-  ctx.fillStyle = mGrad;
+  const mR = 24 * flicker;
+  ctx.fillStyle = 'rgba(249, 115, 22, 0.5)';
   ctx.beginPath();
   ctx.arc(sx1, sy1, mR, 0, Math.PI * 2);
   ctx.fill();
+  ctx.fillStyle = '#ffffff';
+  ctx.beginPath();
+  ctx.arc(sx1, sy1, mR * 0.45, 0, Math.PI * 2);
+  ctx.fill();
 
   // 7. Advancing fireball spearhead tip as the beam surges forward from the jaws
-  const tipR = 22 * flicker;
-  const tipGrad = ctx.createRadialGradient(sx2, sy2, 2, sx2, sy2, tipR);
-  tipGrad.addColorStop(0, '#ffffff');
-  tipGrad.addColorStop(0.38, '#fde047');
-  tipGrad.addColorStop(0.75, '#f97316');
-  tipGrad.addColorStop(1, 'rgba(220, 38, 38, 0)');
-  ctx.fillStyle = tipGrad;
+  const tipR = 20 * flicker;
+  ctx.fillStyle = 'rgba(249, 115, 22, 0.5)';
   ctx.beginPath();
   ctx.arc(sx2, sy2, tipR, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#ffffff';
+  ctx.beginPath();
+  ctx.arc(sx2, sy2, tipR * 0.45, 0, Math.PI * 2);
   ctx.fill();
 
   ctx.restore();
@@ -3728,31 +3672,25 @@ export function renderEastDragon(
       ctx.restore();
     }
 
-    // Segment scale body
+    // Segment scale body (fast layered shading without per-segment gradients/shadowBlur)
     ctx.save();
     ctx.translate(sx, sy);
     ctx.rotate(seg.angle);
 
-    // Outer fiery rim glow
-    ctx.shadowColor = isFiring ? '#f97316' : '#dc2626';
-    ctx.shadowBlur = isFiring ? 12 : 6;
-
-    // Crimson scale armor plate
-    const segGrad = ctx.createRadialGradient(2, 0, 1, 0, 0, r);
-    segGrad.addColorStop(0, i % 2 === 0 ? '#ef4444' : '#dc2626');
-    segGrad.addColorStop(0.75, '#991b1b');
-    segGrad.addColorStop(1, '#450a0a');
-    ctx.fillStyle = segGrad;
+    ctx.fillStyle = '#7f1d1d';
     ctx.strokeStyle = i % 2 === 0 ? '#fbbf24' : '#f97316';
     ctx.lineWidth = 1.4;
-
     ctx.beginPath();
     ctx.ellipse(0, 0, r * 1.15, r, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.stroke();
 
+    ctx.fillStyle = i % 2 === 0 ? '#ef4444' : '#dc2626';
+    ctx.beginPath();
+    ctx.ellipse(1.5, 0, r * 0.82, r * 0.72, 0, 0, Math.PI * 2);
+    ctx.fill();
+
     // Golden dorsal spine fin spike on alternating segments
-    ctx.shadowBlur = 0;
     if (i % 2 === 0) {
       const finTilt = Math.sin(time * 0.012 - i * 0.5) * 2.5;
       ctx.fillStyle = '#fbbf24';
@@ -3805,8 +3743,6 @@ export function renderEastDragon(
     ctx.strokeStyle = '#fde047';
     ctx.lineWidth = 3.6;
     ctx.lineCap = 'round';
-    ctx.shadowColor = '#f59e0b';
-    ctx.shadowBlur = 8;
     ctx.beginPath();
     ctx.moveTo(-3, 7);
     ctx.quadraticCurveTo(-14, 16, -26, 13);
@@ -3823,9 +3759,6 @@ export function renderEastDragon(
 
   // C. Main Dragon Cranium & Elongated Jaw/Snout
   const jawFlare = isFiring ? 3.2 : 0;
-  ctx.shadowColor = isFiring ? '#f97316' : '#ef4444';
-  ctx.shadowBlur = isFiring ? 18 : 10;
-
   ctx.fillStyle = '#b91c1c';
   ctx.strokeStyle = '#fbbf24';
   ctx.lineWidth = 2;
@@ -3844,7 +3777,6 @@ export function renderEastDragon(
   ctx.stroke();
 
   // Snout ridge armor & golden crown crest
-  ctx.shadowBlur = 0;
   ctx.fillStyle = '#dc2626';
   ctx.beginPath();
   ctx.moveTo(23, 0);
@@ -3875,13 +3807,13 @@ export function renderEastDragon(
   if (isFiring) {
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
-    const mawGrad = ctx.createRadialGradient(25, 0, 1, 25, 0, 14);
-    mawGrad.addColorStop(0, '#ffffff');
-    mawGrad.addColorStop(0.45, '#fde047');
-    mawGrad.addColorStop(1, 'rgba(249, 115, 22, 0)');
-    ctx.fillStyle = mawGrad;
+    ctx.fillStyle = 'rgba(253, 224, 71, 0.55)';
     ctx.beginPath();
-    ctx.arc(25, 0, 14, 0, Math.PI * 2);
+    ctx.arc(25, 0, 12, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.arc(25, 0, 5.5, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
   }
@@ -3890,13 +3822,10 @@ export function renderEastDragon(
   [-1, 1].forEach((side) => {
     ctx.save();
     ctx.scale(1, side);
-    ctx.shadowColor = '#fde047';
-    ctx.shadowBlur = 10;
     ctx.fillStyle = '#fef08a';
     ctx.beginPath();
     ctx.ellipse(3, 8.5, 4.2, 2.2, -0.25, 0, Math.PI * 2);
     ctx.fill();
-    ctx.shadowBlur = 0;
     ctx.fillStyle = '#ffffff';
     ctx.beginPath();
     ctx.arc(4, 8.5, 1.2, 0, Math.PI * 2);
@@ -3925,12 +3854,13 @@ export function renderEastDragon(
   // 4. Optional Shield Aura around Dragon Head
   if (shield > 0) {
     ctx.save();
-    ctx.strokeStyle = 'rgba(251, 146, 60, 0.52)';
-    ctx.shadowColor = '#f97316';
-    ctx.shadowBlur = 14;
-    ctx.lineWidth = 2.8 + Math.sin(time / 150) * 1.0;
+    ctx.strokeStyle = 'rgba(251, 146, 60, 0.25)';
+    ctx.lineWidth = 7;
     ctx.beginPath();
     ctx.arc(headX, headY, 28, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.strokeStyle = 'rgba(251, 146, 60, 0.6)';
+    ctx.lineWidth = 2.6 + Math.sin(time / 150) * 1.0;
     ctx.stroke();
     ctx.restore();
   }
@@ -4028,10 +3958,8 @@ export function renderIronManLaserBeam(
   ctx.lineCap = 'round';
 
   // 1. Wide crimson thermal sheath
-  ctx.shadowColor = '#ef4444';
-  ctx.shadowBlur = 28 * (0.4 + 0.6 * easedCharge);
   ctx.strokeStyle = 'rgba(220, 38, 38, 0.44)';
-  ctx.lineWidth = 30 * widthRamp * flicker;
+  ctx.lineWidth = 34 * widthRamp * flicker;
   ctx.beginPath();
   ctx.moveTo(sx1, sy1);
   ctx.lineTo(sx2, sy2);
@@ -4046,8 +3974,7 @@ export function renderIronManLaserBeam(
   ctx.stroke();
 
   // 3. Golden high-frequency energy wave helix
-  ctx.shadowBlur = 0;
-  const steps = Math.min(36, Math.max(12, Math.floor(len / 28)));
+  const steps = Math.min(28, Math.max(10, Math.floor(len / 34)));
   ctx.strokeStyle = 'rgba(253, 224, 71, 0.85)';
   ctx.lineWidth = 2.4 * (0.35 + 0.65 * easedCharge);
   ctx.beginPath();
@@ -4070,24 +3997,18 @@ export function renderIronManLaserBeam(
   ctx.lineTo(sx2, sy2);
   ctx.stroke();
 
-  // 5. Emitter bloom + endpoint thermal bloom
-  const mGrad = ctx.createRadialGradient(sx1, sy1, 2, sx1, sy1, 20 * (0.5 + 0.5 * widthRamp) * flicker);
-  mGrad.addColorStop(0, '#ffffff');
-  mGrad.addColorStop(0.45, '#fbbf24');
-  mGrad.addColorStop(0.8, '#ef4444');
-  mGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
-  ctx.fillStyle = mGrad;
+  // 5. Emitter bloom + endpoint thermal bloom (fast additive circles)
+  const mr = 18 * (0.5 + 0.5 * widthRamp) * flicker;
+  const er = 22 * widthRamp * flicker;
+  ctx.fillStyle = 'rgba(239, 68, 68, 0.45)';
   ctx.beginPath();
-  ctx.arc(sx1, sy1, 20 * (0.5 + 0.5 * widthRamp) * flicker, 0, Math.PI * 2);
+  ctx.arc(sx1, sy1, mr, 0, Math.PI * 2);
+  ctx.arc(sx2, sy2, er, 0, Math.PI * 2);
   ctx.fill();
-
-  const eGrad = ctx.createRadialGradient(sx2, sy2, 2, sx2, sy2, 24 * widthRamp * flicker);
-  eGrad.addColorStop(0, '#ffffff');
-  eGrad.addColorStop(0.45, '#ef4444');
-  eGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
-  ctx.fillStyle = eGrad;
+  ctx.fillStyle = '#ffffff';
   ctx.beginPath();
-  ctx.arc(sx2, sy2, 24 * widthRamp * flicker, 0, Math.PI * 2);
+  ctx.arc(sx1, sy1, mr * 0.4, 0, Math.PI * 2);
+  ctx.arc(sx2, sy2, er * 0.4, 0, Math.PI * 2);
   ctx.fill();
 
   ctx.restore();
@@ -4174,13 +4095,10 @@ export function renderIronManSuit(
 
     // Palm / Wrist Emitter Node
     const emitterCol = isLaserMode ? '#ef4444' : '#38bdf8';
-    ctx.shadowColor = emitterCol;
-    ctx.shadowBlur = isFiring ? 14 : 7;
     ctx.fillStyle = isFiring ? '#ffffff' : emitterCol;
     ctx.beginPath();
     ctx.arc(16.5, 0, isFiring ? 3.8 : 2.8, 0, Math.PI * 2);
     ctx.fill();
-    ctx.shadowBlur = 0;
 
     if (isFiring && idx === 0 && !isLaserMode) {
       // subtle palm discharge ring
@@ -4195,8 +4113,6 @@ export function renderIronManSuit(
   });
 
   // Main Sculpted Crimson Torso & Back Wing Flaps
-  ctx.shadowColor = isLaserMode ? '#ef4444' : '#38bdf8';
-  ctx.shadowBlur = 10;
   ctx.fillStyle = '#b91c1c';
   ctx.strokeStyle = '#fbbf24';
   ctx.lineWidth = 1.8;
@@ -4211,7 +4127,6 @@ export function renderIronManSuit(
   ctx.closePath();
   ctx.fill();
   ctx.stroke();
-  ctx.shadowBlur = 0;
 
   // Gold Upper Clavicle Armor Plates
   ctx.fillStyle = '#fbbf24';
@@ -4265,24 +4180,17 @@ export function renderIronManSuit(
   ctx.stroke();
 
   // Glowing Visor Eyes (Cyan in Repulsor mode, Blazing Amber-White in Laser mode)
-  ctx.shadowColor = isLaserMode ? '#fde047' : '#38bdf8';
-  ctx.shadowBlur = 8;
   ctx.fillStyle = isLaserMode ? '#fffbeb' : '#e0f2fe';
   ctx.fillRect(8.5, -5.2, 3.2, 2.2);
   ctx.fillRect(8.5, 3.0, 3.2, 2.2);
-  ctx.shadowBlur = 0;
 
   // Glowing Arc Reactor / Unibeam Core (Forward Chest Collar / Crown Core)
   const reactorColor = isLaserMode ? '#ef4444' : '#38bdf8';
   ctx.save();
   ctx.globalCompositeOperation = 'lighter';
-  const arcGrad = ctx.createRadialGradient(14.5, 0, 0.5, 14.5, 0, 7.5 * pulse);
-  arcGrad.addColorStop(0, '#ffffff');
-  arcGrad.addColorStop(0.45, isLaserMode ? '#fbbf24' : '#38bdf8');
-  arcGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
-  ctx.fillStyle = arcGrad;
+  ctx.fillStyle = isLaserMode ? 'rgba(251, 191, 36, 0.45)' : 'rgba(56, 189, 248, 0.45)';
   ctx.beginPath();
-  ctx.arc(14.5, 0, 7.5 * pulse, 0, Math.PI * 2);
+  ctx.arc(14.5, 0, 7.2 * pulse, 0, Math.PI * 2);
   ctx.fill();
   ctx.restore();
 
@@ -4299,12 +4207,13 @@ export function renderIronManSuit(
   // 3. Stark Energy Shield Ring if active
   if (shield > 0) {
     ctx.save();
-    ctx.strokeStyle = isLaserMode ? 'rgba(251, 191, 36, 0.5)' : 'rgba(56, 189, 248, 0.5)';
-    ctx.shadowColor = isLaserMode ? '#fbbf24' : '#38bdf8';
-    ctx.shadowBlur = 14;
-    ctx.lineWidth = 2.8 + Math.sin(time / 150) * 1.0;
+    ctx.strokeStyle = isLaserMode ? 'rgba(251, 191, 36, 0.24)' : 'rgba(56, 189, 248, 0.24)';
+    ctx.lineWidth = 7;
     ctx.beginPath();
     ctx.arc(screenX, screenY, 27, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.strokeStyle = isLaserMode ? 'rgba(251, 191, 36, 0.6)' : 'rgba(56, 189, 248, 0.6)';
+    ctx.lineWidth = 2.6 + Math.sin(time / 150) * 1.0;
     ctx.stroke();
     ctx.restore();
   }
@@ -4513,7 +4422,6 @@ export function renderCompanionDragon(
   const segColorA = isMega ? '#9333ea' : isIce ? '#38bdf8' : '#ef4444';
   const segColorB = isMega ? '#7e22ce' : isIce ? '#0ea5e9' : '#dc2626';
   const segMidColor = isMega ? '#581c87' : isIce ? '#0369a1' : '#991b1b';
-  const segDarkColor = isMega ? '#2e1065' : isIce ? '#082f49' : '#450a0a';
   const accentColor = isMega ? '#e879f9' : isIce ? '#e0f2fe' : '#fbbf24';
   const accentGlow = isMega ? '#c084fc' : isIce ? '#7dd3fc' : '#f97316';
   const tailStart = isMega ? '#f5d0fe' : isIce ? '#e0f2fe' : '#fde047';
@@ -4526,7 +4434,6 @@ export function renderCompanionDragon(
   const craniumFill = isMega ? '#6b21a8' : isIce ? '#0284c7' : '#b91c1c';
   const ridgeFill = isMega ? '#9333ea' : isIce ? '#0ea5e9' : '#dc2626';
   const eyeFill = isMega ? '#f5d0fe' : isIce ? '#e0f2fe' : '#fef08a';
-  const eyeGlow = isMega ? '#e879f9' : isIce ? '#38bdf8' : '#fde047';
 
   // 1. Soft ground shadow beneath serpentine body & head
   ctx.save();
@@ -4615,19 +4522,12 @@ export function renderCompanionDragon(
       ctx.restore();
     }
 
-    // Segment scale armor
+    // Segment scale armor (fast layered shading without per-segment gradients/shadowBlur)
     ctx.save();
     ctx.translate(sx, sy);
     ctx.rotate(seg.angle);
 
-    ctx.shadowColor = isFiring || isActiveAttacker ? accentGlow : segColorB;
-    ctx.shadowBlur = (isFiring ? 12 : isActiveAttacker ? 9 : 5) * scale;
-
-    const segGrad = ctx.createRadialGradient(2 * scale, 0, 1, 0, 0, r);
-    segGrad.addColorStop(0, i % 2 === 0 ? segColorA : segColorB);
-    segGrad.addColorStop(0.75, segMidColor);
-    segGrad.addColorStop(1, segDarkColor);
-    ctx.fillStyle = segGrad;
+    ctx.fillStyle = segMidColor;
     ctx.strokeStyle = i % 2 === 0 ? accentColor : accentGlow;
     ctx.lineWidth = 1.3 * scale;
 
@@ -4636,7 +4536,11 @@ export function renderCompanionDragon(
     ctx.fill();
     ctx.stroke();
 
-    ctx.shadowBlur = 0;
+    ctx.fillStyle = i % 2 === 0 ? segColorA : segColorB;
+    ctx.beginPath();
+    ctx.ellipse(1.5 * scale, 0, r * 0.82, r * 0.72, 0, 0, Math.PI * 2);
+    ctx.fill();
+
     if (i % 2 === 0) {
       const finTilt = Math.sin(time * 0.012 - i * 0.5) * 2.2 * scale;
       ctx.fillStyle = accentColor;
@@ -4717,8 +4621,6 @@ export function renderCompanionDragon(
     ctx.strokeStyle = isMega ? '#f0abfc' : isIce ? '#bae6fd' : '#fde047';
     ctx.lineWidth = 3.4;
     ctx.lineCap = 'round';
-    ctx.shadowColor = accentGlow;
-    ctx.shadowBlur = 8;
     ctx.beginPath();
     ctx.moveTo(-3, 7);
     if (isIce) {
@@ -4739,8 +4641,6 @@ export function renderCompanionDragon(
 
   // Main Cranium & Elongated Jaw
   const jawFlare = isFiring ? 3.0 : 0;
-  ctx.shadowColor = isFiring ? accentGlow : segColorA;
-  ctx.shadowBlur = isFiring ? 16 : 9;
 
   ctx.fillStyle = craniumFill;
   ctx.strokeStyle = accentColor;
@@ -4760,7 +4660,6 @@ export function renderCompanionDragon(
   ctx.stroke();
 
   // Snout ridge & crown crest
-  ctx.shadowBlur = 0;
   ctx.fillStyle = ridgeFill;
   ctx.beginPath();
   ctx.moveTo(22, 0);
@@ -4791,13 +4690,15 @@ export function renderCompanionDragon(
   if (isFiring) {
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
-    const mawGrad = ctx.createRadialGradient(24, 0, 1, 24, 0, 13);
-    mawGrad.addColorStop(0, '#ffffff');
-    mawGrad.addColorStop(0.45, tailStart);
-    mawGrad.addColorStop(1, tailEnd);
-    ctx.fillStyle = mawGrad;
+    ctx.fillStyle = tailMid;
+    ctx.globalAlpha = 0.55;
     ctx.beginPath();
-    ctx.arc(24, 0, 13, 0, Math.PI * 2);
+    ctx.arc(24, 0, 12, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.arc(24, 0, 5.5, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
   }
@@ -4806,13 +4707,10 @@ export function renderCompanionDragon(
   [-1, 1].forEach((side) => {
     ctx.save();
     ctx.scale(1, side);
-    ctx.shadowColor = eyeGlow;
-    ctx.shadowBlur = 9;
     ctx.fillStyle = eyeFill;
     ctx.beginPath();
     ctx.ellipse(3, 8.2, 4.0, 2.1, -0.25, 0, Math.PI * 2);
     ctx.fill();
-    ctx.shadowBlur = 0;
     ctx.fillStyle = '#ffffff';
     ctx.beginPath();
     ctx.arc(4, 8.2, 1.15, 0, Math.PI * 2);

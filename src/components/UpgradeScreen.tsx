@@ -260,7 +260,7 @@ export const UpgradeScreen: React.FC<UpgradeScreenProps> = ({
   }, [options, mythicStage, rerollsLeft, onReroll, triggerSelect, handleReroll]);
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-slate-950/92 backdrop-blur-xl p-4 sm:p-6 md:p-8 select-none overflow-y-auto animate-lvl-backdrop">
+    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-slate-950/92 p-2.5 sm:p-5 md:p-8 select-none overflow-y-auto animate-lvl-backdrop">
       {/* Ambient Tactical Grid */}
       <div
         className="fixed inset-0 z-0 opacity-15 pointer-events-none"
@@ -343,13 +343,13 @@ export const UpgradeScreen: React.FC<UpgradeScreenProps> = ({
       {/* REBUILT POWER-UP SELECTOR PANEL                           */}
       {/* ========================================================= */}
       <div
-        className={`relative z-10 w-full max-w-5xl flex flex-col items-center my-auto py-3 transition-all duration-300 ${
+        className={`relative z-10 w-full max-w-5xl flex flex-col items-center my-auto py-1 sm:py-3 transition-all duration-300 ${
           mythicStage !== 'REVEALED' ? 'opacity-0 scale-95 pointer-events-none' : 'opacity-100 scale-100'
         }`}
       >
         {/* Tactical Header Banner */}
-        <div className="w-full max-w-3xl text-center mb-5 sm:mb-7 animate-lvl-banner">
-          <div className="inline-flex items-center gap-2 px-3 py-1 bg-slate-900/90 border border-cyan-500/35 rounded text-[10px] font-mono font-bold tracking-[0.22em] uppercase text-cyan-300 mb-2.5">
+        <div className="w-full max-w-3xl text-center mb-2.5 sm:mb-6 animate-lvl-banner">
+          <div className="inline-flex items-center gap-2 px-2.5 py-0.5 bg-slate-900/90 border border-cyan-500/35 rounded text-[9.5px] sm:text-[10px] font-mono font-bold tracking-[0.2em] uppercase text-cyan-300 mb-1 sm:mb-2">
             <span className="w-1.5 h-1.5 bg-cyan-400 animate-pulse" />
             <span>
               {hasMythic
@@ -359,7 +359,7 @@ export const UpgradeScreen: React.FC<UpgradeScreenProps> = ({
           </div>
 
           <h2
-            className={`text-3xl sm:text-5xl font-display font-black text-transparent bg-clip-text tracking-tight uppercase italic drop-shadow-xl ${
+            className={`text-xl sm:text-4xl lg:text-5xl font-display font-black text-transparent bg-clip-text tracking-tight uppercase italic drop-shadow-xl ${
               hasMythic
                 ? 'bg-gradient-to-r from-cyan-200 via-fuchsia-300 to-amber-200'
                 : 'bg-gradient-to-r from-white via-cyan-200 to-sky-400'
@@ -368,13 +368,13 @@ export const UpgradeScreen: React.FC<UpgradeScreenProps> = ({
             SELETOR DE POWER-UP
           </h2>
 
-          <p className="text-slate-400 text-xs sm:text-sm mt-1.5 max-w-lg mx-auto font-sans">
+          <p className="hidden sm:block text-slate-400 text-xs sm:text-sm mt-1 max-w-lg mx-auto font-sans">
             Escolha 1 diretriz de combate para instalar no seu equipamento agora.
           </p>
         </div>
 
-        {/* 3 Angular Tactical Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-5 w-full mb-6">
+        {/* 3 Angular Tactical Cards (Side-by-side in mobile landscape) */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-5 w-full mb-3 sm:mb-6">
           {options.map((option, idx) => {
             const rarity = option.rarity || 'COMMON';
             const config = RARITY_CONFIG[rarity];
@@ -399,9 +399,9 @@ export const UpgradeScreen: React.FC<UpgradeScreenProps> = ({
                 key={`${option.id}-${rerollCycle}`}
                 onClick={() => triggerSelect(option)}
                 style={{ animationDelay: `${idx * 90}ms` }}
-                className={`group relative flex flex-col justify-between p-5 rounded-lg border-2 bg-gradient-to-b ${
+                className={`group relative flex flex-col justify-between p-3 sm:p-5 rounded-lg border-2 bg-gradient-to-b ${
                   config.bgGradient
-                } ${config.border} ${config.glow} ${animClass} backdrop-blur-md cursor-pointer transition-transform duration-200 hover:-translate-y-1.5 active:scale-[0.98] ${
+                } ${config.border} ${config.glow} ${animClass} cursor-pointer transition-transform duration-200 hover:-translate-y-1 active:scale-[0.98] ${
                   isMythic ? 'ring-1 ring-cyan-200/70' : ''
                 } ${isDimmed ? 'opacity-40 scale-95 pointer-events-none' : ''} overflow-hidden shadow-2xl`}
               >
@@ -450,30 +450,29 @@ export const UpgradeScreen: React.FC<UpgradeScreenProps> = ({
                 </div>
 
                 {/* Emblem Icon with Active Orbital Rings on Mythic / Legendary */}
-                <div className="relative z-10 flex items-center justify-center my-5">
+                <div className="relative z-10 flex items-center justify-center my-2 sm:my-4">
                   {isMythic && (
                     <>
-                      <div className="absolute w-24 h-24 rounded-full border border-dashed border-cyan-300/70 animate-mythic-spin pointer-events-none" />
-                      <div className="absolute w-28 h-28 rounded-full border border-fuchsia-400/50 animate-mythic-spin-reverse pointer-events-none" />
-                      <div className="absolute w-20 h-20 rotate-45 border border-amber-300/40 animate-mythic-spin-fast pointer-events-none" />
+                      <div className="absolute w-14 h-14 sm:w-24 sm:h-24 rounded-full border border-dashed border-cyan-300/70 animate-mythic-spin pointer-events-none" />
+                      <div className="absolute w-16 h-16 sm:w-28 sm:h-28 rounded-full border border-fuchsia-400/50 animate-mythic-spin-reverse pointer-events-none" />
                     </>
                   )}
                   {isLegendary && (
-                    <div className="absolute w-24 h-24 rounded-full border border-dashed border-amber-400/40 animate-mythic-spin pointer-events-none" />
+                    <div className="absolute w-14 h-14 sm:w-24 sm:h-24 rounded-full border border-dashed border-amber-400/40 animate-mythic-spin pointer-events-none" />
                   )}
                   <div
-                    className={`w-16 h-16 sm:w-20 sm:h-20 rounded-lg border-2 flex items-center justify-center shadow-lg transition-transform duration-300 group-hover:scale-110 ${
+                    className={`w-11 h-11 sm:w-18 sm:h-18 rounded-lg border-2 flex items-center justify-center shadow-lg transition-transform duration-300 group-hover:scale-110 ${
                       isMythic ? 'animate-mythic-float' : ''
                     } ${config.iconBg}`}
                   >
-                    {getUpgradeIcon(option.icon, 'w-8 h-8 sm:w-10 sm:h-10')}
+                    {getUpgradeIcon(option.icon, 'w-5 h-5 sm:w-9 sm:h-9')}
                   </div>
                 </div>
 
                 {/* Title, Stat Bonus Callout & Description */}
-                <div className="relative z-10 flex flex-col text-center mb-5 flex-1">
+                <div className="relative z-10 flex flex-col text-center mb-2.5 sm:mb-4 flex-1">
                   <h3
-                    className={`text-base sm:text-lg font-display font-black tracking-wide uppercase mb-2 ${
+                    className={`text-sm sm:text-base font-display font-black tracking-wide uppercase mb-1 sm:mb-2 leading-tight ${
                       isMythic
                         ? 'text-transparent bg-clip-text bg-gradient-to-r from-cyan-200 via-white to-fuchsia-200'
                         : 'text-white'
@@ -483,12 +482,12 @@ export const UpgradeScreen: React.FC<UpgradeScreenProps> = ({
                   </h3>
 
                   {option.statBonus && (
-                    <div className="mx-auto mb-2.5 px-2.5 py-1 rounded bg-slate-950/80 border border-white/10 text-[11px] font-mono-numbers font-bold text-cyan-300 tracking-wide">
+                    <div className="mx-auto mb-1.5 sm:mb-2 px-2 py-0.5 rounded bg-slate-950/80 border border-white/10 text-[10px] sm:text-[11px] font-mono-numbers font-bold text-cyan-300 tracking-wide">
                       {option.statBonus}
                     </div>
                   )}
 
-                  <p className="text-xs text-slate-300 leading-relaxed font-normal">
+                  <p className="text-[11px] sm:text-xs text-slate-300 leading-snug sm:leading-relaxed font-normal line-clamp-3">
                     {option.description}
                   </p>
                 </div>
@@ -496,9 +495,9 @@ export const UpgradeScreen: React.FC<UpgradeScreenProps> = ({
                 {/* Action Button */}
                 <button
                   type="button"
-                  className={`relative z-10 w-full py-2.5 px-4 rounded border flex items-center justify-center gap-1.5 text-xs font-display font-black uppercase tracking-wider transition-all duration-150 cursor-pointer whitespace-nowrap shrink-0 ${config.ctaClass}`}
+                  className={`relative z-10 w-full py-1.5 sm:py-2.5 px-3 rounded border flex items-center justify-center gap-1 text-[11px] sm:text-xs font-display font-black uppercase tracking-wider transition-all duration-150 cursor-pointer whitespace-nowrap shrink-0 ${config.ctaClass}`}
                 >
-                  <span>{isMythic ? 'Despertar Poder Mítico' : 'Instalar Power-Up'}</span>
+                  <span>{isMythic ? 'Despertar Poder' : 'Instalar'}</span>
                   <ChevronRight className="w-3.5 h-3.5" />
                 </button>
               </div>

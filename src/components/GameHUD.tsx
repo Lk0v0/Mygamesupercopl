@@ -273,31 +273,30 @@ export const GameHUD: React.FC<GameHUDProps> = ({
               </svg>
 
               {/* Layer 4: Tactical Biometric ECG Telemetry Monitor Warning Banner */}
-              <div className="absolute top-12 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1">
+              <div className="absolute top-10 sm:top-12 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1">
                 <div
-                  className={`flex items-center gap-2.5 px-4 py-1.5 rounded-full backdrop-blur-md border shadow-2xl transition-all ${
+                  className={`flex items-center gap-2 px-3 py-1 rounded-full border shadow-xl transition-all ${
                     isExtremeHp
-                      ? 'bg-red-950/95 border-red-500 shadow-[0_0_30px_rgba(239,68,68,0.8)] animate-bounce'
-                      : 'bg-red-950/80 border-red-500/60 shadow-[0_0_20px_rgba(239,68,68,0.5)]'
+                      ? 'bg-red-950/95 border-red-500 shadow-[0_0_20px_rgba(239,68,68,0.75)] animate-bounce'
+                      : 'bg-red-950/90 border-red-500/60 shadow-[0_0_16px_rgba(239,68,68,0.45)]'
                   }`}
                 >
-                  <Heart className={`w-4 h-4 text-red-400 fill-red-500 ${isExtremeHp ? 'animate-ping' : 'animate-pulse'}`} />
+                  <Heart className={`w-3.5 h-3.5 text-red-400 fill-red-500 ${isExtremeHp ? 'animate-ping' : 'animate-pulse'}`} />
                   
-                  {/* Real-time Heartbeat EKG waveform */}
-                  <svg className="w-14 h-4 text-red-400 stroke-current fill-none" viewBox="0 0 60 20" strokeWidth="2">
+                  <svg className="hidden sm:block w-12 h-3.5 text-red-400 stroke-current fill-none" viewBox="0 0 60 20" strokeWidth="2">
                     <path d="M0,10 L15,10 L20,3 L25,17 L30,5 L35,13 L40,10 L60,10" className="animate-pulse" />
                   </svg>
 
                   <div className="flex flex-col text-left">
-                    <span className="text-[11px] font-mono font-black tracking-widest text-red-200 uppercase leading-none">
-                      {isExtremeHp ? 'TRAUMA SEVERO // RISCO DE ÓBITO' : 'VITALIDADE CRÍTICA'}
+                    <span className="text-[10px] font-mono font-black tracking-wider text-red-200 uppercase leading-none">
+                      {isExtremeHp ? 'TRAUMA SEVERO' : 'VITALIDADE CRÍTICA'}
                     </span>
-                    <span className="text-[9px] font-mono font-bold text-red-400 uppercase mt-0.5 leading-none">
-                      {player.hp} HP • {Math.round(130 + (1 - hpPercentage / 30) * 55)} BPM (TAQUICARDIA)
+                    <span className="text-[8.5px] font-mono font-bold text-red-400 uppercase mt-0.5 leading-none">
+                      {player.hp} HP · {Math.round(130 + (1 - hpPercentage / 30) * 55)} BPM
                     </span>
                   </div>
 
-                  <Activity className="w-4 h-4 text-red-400 animate-pulse ml-1" />
+                  <Activity className="w-3.5 h-3.5 text-red-400 animate-pulse" />
                 </div>
               </div>
             </div>
@@ -305,10 +304,10 @@ export const GameHUD: React.FC<GameHUDProps> = ({
 
           {/* New Wave Start Brief Tactical Alert */}
           {waveAlert && (
-            <div className="absolute top-12 left-1/2 -translate-x-1/2 z-50 pointer-events-none animate-in fade-in zoom-in-95 duration-200">
-              <div className="bg-slate-950/80 backdrop-blur-md border border-amber-500/40 px-4 py-1.5 rounded-lg shadow-lg flex items-center gap-2">
-                <AlertTriangle className="w-4 h-4 text-amber-400 animate-pulse" />
-                <span className="text-xs font-display font-black text-white uppercase tracking-wider">
+            <div className="absolute top-10 sm:top-12 left-1/2 -translate-x-1/2 z-50 pointer-events-none animate-in fade-in zoom-in-95 duration-200">
+              <div className="bg-slate-950/90 border border-amber-500/40 px-3.5 py-1 rounded-lg shadow-lg flex items-center gap-2">
+                <AlertTriangle className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
+                <span className="text-[11px] sm:text-xs font-display font-black text-white uppercase tracking-wider whitespace-nowrap">
                   ONDA {waveAlert} INICIADA
                 </span>
               </div>
@@ -317,25 +316,25 @@ export const GameHUD: React.FC<GameHUDProps> = ({
 
           {/* Dramatic Boss Arrival Warning Banner */}
           {bossBanner && (
-            <div className="absolute top-16 left-1/2 -translate-x-1/2 z-50 pointer-events-none animate-in fade-in zoom-in-95 duration-300 w-full max-w-lg px-4">
-              <div className={`p-3 rounded-2xl backdrop-blur-xl border shadow-2xl flex items-center gap-3 ${
+            <div className="absolute top-12 sm:top-16 left-1/2 -translate-x-1/2 z-50 pointer-events-none animate-in fade-in zoom-in-95 duration-300 w-full max-w-md px-3">
+              <div className={`p-2 sm:p-3 rounded-xl border shadow-2xl flex items-center gap-2.5 ${
                 gameMode === GameMode.ALIEN
-                  ? 'bg-cyan-950/95 border-cyan-400 shadow-[0_0_35px_rgba(6,182,212,0.6)]'
-                  : 'bg-red-950/95 border-red-500 shadow-[0_0_35px_rgba(239,68,68,0.6)]'
+                  ? 'bg-cyan-950/95 border-cyan-400 shadow-[0_0_24px_rgba(6,182,212,0.5)]'
+                  : 'bg-red-950/95 border-red-500 shadow-[0_0_24px_rgba(239,68,68,0.5)]'
               }`}>
-                <div className={`p-2.5 rounded-xl ${gameMode === GameMode.ALIEN ? 'bg-cyan-500 text-slate-950' : 'bg-red-600 text-white'}`}>
+                <div className={`p-2 rounded-lg shrink-0 ${gameMode === GameMode.ALIEN ? 'bg-cyan-500 text-slate-950' : 'bg-red-600 text-white'}`}>
                   {gameMode === GameMode.ALIEN ? (
-                    <Orbit className="w-6 h-6 animate-spin-slow" />
+                    <Orbit className="w-5 h-5 animate-spin-slow" />
                   ) : (
-                    <Skull className="w-6 h-6 animate-pulse" />
+                    <Skull className="w-5 h-5 animate-pulse" />
                   )}
                 </div>
                 <div className="flex flex-col text-left min-w-0">
-                  <span className="text-[10px] font-mono font-black tracking-widest uppercase text-amber-400 flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
+                  <span className="text-[9px] font-mono font-black tracking-widest uppercase text-amber-400 flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping" />
                     <span>ALERTA DE CHEFE SUPREMO</span>
                   </span>
-                  <span className="text-sm sm:text-base font-display font-black text-white tracking-wide uppercase truncate">
+                  <span className="text-xs sm:text-base font-display font-black text-white tracking-wide uppercase truncate">
                     {bossBanner.name}
                   </span>
                   <span className="text-[9px] font-mono text-slate-300 truncate">
@@ -348,39 +347,39 @@ export const GameHUD: React.FC<GameHUDProps> = ({
 
           {/* Dedicated Top Boss Health Bar */}
           {activeBoss && (
-            <div className="absolute top-13 sm:top-14 left-1/2 -translate-x-1/2 z-30 w-full max-w-sm sm:max-w-md px-3 pointer-events-none animate-in fade-in duration-200">
-              <div className={`p-2 rounded-xl backdrop-blur-md border shadow-2xl flex flex-col gap-1 ${
+            <div className="absolute top-11 sm:top-14 left-1/2 -translate-x-1/2 z-30 w-full max-w-[270px] sm:max-w-md px-2 pointer-events-none animate-in fade-in duration-200">
+              <div className={`px-2.5 py-1.5 rounded-lg border shadow-xl flex flex-col gap-1 ${
                 gameMode === GameMode.ALIEN
-                  ? 'bg-slate-950/85 border-cyan-500/50 shadow-[0_0_20px_rgba(6,182,212,0.3)]'
-                  : 'bg-slate-950/85 border-red-500/50 shadow-[0_0_20px_rgba(239,68,68,0.3)]'
+                  ? 'bg-slate-950/90 border-cyan-500/50'
+                  : 'bg-slate-950/90 border-red-500/50'
               }`}>
-                <div className="flex items-center justify-between text-[10px]">
+                <div className="flex items-center justify-between text-[9px] sm:text-[10px]">
                   <div className="flex items-center gap-1.5 min-w-0">
                     {gameMode === GameMode.ALIEN ? (
-                      <Orbit className="w-3.5 h-3.5 text-cyan-400 animate-spin-slow shrink-0" />
+                      <Orbit className="w-3 h-3 text-cyan-400 animate-spin-slow shrink-0" />
                     ) : (
-                      <Skull className="w-3.5 h-3.5 text-red-500 animate-pulse shrink-0" />
+                      <Skull className="w-3 h-3 text-red-500 animate-pulse shrink-0" />
                     )}
-                    <span className="font-display font-black tracking-wider uppercase text-white truncate max-w-[180px] sm:max-w-[240px]">
+                    <span className="font-display font-black tracking-wider uppercase text-white truncate max-w-[130px] sm:max-w-[220px]">
                       {activeBoss.name}
                     </span>
                   </div>
-                  <div className="flex items-center gap-1 font-mono-numbers font-bold">
+                  <div className="flex items-center gap-1 font-mono-numbers font-bold shrink-0">
                     <span className={gameMode === GameMode.ALIEN ? 'text-cyan-300' : 'text-red-300'}>
                       {Math.max(0, activeBoss.hp)} / {activeBoss.maxHp}
                     </span>
-                    <span className="text-amber-400 ml-1">
+                    <span className="text-amber-400 ml-0.5">
                       {Math.round(Math.max(0, (activeBoss.hp / activeBoss.maxHp) * 100))}%
                     </span>
                   </div>
                 </div>
 
-                <div className="w-full h-2 bg-slate-900 rounded-full overflow-hidden p-0.5 border border-white/10">
+                <div className="w-full h-1.5 sm:h-2 bg-slate-900 rounded-full overflow-hidden border border-white/10">
                   <div
                     className={`h-full rounded-full transition-all duration-150 ease-out ${
                       gameMode === GameMode.ALIEN
-                        ? 'bg-gradient-to-r from-cyan-500 via-sky-400 to-fuchsia-500 shadow-[0_0_8px_rgba(6,182,212,0.7)]'
-                        : 'bg-gradient-to-r from-amber-500 via-red-500 to-rose-600 shadow-[0_0_8px_rgba(239,68,68,0.7)]'
+                        ? 'bg-gradient-to-r from-cyan-500 via-sky-400 to-fuchsia-500'
+                        : 'bg-gradient-to-r from-amber-500 via-red-500 to-rose-600'
                     }`}
                     style={{ width: `${Math.max(0, Math.min(100, (activeBoss.hp / activeBoss.maxHp) * 100))}%` }}
                   />
@@ -389,21 +388,19 @@ export const GameHUD: React.FC<GameHUDProps> = ({
             </div>
           )}
 
-          {/* Main Top Header HUD - Minimalist Floating Bar */}
-          <div className="w-full flex items-center justify-between p-2.5 sm:p-4 pt-3 pointer-events-auto">
+          {/* Main Top Header HUD - Compact & Zero-Blur for Max Mobile FPS */}
+          <div className="w-full flex items-center justify-between gap-1.5 px-2 sm:px-4 pt-2 pb-1 pointer-events-auto">
             {/* LEFT: Minimal Vital Signs Capsule */}
-            <div className="flex items-center gap-2 bg-slate-950/50 backdrop-blur-md px-2.5 py-1.5 rounded-lg border border-white/10 shadow-md">
-              <span className="text-[10px] font-mono font-black text-cyan-300 tracking-wider">
+            <div className="flex items-center gap-1.5 sm:gap-2 bg-slate-950/80 px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-lg border border-white/10 shadow-md shrink-0">
+              <span className="text-[9.5px] sm:text-[10px] font-mono font-black text-cyan-300 tracking-wider">
                 LV.{player.level}
               </span>
-              <div className="flex flex-col gap-1 min-w-[75px] sm:min-w-[100px]">
+              <div className="flex flex-col gap-0.5 sm:gap-1 min-w-[52px] sm:min-w-[100px]">
                 {/* Health Bar */}
                 <div className="w-full h-1.5 bg-slate-900 rounded-full overflow-hidden">
                   <div
                     className={`h-full rounded-full transition-all duration-150 ${
-                      isCriticalHp
-                        ? 'bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.8)] animate-pulse'
-                        : 'bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.5)]'
+                      isCriticalHp ? 'bg-red-500 animate-pulse' : 'bg-emerald-400'
                     }`}
                     style={{ width: `${hpPercentage}%` }}
                   />
@@ -412,14 +409,14 @@ export const GameHUD: React.FC<GameHUDProps> = ({
                 {player.maxShield > 0 && (
                   <div className="w-full h-1 bg-slate-900 rounded-full overflow-hidden">
                     <div
-                      className="h-full bg-cyan-400 rounded-full transition-all duration-150 shadow-[0_0_6px_rgba(6,182,212,0.6)]"
+                      className="h-full bg-cyan-400 rounded-full transition-all duration-150"
                       style={{ width: `${shieldPercentage}%` }}
                     />
                   </div>
                 )}
               </div>
               <span
-                className={`text-[10px] font-mono-numbers font-bold ${
+                className={`text-[9.5px] sm:text-[10px] font-mono-numbers font-bold ${
                   isCriticalHp ? 'text-red-400 animate-pulse' : 'text-slate-300'
                 }`}
               >
@@ -428,36 +425,43 @@ export const GameHUD: React.FC<GameHUDProps> = ({
             </div>
 
             {/* CENTER: Floating Slim Wave & Mode Badge */}
-            <div className="flex items-center gap-2 bg-slate-950/60 backdrop-blur-md px-3 py-1.5 rounded-lg border border-white/10 shadow-md">
+            <div className="flex items-center gap-1.5 sm:gap-2 bg-slate-950/80 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg border border-white/10 shadow-md min-w-0">
               {gameMode === GameMode.ALIEN ? (
-                <div className="flex items-center gap-1 text-[9px] font-mono font-bold text-cyan-400 bg-cyan-950/80 border border-cyan-500/40 px-1.5 py-0.5 rounded">
-                  <Atom className="w-2.5 h-2.5 text-cyan-400 animate-spin-slow" />
-                  <span>ALIEN</span>
+                <div className="flex items-center gap-1 text-[8.5px] sm:text-[9px] font-mono font-bold text-cyan-400 bg-cyan-950/90 border border-cyan-500/40 px-1.5 py-0.5 rounded shrink-0">
+                  <Atom className="w-2.5 h-2.5 text-cyan-400" />
+                  <span className="hidden xs:inline sm:inline">ALIEN</span>
                 </div>
               ) : (
-                <div className="flex items-center gap-1 text-[9px] font-mono font-bold text-red-400 bg-red-950/80 border border-red-500/40 px-1.5 py-0.5 rounded">
+                <div className="flex items-center gap-1 text-[8.5px] sm:text-[9px] font-mono font-bold text-red-400 bg-red-950/90 border border-red-500/40 px-1.5 py-0.5 rounded shrink-0">
                   <Biohazard className="w-2.5 h-2.5 text-red-400" />
-                  <span>ZUMBI</span>
+                  <span className="hidden xs:inline sm:inline">ZUMBI</span>
                 </div>
               )}
-              <span className="text-[11px] font-display font-black text-white tracking-widest uppercase">
-                ONDA {wave.toString().padStart(2, '0')}
+              <span className="text-[10px] sm:text-[11px] font-display font-black text-white tracking-wider uppercase whitespace-nowrap">
+                O{wave.toString().padStart(2, '0')}
               </span>
               <span className="text-white/20">·</span>
-              <span className="text-[10px] font-mono-numbers text-slate-400 font-bold">
-                {zombiesRemaining > 0 ? `${zombiesRemaining} RESTANTES` : 'LIMPO'}
+              <span className="text-[9.5px] sm:text-[10px] font-mono-numbers text-slate-300 font-bold whitespace-nowrap">
+                {zombiesRemaining > 0 ? (
+                  <>
+                    {zombiesRemaining}
+                    <span className="hidden md:inline"> RESTANTES</span>
+                  </>
+                ) : (
+                  'LIMPO'
+                )}
               </span>
             </div>
 
             {/* RIGHT: Minimalist Score & Actions */}
-            <div className="flex items-center gap-1.5 sm:gap-2">
-              <div className="flex items-center gap-2 bg-slate-950/50 backdrop-blur-md px-2.5 py-1.5 rounded-lg border border-white/10 shadow-md">
-                <span className="text-xs sm:text-sm font-mono-numbers font-bold text-amber-400 flex items-center gap-1 tracking-tight" title="Score / Dinheiro Ganho">
+            <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
+              <div className="flex items-center gap-1.5 sm:gap-2 bg-slate-950/80 px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-lg border border-white/10 shadow-md">
+                <span className="text-[11px] sm:text-sm font-mono-numbers font-bold text-amber-400 flex items-center gap-1 tracking-tight" title="Score / Dinheiro Ganho">
                   <Coins className="w-3 h-3 text-amber-400" />
                   {player.score.toLocaleString()}
                 </span>
                 <span className="text-white/20">·</span>
-                <span className="text-[10px] font-mono-numbers font-bold text-rose-400 flex items-center gap-1">
+                <span className="text-[9.5px] sm:text-[10px] font-mono-numbers font-bold text-rose-400 flex items-center gap-1">
                   <Skull className="w-2.5 h-2.5" /> {player.kills}
                 </span>
               </div>
@@ -466,7 +470,7 @@ export const GameHUD: React.FC<GameHUDProps> = ({
               {onResetAll && (
                 <button
                   onClick={() => handleButtonClick(() => setShowRebootModal(true))}
-                  className="p-1.5 rounded-lg bg-slate-950/50 backdrop-blur-md border border-white/10 text-rose-400 hover:text-rose-300 hover:border-rose-500/40 active:scale-95 transition-all cursor-pointer shadow-md"
+                  className="p-1.5 rounded-lg bg-slate-950/80 border border-white/10 text-rose-400 hover:text-rose-300 hover:border-rose-500/40 active:scale-95 transition-all cursor-pointer shadow-md"
                   title="Reboot: Resetar Tudo"
                   aria-label="Reboot: Resetar Tudo"
                 >
@@ -475,7 +479,7 @@ export const GameHUD: React.FC<GameHUDProps> = ({
               )}
               <button
                 onClick={() => handleButtonClick(onToggleSound)}
-                className="p-1.5 rounded-lg bg-slate-950/50 backdrop-blur-md border border-white/10 text-slate-400 hover:text-white hover:border-cyan-500/40 active:scale-95 transition-all cursor-pointer shadow-md"
+                className="p-1.5 rounded-lg bg-slate-950/80 border border-white/10 text-slate-400 hover:text-white hover:border-cyan-500/40 active:scale-95 transition-all cursor-pointer shadow-md"
                 title="Alternar Áudio"
                 aria-label="Alternar Áudio"
               >
@@ -483,7 +487,7 @@ export const GameHUD: React.FC<GameHUDProps> = ({
               </button>
               <button
                 onClick={() => handleButtonClick(onPauseToggle)}
-                className="p-1.5 rounded-lg bg-slate-950/50 backdrop-blur-md border border-white/10 text-slate-400 hover:text-white hover:border-cyan-500/40 active:scale-95 transition-all cursor-pointer shadow-md"
+                className="p-1.5 rounded-lg bg-slate-950/80 border border-white/10 text-slate-400 hover:text-white hover:border-cyan-500/40 active:scale-95 transition-all cursor-pointer shadow-md"
                 title="Pausar Combate"
                 aria-label="Pausar Combate"
               >
@@ -496,15 +500,15 @@ export const GameHUD: React.FC<GameHUDProps> = ({
             </div>
           </div>
 
-          {/* BOTTOM CENTER: Active Mythic Powers, Destructor Warp Indicator & Weapon Strip */}
-          <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1.5 z-20 pointer-events-auto">
+          {/* BOTTOM CENTER: Compact Active Powers, Warp Indicator & Weapon Strip */}
+          <div className="absolute bottom-1.5 sm:bottom-2 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1 z-20 pointer-events-auto max-w-[60vw]">
             {((player.mythicSingularity || 0) > 0 ||
               (player.mythicSolarAura || 0) > 0 ||
               (player.mythicSplitShot || 0) > 0 ||
               (player.mythicVoidDrones || 0) > 0 ||
               (player.chainLightningLevel || 0) > 0 ||
               (player.gravityPulseLevel || 0) > 0) && (
-              <div className="flex items-center gap-2 bg-slate-950/75 backdrop-blur-md px-2.5 py-1 rounded border border-fuchsia-500/30 text-[9px] font-mono font-bold uppercase tracking-wider text-slate-200 shadow-lg">
+              <div className="flex items-center flex-wrap justify-center gap-1.5 bg-slate-950/85 px-2 py-0.5 rounded border border-fuchsia-500/30 text-[8.5px] sm:text-[9px] font-mono font-bold uppercase tracking-wider text-slate-200 shadow-lg">
                 {(player.mythicSingularity || 0) > 0 && (
                   <span className="text-cyan-300">✦ Lâminas×5</span>
                 )}
@@ -529,10 +533,10 @@ export const GameHUD: React.FC<GameHUDProps> = ({
             {(player.currentWeapon === WeaponType.DESTRUCTOR ||
               player.currentWeapon === WeaponType.INTERCEPTOR ||
               player.currentWeapon === WeaponType.NAVE_REI) && destructorWarp && (
-              <div className={`bg-slate-950/75 backdrop-blur-md px-3 py-1 rounded-lg border flex items-center gap-2.5 shadow-lg min-w-[215px] ${
+              <div className={`bg-slate-950/85 px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-lg border flex items-center gap-2 shadow-lg min-w-[165px] sm:min-w-[215px] ${
                 player.currentWeapon === WeaponType.NAVE_REI ? 'border-red-500/45' : 'border-cyan-500/30'
               }`}>
-                <span className={`text-[9px] font-mono font-black uppercase tracking-wider whitespace-nowrap ${
+                <span className={`text-[8.5px] sm:text-[9px] font-mono font-black uppercase tracking-wider whitespace-nowrap ${
                   destructorWarp.active
                     ? (player.currentWeapon === WeaponType.NAVE_REI ? 'text-red-400 animate-pulse' : 'text-fuchsia-300 animate-pulse')
                     : destructorWarp.chargeProgress > 0.02
@@ -541,17 +545,17 @@ export const GameHUD: React.FC<GameHUDProps> = ({
                 }`}>
                   {player.currentWeapon === WeaponType.NAVE_REI
                     ? (destructorWarp.active
-                        ? 'MODO FÚRIA ATIVO'
+                        ? 'FÚRIA ATIVA'
                         : destructorWarp.chargeProgress > 0.02
-                          ? `CARREGANDO FÚRIA ${Math.round(destructorWarp.chargeProgress * 100)}%`
-                          : 'SEGURE [SHIFT] 6s • FÚRIA')
+                          ? `FÚRIA ${Math.round(destructorWarp.chargeProgress * 100)}%`
+                          : '[SHIFT] 6s · FÚRIA')
                     : (destructorWarp.active
-                        ? 'MODO WARP ATIVO'
+                        ? 'WARP ATIVO'
                         : destructorWarp.chargeProgress > 0.02
-                          ? `CARREGANDO WARP ${Math.round(destructorWarp.chargeProgress * 100)}%`
-                          : 'SEGURE [SHIFT] 3s • WARP')}
+                          ? `WARP ${Math.round(destructorWarp.chargeProgress * 100)}%`
+                          : '[SHIFT] 3s · WARP')}
                 </span>
-                <div className="flex-1 h-1.5 bg-slate-900 rounded-sm overflow-hidden border border-white/10 min-w-[56px]">
+                <div className="flex-1 h-1.5 bg-slate-900 rounded-sm overflow-hidden border border-white/10 min-w-[44px]">
                   <div
                     className={`h-full transition-all duration-75 ${
                       player.currentWeapon === WeaponType.NAVE_REI
@@ -577,7 +581,7 @@ export const GameHUD: React.FC<GameHUDProps> = ({
                 onClick={() => {
                   if (onToggleIronManMode) onToggleIronManMode();
                 }}
-                className={`bg-slate-950/85 backdrop-blur-md px-3 py-1 rounded-lg border flex items-center gap-2 text-[10px] font-mono font-bold transition-all shadow-lg cursor-pointer ${
+                className={`bg-slate-950/90 px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-lg border flex items-center gap-1.5 text-[9px] sm:text-[10px] font-mono font-bold transition-all shadow-lg cursor-pointer ${
                   ironManMode === 'LASER'
                     ? 'border-red-500/60 text-amber-200 hover:bg-red-950/60'
                     : 'border-cyan-400/60 text-cyan-200 hover:bg-cyan-950/60'
@@ -585,25 +589,25 @@ export const GameHUD: React.FC<GameHUDProps> = ({
                 title="Pressione [Shift] ou [E] para alternar entre Repulsor e Laser"
               >
                 {ironManMode === 'LASER' ? (
-                  <Flame className="w-3.5 h-3.5 text-red-400" />
+                  <Flame className="w-3 h-3 text-red-400" />
                 ) : (
-                  <Zap className="w-3.5 h-3.5 text-cyan-400" />
+                  <Zap className="w-3 h-3 text-cyan-400" />
                 )}
                 <span className="uppercase tracking-wider">
-                  {ironManMode === 'LASER' ? 'MODO LASER' : 'MODO REPULSOR'}
+                  {ironManMode === 'LASER' ? 'LASER' : 'REPULSOR'}
                 </span>
-                <span className="text-white/25">·</span>
-                <span className="text-slate-300">[SHIFT / E] TROCAR</span>
+                <span className="hidden sm:inline text-white/25">·</span>
+                <span className="hidden sm:inline text-slate-300">[SHIFT/E]</span>
               </button>
             )}
 
             {player.currentWeapon === WeaponType.ICE_AND_FIRE_DRAGON && iceFireDragonHud && (
-              <div className="flex items-center gap-2 flex-wrap justify-end">
+              <div className="flex items-center gap-1.5 flex-wrap justify-center">
                 {iceFireDragonHud.merged ? (
-                  <div className="bg-slate-950/90 backdrop-blur-md px-3 py-1.5 rounded-lg border border-purple-400/70 shadow-lg flex flex-col gap-1 min-w-[200px]">
-                    <div className="flex items-center justify-between gap-2 text-[10px] font-mono font-bold tracking-wider">
-                      <span className="text-fuchsia-300 flex items-center gap-1.5 animate-pulse">
-                        <Crown className="w-3.5 h-3.5 text-fuchsia-300" />
+                  <div className="bg-slate-950/90 px-2.5 py-1 rounded-lg border border-purple-400/70 shadow-lg flex flex-col gap-0.5 min-w-[160px] sm:min-w-[200px]">
+                    <div className="flex items-center justify-between gap-2 text-[9px] sm:text-[10px] font-mono font-bold tracking-wider">
+                      <span className="text-fuchsia-300 flex items-center gap-1 animate-pulse">
+                        <Crown className="w-3 h-3 text-fuchsia-300" />
                         MEGA DRAGÃO ROXO
                       </span>
                       <span className="text-purple-200">
@@ -627,7 +631,7 @@ export const GameHUD: React.FC<GameHUDProps> = ({
                       onClick={() => {
                         if (onSwitchIceFireDragon) onSwitchIceFireDragon();
                       }}
-                      className={`bg-slate-950/85 backdrop-blur-md px-3 py-1 rounded-lg border flex items-center gap-2 text-[10px] font-mono font-bold transition-all shadow-lg cursor-pointer ${
+                      className={`bg-slate-950/90 px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-lg border flex items-center gap-1.5 text-[9px] sm:text-[10px] font-mono font-bold transition-all shadow-lg cursor-pointer ${
                         iceFireDragonHud.activeDragon === 'FIRE'
                           ? 'border-orange-500/65 text-amber-200 hover:bg-orange-950/50'
                           : 'border-sky-400/65 text-sky-200 hover:bg-sky-950/50'
@@ -635,15 +639,15 @@ export const GameHUD: React.FC<GameHUDProps> = ({
                       title="Pressione [Shift] para trocar entre Dragão de Fogo e Dragão de Gelo"
                     >
                       {iceFireDragonHud.activeDragon === 'FIRE' ? (
-                        <Flame className="w-3.5 h-3.5 text-orange-400" />
+                        <Flame className="w-3 h-3 text-orange-400" />
                       ) : (
-                        <Snowflake className="w-3.5 h-3.5 text-sky-400" />
+                        <Snowflake className="w-3 h-3 text-sky-400" />
                       )}
                       <span className="uppercase tracking-wider">
-                        {iceFireDragonHud.activeDragon === 'FIRE' ? 'DRAGÃO FOGO' : 'DRAGÃO GELO'}
+                        {iceFireDragonHud.activeDragon === 'FIRE' ? 'FOGO' : 'GELO'}
                       </span>
-                      <span className="text-white/25">·</span>
-                      <span className="text-slate-300">[SHIFT] TROCAR</span>
+                      <span className="hidden sm:inline text-white/25">·</span>
+                      <span className="hidden sm:inline text-slate-300">[SHIFT]</span>
                     </button>
 
                     <button
@@ -652,16 +656,15 @@ export const GameHUD: React.FC<GameHUDProps> = ({
                           onTriggerIceFireMerge();
                         }
                       }}
-                      className={`bg-slate-950/85 backdrop-blur-md px-3 py-1 rounded-lg border flex items-center gap-2 text-[10px] font-mono font-bold transition-all shadow-lg ${
+                      className={`bg-slate-950/90 px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-lg border flex items-center gap-1.5 text-[9px] sm:text-[10px] font-mono font-bold transition-all shadow-lg ${
                         iceFireDragonHud.cooldown <= 0
                           ? 'border-purple-400/70 text-fuchsia-200 hover:bg-purple-950/60 cursor-pointer'
                           : 'border-white/10 text-slate-400 cursor-default'
                       }`}
                       title="Pressione [Q] para fundir Fogo + Gelo no Mega Dragão Roxo"
                     >
-                      <Sparkles className="w-3.5 h-3.5 text-purple-400" />
-                      <span className="uppercase tracking-wider">[Q] FUSÃO ROXA</span>
-                      <span className="text-white/25">·</span>
+                      <Sparkles className="w-3 h-3 text-purple-400" />
+                      <span className="uppercase tracking-wider">[Q] FUSÃO</span>
                       <span style={{ color: iceFireDragonHud.cooldown <= 0 ? '#e879f9' : '#94a3b8' }}>
                         {iceFireDragonHud.cooldown <= 0 ? 'PRONTA' : `${iceFireDragonHud.cooldown.toFixed(1)}s`}
                       </span>
@@ -678,7 +681,7 @@ export const GameHUD: React.FC<GameHUDProps> = ({
                     onTriggerMasterySkill();
                   }
                 }}
-                className={`bg-slate-950/80 backdrop-blur-md px-3 py-1 rounded-lg border flex items-center gap-2 text-[10px] font-mono font-bold transition-all shadow-lg ${
+                className={`bg-slate-950/85 px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-lg border flex items-center gap-1.5 text-[9px] sm:text-[10px] font-mono font-bold transition-all shadow-lg ${
                   masterySkillHud.cooldown <= 0
                     ? 'border-amber-400/50 text-white hover:bg-slate-900 cursor-pointer'
                     : 'border-white/10 text-slate-400 cursor-default'
@@ -687,16 +690,15 @@ export const GameHUD: React.FC<GameHUDProps> = ({
               >
                 <Sparkles className="w-3 h-3" style={{ color: masterySkillHud.shipColor }} />
                 <span className="uppercase tracking-wider">[Q] {masterySkillHud.name}</span>
-                <span className="text-white/20">·</span>
                 <span style={{ color: masterySkillHud.cooldown <= 0 ? '#34d399' : '#94a3b8' }}>
                   {masterySkillHud.cooldown <= 0 ? 'PRONTA' : `${masterySkillHud.cooldown.toFixed(1)}s`}
                 </span>
               </button>
             )}
 
-            <div className="bg-slate-950/60 backdrop-blur-md px-3 py-1 rounded-md border border-white/10 flex items-center gap-2 shadow-lg">
-              <CurrentIcon className="w-3.5 h-3.5" style={{ color: currentWeaponStats.color }} />
-              <span className="text-[11px] font-display font-black uppercase tracking-wider text-white truncate max-w-[130px] sm:max-w-[200px]">
+            <div className="bg-slate-950/80 px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-md border border-white/10 flex items-center gap-1.5 shadow-lg">
+              <CurrentIcon className="w-3 h-3 sm:w-3.5 sm:h-3.5" style={{ color: currentWeaponStats.color }} />
+              <span className="text-[10px] sm:text-[11px] font-display font-black uppercase tracking-wider text-white truncate max-w-[115px] sm:max-w-[200px]">
                 {currentWeaponStats.name}
               </span>
               <span className="text-[10px] font-mono font-bold text-cyan-400">
@@ -708,12 +710,12 @@ export const GameHUD: React.FC<GameHUDProps> = ({
       )}
 
       {/* ========================================================= */}
-      {/* 2. MINIMALIST GAME MENU (GameState.MENU) */}
+      {/* 2. MINIMALIST GAME MENU (GameState.MENU) - SPLIT LANDSCAPE */}
       {/* ========================================================= */}
       {gameState === GameState.MENU && (
-        <div className="absolute inset-0 pointer-events-auto bg-slate-950 flex flex-col justify-between text-white overflow-hidden">
+        <div className="absolute inset-0 pointer-events-auto bg-slate-950 flex flex-col justify-between text-white overflow-y-auto">
           {/* Ambient Cinematic Backdrop */}
-          <div className="absolute inset-0 z-0">
+          <div className="fixed inset-0 z-0 pointer-events-none">
             <img
               src="/src/assets/images/menu_apocalypse_backdrop_1794414619588.jpg"
               alt="Quarantine Outpost"
@@ -721,13 +723,13 @@ export const GameHUD: React.FC<GameHUDProps> = ({
               referrerPolicy="no-referrer"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/75 to-slate-950/90 pointer-events-none" />
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_40%,rgba(6,182,212,0.10),transparent_65%)] pointer-events-none" />
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_35%_50%,rgba(6,182,212,0.10),transparent_65%)] pointer-events-none" />
           </div>
 
-          {/* MENU TOP BAR: Clean 3-Zone Minimalist Header */}
-          <header className="relative z-10 flex items-center justify-between gap-4 px-5 sm:px-8 py-4 border-b border-white/5">
+          {/* MENU TOP BAR: Compact Header */}
+          <header className="relative z-10 flex items-center justify-between gap-3 px-4 sm:px-8 py-2.5 sm:py-3.5 border-b border-white/5 shrink-0">
             {/* Zone 1: Brand + Prestige Tier */}
-            <div className="flex items-center gap-2.5 min-w-0">
+            <div className="flex items-center gap-2 min-w-0">
               <span className="text-xs sm:text-sm font-display font-black tracking-[0.14em] uppercase text-white whitespace-nowrap">
                 ZOMBIE SHOOTER 2D
               </span>
@@ -736,7 +738,7 @@ export const GameHUD: React.FC<GameHUDProps> = ({
                   <span className="text-white/20">·</span>
                   <button
                     onClick={() => onOpenPrestige && handleButtonClick(onOpenPrestige)}
-                    className="flex items-center gap-1 text-[11px] font-mono font-bold text-amber-300 hover:text-amber-200 transition-colors cursor-pointer"
+                    className="flex items-center gap-1 text-[11px] font-mono font-bold text-amber-300 hover:text-amber-200 transition-colors cursor-pointer shrink-0"
                   >
                     <Crown className="w-3 h-3" />
                     <span>P{prestigeLevel}</span>
@@ -746,7 +748,7 @@ export const GameHUD: React.FC<GameHUDProps> = ({
             </div>
 
             {/* Zone 2: Unboxed Wallet (Credits · Tokens) */}
-            <div className="flex items-center gap-3 text-xs font-mono">
+            <div className="flex items-center gap-2.5 sm:gap-3 text-xs font-mono shrink-0">
               <button
                 onClick={() => handleButtonClick(onOpenStore)}
                 className="flex items-center gap-1.5 text-slate-300 hover:text-amber-300 transition-colors cursor-pointer"
@@ -767,11 +769,11 @@ export const GameHUD: React.FC<GameHUDProps> = ({
             </div>
 
             {/* Zone 3: Minimal Utility Icons */}
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1 shrink-0">
               {onResetAll && (
                 <button
                   onClick={() => handleButtonClick(() => setShowRebootModal(true))}
-                  className="p-2 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-white/5 transition-colors cursor-pointer"
+                  className="p-1.5 sm:p-2 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-white/5 transition-colors cursor-pointer"
                   title="Reboot (Resetar Progresso)"
                   aria-label="Reboot"
                 >
@@ -780,7 +782,7 @@ export const GameHUD: React.FC<GameHUDProps> = ({
               )}
               <button
                 onClick={() => handleButtonClick(() => setShowControlsModal(true))}
-                className="p-2 rounded-lg text-slate-400 hover:text-cyan-300 hover:bg-white/5 transition-colors cursor-pointer"
+                className="p-1.5 sm:p-2 rounded-lg text-slate-400 hover:text-cyan-300 hover:bg-white/5 transition-colors cursor-pointer"
                 title="Guia de Controles"
                 aria-label="Controles"
               >
@@ -788,7 +790,7 @@ export const GameHUD: React.FC<GameHUDProps> = ({
               </button>
               <button
                 onClick={() => handleButtonClick(onToggleSound)}
-                className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
+                className="p-1.5 sm:p-2 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
                 title={soundEnabled ? 'Silenciar Áudio' : 'Ativar Áudio'}
                 aria-label="Alternar Som"
               >
@@ -797,136 +799,175 @@ export const GameHUD: React.FC<GameHUDProps> = ({
             </div>
           </header>
 
-          {/* MENU CENTERPIECE: Ultra-Minimalist Focal Point */}
-          <main className="relative z-10 flex-1 flex flex-col items-center justify-center px-5 sm:px-8 py-6 max-w-lg w-full mx-auto text-center">
-            {/* Hero Title */}
-            <div className="mb-7">
-              <h1 className="text-4xl sm:text-6xl font-display font-black tracking-tight text-white uppercase leading-none">
-                ZOMBIE{' '}
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-sky-300">
-                  SHOOTER
-                </span>
-              </h1>
-              <p className="mt-2.5 text-[11px] sm:text-xs text-slate-400 font-mono tracking-wide">
-                Combate 360° · Naves & Arsenal · Hordas Implacáveis
-              </p>
-            </div>
+          {/* MENU CENTERPIECE: LEFT = MENU/BRAND/WEAPON/RECORDS · RIGHT = OPTIONS & ACTIONS */}
+          <main className="relative z-10 flex-1 w-full max-w-5xl mx-auto px-4 sm:px-8 py-3 landscape:py-2 flex items-center justify-center">
+            <div className="w-full grid grid-cols-1 landscape:grid-cols-12 md:grid-cols-12 gap-4 landscape:gap-6 md:gap-8 items-center">
+              {/* LEFT COLUMN: Brand Identity, Equipped Weapon & High Scores */}
+              <div className="landscape:col-span-6 md:col-span-6 flex flex-col items-center landscape:items-start md:items-start text-center landscape:text-left md:text-left">
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded bg-cyan-500/10 border border-cyan-500/25 text-[10px] font-mono font-bold uppercase tracking-widest text-cyan-300 mb-2">
+                  <span>OPERATIVOS 360°</span>
+                  <span className="text-white/25">·</span>
+                  <span>MUNIÇÃO ∞</span>
+                </div>
 
-            {/* Segmented Mode Switcher */}
-            <div className="w-full max-w-sm mx-auto mb-5">
-              <div className="p-1 bg-white/[0.03] border border-white/10 rounded-xl grid grid-cols-2 gap-1">
-                <button
-                  onClick={() => {
-                    sound.playClick();
-                    if (onChangeMode) onChangeMode(GameMode.ZOMBIE);
-                  }}
-                  className={`py-2 px-3 rounded-lg text-xs font-display font-bold uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-2 ${
-                    gameMode === GameMode.ZOMBIE
-                      ? 'bg-red-500/20 text-red-100 border border-red-500/40'
-                      : 'text-slate-400 hover:text-white border border-transparent'
-                  }`}
-                >
-                  <Biohazard className="w-3.5 h-3.5 text-red-400" />
-                  <span>Zumbi</span>
-                </button>
+                <h1 className="text-4xl landscape:text-3xl sm:text-5xl lg:text-6xl font-display font-black tracking-tight text-white uppercase leading-none">
+                  ZOMBIE{' '}
+                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-sky-300">
+                    SHOOTER
+                  </span>
+                </h1>
+                <p className="mt-1.5 landscape:mt-1.5 sm:mt-2.5 text-[11px] sm:text-xs text-slate-400 font-mono tracking-wide max-w-sm">
+                  Combate 360° · Naves, Dragões & Arsenal · Hordas Implacáveis
+                </p>
 
+                {/* Equipped Weapon Glance Card */}
+                <div className="mt-3 sm:mt-5 w-full max-w-sm bg-white/[0.03] border border-white/10 rounded-xl px-3.5 py-2.5 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div
+                      className="w-8 h-8 rounded-lg flex items-center justify-center border border-white/10 bg-slate-900/90 shrink-0"
+                    >
+                      <CurrentIcon className="w-4 h-4" style={{ color: currentWeaponStats.color }} />
+                    </div>
+                    <div className="flex flex-col text-left min-w-0">
+                      <span className="text-[9px] font-mono uppercase tracking-wider text-slate-400 leading-none">
+                        Arma Equipada
+                      </span>
+                      <span className="text-xs sm:text-sm font-display font-bold text-white truncate mt-0.5">
+                        {currentWeaponStats.name}
+                      </span>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => handleButtonClick(onOpenStore)}
+                    className="px-2.5 py-1 rounded-lg bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-500/30 text-[11px] font-mono font-bold text-cyan-300 hover:text-cyan-200 cursor-pointer transition-colors shrink-0"
+                  >
+                    Trocar
+                  </button>
+                </div>
+
+                {/* High Scores Summary */}
+                <div className="mt-2.5 sm:mt-3.5 w-full max-w-sm grid grid-cols-2 gap-2 text-left">
+                  <div className="bg-white/[0.02] border border-white/5 rounded-lg px-3 py-1.5 flex items-center justify-between">
+                    <span className="text-[10px] font-mono text-red-300 flex items-center gap-1">
+                      <Biohazard className="w-3 h-3 text-red-400" /> Zumbi
+                    </span>
+                    <span className="text-xs font-mono-numbers font-bold text-white">
+                      {highScoreZombie.toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="bg-white/[0.02] border border-white/5 rounded-lg px-3 py-1.5 flex items-center justify-between">
+                    <span className="text-[10px] font-mono text-cyan-300 flex items-center gap-1">
+                      <Atom className="w-3 h-3 text-cyan-400" /> Alien
+                    </span>
+                    <span className="text-xs font-mono-numbers font-bold text-white">
+                      {highScoreAlien.toLocaleString()}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* RIGHT COLUMN: Mode Switcher, Play CTA & 2x2 Options Grid */}
+              <div className="landscape:col-span-6 md:col-span-6 w-full max-w-md mx-auto flex flex-col gap-2.5">
+                {/* Segmented Mode Switcher */}
+                <div>
+                  <div className="p-1 bg-white/[0.03] border border-white/10 rounded-xl grid grid-cols-2 gap-1">
+                    <button
+                      onClick={() => {
+                        sound.playClick();
+                        if (onChangeMode) onChangeMode(GameMode.ZOMBIE);
+                      }}
+                      className={`py-2 px-3 rounded-lg text-xs font-display font-bold uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-2 ${
+                        gameMode === GameMode.ZOMBIE
+                          ? 'bg-red-500/20 text-red-100 border border-red-500/40'
+                          : 'text-slate-400 hover:text-white border border-transparent'
+                      }`}
+                    >
+                      <Biohazard className="w-3.5 h-3.5 text-red-400" />
+                      <span>Zumbi</span>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        sound.playClick();
+                        if (onChangeMode) onChangeMode(GameMode.ALIEN);
+                      }}
+                      className={`py-2 px-3 rounded-lg text-xs font-display font-bold uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-2 ${
+                        gameMode === GameMode.ALIEN
+                          ? 'bg-cyan-500/20 text-cyan-100 border border-cyan-500/40'
+                          : 'text-slate-400 hover:text-white border border-transparent'
+                      }`}
+                    >
+                      <Atom className="w-3.5 h-3.5 text-cyan-400" />
+                      <span>Alien</span>
+                    </button>
+                  </div>
+
+                  <div className="flex items-center justify-between px-1.5 pt-1.5 text-[10.5px] font-mono text-slate-400">
+                    <span>
+                      {gameMode === GameMode.ZOMBIE ? 'Infectados & Titãs' : 'Frotas Alien & Overlords'}
+                    </span>
+                    <span className="font-mono-numbers text-slate-200">
+                      Recorde {(gameMode === GameMode.ALIEN ? highScoreAlien : highScoreZombie).toLocaleString()}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Primary Dominant PLAY CTA */}
                 <button
-                  onClick={() => {
-                    sound.playClick();
-                    if (onChangeMode) onChangeMode(GameMode.ALIEN);
-                  }}
-                  className={`py-2 px-3 rounded-lg text-xs font-display font-bold uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-2 ${
+                  id="btn-start-game"
+                  onClick={() => handleButtonClick(onStart)}
+                  className={`group w-full py-3 landscape:py-2.5 sm:py-3.5 px-6 rounded-xl font-display font-black tracking-wider uppercase text-sm sm:text-base transition-all active:scale-[0.98] cursor-pointer flex items-center justify-center gap-2.5 shadow-lg ${
                     gameMode === GameMode.ALIEN
-                      ? 'bg-cyan-500/20 text-cyan-100 border border-cyan-500/40'
-                      : 'text-slate-400 hover:text-white border border-transparent'
+                      ? 'bg-cyan-400 hover:bg-cyan-300 text-slate-950 shadow-[0_0_24px_rgba(34,211,238,0.28)]'
+                      : 'bg-rose-600 hover:bg-rose-500 text-white shadow-[0_0_24px_rgba(225,29,72,0.28)]'
                   }`}
                 >
-                  <Atom className="w-3.5 h-3.5 text-cyan-400" />
-                  <span>Alien</span>
+                  <Play className="w-4 h-4 fill-current" />
+                  <span>JOGAR {gameMode === GameMode.ALIEN ? 'ALIEN' : 'ZUMBI'}</span>
                 </button>
+
+                {/* Streamlined 2x2 Options Grid */}
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={() => handleButtonClick(onOpenStore)}
+                    className="py-2.5 landscape:py-2 sm:py-2.5 px-3 rounded-xl bg-white/[0.03] hover:bg-white/[0.07] border border-white/10 text-slate-200 text-xs font-display font-bold uppercase tracking-wider transition-all active:scale-[0.98] cursor-pointer flex items-center justify-center gap-2"
+                  >
+                    <ShoppingCart className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Armaria</span>
+                  </button>
+
+                  <button
+                    onClick={() => onOpenPrestige && handleButtonClick(onOpenPrestige)}
+                    className="py-2.5 landscape:py-2 sm:py-2.5 px-3 rounded-xl bg-white/[0.03] hover:bg-white/[0.07] border border-white/10 hover:border-amber-500/40 text-slate-200 text-xs font-display font-bold uppercase tracking-wider transition-all active:scale-[0.98] cursor-pointer flex items-center justify-center gap-2"
+                  >
+                    <Crown className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Prestígio</span>
+                  </button>
+
+                  <button
+                    onClick={() => onOpenMastery && handleButtonClick(onOpenMastery)}
+                    className="py-2.5 landscape:py-2 sm:py-2.5 px-3 rounded-xl bg-white/[0.03] hover:bg-white/[0.07] border border-white/10 hover:border-cyan-500/40 text-slate-200 text-xs font-display font-bold uppercase tracking-wider transition-all active:scale-[0.98] cursor-pointer flex items-center justify-center gap-2"
+                  >
+                    <GitBranch className="w-3.5 h-3.5 text-cyan-400" />
+                    <span>Maestria</span>
+                  </button>
+
+                  <button
+                    onClick={() => handleButtonClick(onOpenModeSelect)}
+                    className="py-2.5 landscape:py-2 sm:py-2.5 px-3 rounded-xl bg-white/[0.03] hover:bg-white/[0.07] border border-white/10 text-slate-200 text-xs font-display font-bold uppercase tracking-wider transition-all active:scale-[0.98] cursor-pointer flex items-center justify-center gap-2"
+                  >
+                    <Crosshair className="w-3.5 h-3.5 text-sky-400" />
+                    <span>Modos</span>
+                  </button>
+                </div>
               </div>
-
-              <div className="flex items-center justify-between px-1.5 pt-2 text-[11px] font-mono text-slate-500">
-                <span>
-                  {gameMode === GameMode.ZOMBIE ? 'Infectados & Titãs' : 'Frotas Alien & Overlords'}
-                </span>
-                <span className="font-mono-numbers text-slate-300">
-                  Recorde {(gameMode === GameMode.ALIEN ? highScoreAlien : highScoreZombie).toLocaleString()}
-                </span>
-              </div>
-            </div>
-
-            {/* Primary Dominant PLAY CTA */}
-            <div className="w-full max-w-sm mx-auto flex flex-col gap-2.5">
-              <button
-                id="btn-start-game"
-                onClick={() => handleButtonClick(onStart)}
-                className={`group w-full py-3.5 px-6 rounded-xl font-display font-black tracking-wider uppercase text-sm sm:text-base transition-all active:scale-[0.98] cursor-pointer flex items-center justify-center gap-2.5 shadow-lg ${
-                  gameMode === GameMode.ALIEN
-                    ? 'bg-cyan-400 hover:bg-cyan-300 text-slate-950 shadow-[0_0_28px_rgba(34,211,238,0.28)]'
-                    : 'bg-rose-600 hover:bg-rose-500 text-white shadow-[0_0_28px_rgba(225,29,72,0.28)]'
-                }`}
-              >
-                <Play className="w-4 h-4 fill-current" />
-                <span>JOGAR {gameMode === GameMode.ALIEN ? 'ALIEN' : 'ZUMBI'}</span>
-              </button>
-
-              {/* Streamlined 2x2 Action Grid */}
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  onClick={() => handleButtonClick(onOpenStore)}
-                  className="py-2.5 px-3 rounded-xl bg-white/[0.03] hover:bg-white/[0.07] border border-white/10 text-slate-200 text-xs font-display font-bold uppercase tracking-wider transition-all active:scale-[0.98] cursor-pointer flex items-center justify-center gap-2"
-                >
-                  <ShoppingCart className="w-3.5 h-3.5 text-amber-400" />
-                  <span>Armaria</span>
-                </button>
-
-                <button
-                  onClick={() => onOpenPrestige && handleButtonClick(onOpenPrestige)}
-                  className="py-2.5 px-3 rounded-xl bg-white/[0.03] hover:bg-white/[0.07] border border-white/10 hover:border-amber-500/40 text-slate-200 text-xs font-display font-bold uppercase tracking-wider transition-all active:scale-[0.98] cursor-pointer flex items-center justify-center gap-2"
-                >
-                  <Crown className="w-3.5 h-3.5 text-amber-400" />
-                  <span>Prestígio</span>
-                </button>
-
-                <button
-                  onClick={() => onOpenMastery && handleButtonClick(onOpenMastery)}
-                  className="py-2.5 px-3 rounded-xl bg-white/[0.03] hover:bg-white/[0.07] border border-white/10 hover:border-cyan-500/40 text-slate-200 text-xs font-display font-bold uppercase tracking-wider transition-all active:scale-[0.98] cursor-pointer flex items-center justify-center gap-2"
-                >
-                  <GitBranch className="w-3.5 h-3.5 text-cyan-400" />
-                  <span>Maestria</span>
-                </button>
-
-                <button
-                  onClick={() => handleButtonClick(onOpenModeSelect)}
-                  className="py-2.5 px-3 rounded-xl bg-white/[0.03] hover:bg-white/[0.07] border border-white/10 text-slate-200 text-xs font-display font-bold uppercase tracking-wider transition-all active:scale-[0.98] cursor-pointer flex items-center justify-center gap-2"
-                >
-                  <Crosshair className="w-3.5 h-3.5 text-sky-400" />
-                  <span>Modos</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Unboxed Equipped Weapon Glance */}
-            <div className="mt-6 flex items-center justify-center gap-2 text-[11px] font-mono text-slate-400">
-              <CurrentIcon className="w-3.5 h-3.5" style={{ color: currentWeaponStats.color }} />
-              <span className="text-slate-200 font-semibold">{currentWeaponStats.name}</span>
-              <span className="text-white/20">·</span>
-              <button
-                onClick={() => handleButtonClick(onOpenStore)}
-                className="text-cyan-400 hover:text-cyan-300 underline underline-offset-4 cursor-pointer transition-colors"
-              >
-                Trocar
-              </button>
             </div>
           </main>
 
-          {/* MENU FOOTER: Quiet & Unboxed */}
-          <footer className="relative z-10 px-5 sm:px-8 py-3.5 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-2 text-[10px] font-mono text-slate-500">
+          {/* MENU FOOTER: Quiet & Compact */}
+          <footer className="relative z-10 px-4 sm:px-8 py-2 sm:py-3 border-t border-white/5 flex flex-wrap items-center justify-between gap-2 text-[10px] font-mono text-slate-500 shrink-0">
             <div className="flex items-center gap-2">
-              <span>Zumbi: {highScoreZombie.toLocaleString()}</span>
-              <span className="text-white/20">·</span>
-              <span>Alien: {highScoreAlien.toLocaleString()}</span>
+              <span>Modo Mobile: Touch Duplo</span>
               {prestigeLevel > 0 && (
                 <>
                   <span className="text-white/20">·</span>
@@ -937,84 +978,84 @@ export const GameHUD: React.FC<GameHUDProps> = ({
             <div className="flex items-center gap-2">
               <span>WASD + Mouse</span>
               <span className="text-white/20">·</span>
-              <span>Shift: Warp</span>
+              <span>Shift: Warp/Trocar</span>
               <span className="text-white/20">·</span>
-              <span>Q: Maestria</span>
+              <span>Q: Maestria/Fusão</span>
             </div>
           </footer>
 
           {/* CONTROLS GUIDE MODAL */}
           {showControlsModal && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
-              <div className="bg-slate-900 border border-white/15 rounded-2xl max-w-md w-full p-6 shadow-2xl relative">
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/85 backdrop-blur-md">
+              <div className="bg-slate-900 border border-white/15 rounded-2xl max-w-2xl w-full max-h-[92dvh] overflow-y-auto p-4 sm:p-6 shadow-2xl relative">
                 <button
                   onClick={() => setShowControlsModal(false)}
-                  className="absolute top-4 right-4 text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 cursor-pointer"
+                  className="sticky float-right top-0 text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 cursor-pointer"
                   aria-label="Fechar"
                 >
                   <X className="w-5 h-5" />
                 </button>
 
-                <div className="flex items-center gap-2.5 mb-4">
+                <div className="flex items-center gap-2.5 mb-3">
                   <HelpCircle className="w-5 h-5 text-cyan-400" />
-                  <h2 className="text-lg font-display font-bold uppercase text-white">
+                  <h2 className="text-base sm:text-lg font-display font-bold uppercase text-white">
                     GUIA DE CONTROLES
                   </h2>
                 </div>
 
-                <div className="flex flex-col gap-4 text-left">
-                  <div className="bg-slate-950/60 border border-white/10 rounded-xl p-3.5">
+                <div className="grid grid-cols-1 landscape:grid-cols-2 md:grid-cols-2 gap-3 text-left">
+                  <div className="bg-slate-950/60 border border-white/10 rounded-xl p-3">
                     <span className="text-xs font-mono font-bold text-cyan-400 uppercase tracking-wider block mb-2">
                       COMPUTADOR / DESKTOP
                     </span>
-                    <ul className="text-xs text-slate-300 flex flex-col gap-1.5 font-mono">
-                      <li className="flex justify-between">
+                    <ul className="text-[11px] sm:text-xs text-slate-300 flex flex-col gap-1.5 font-mono">
+                      <li className="flex justify-between gap-2">
                         <span className="text-slate-400">Mover:</span>
                         <span className="font-bold text-white">[W] [A] [S] [D]</span>
                       </li>
-                      <li className="flex justify-between">
+                      <li className="flex justify-between gap-2">
                         <span className="text-slate-400">Mirar & Disparar:</span>
-                        <span className="font-bold text-cyan-400">Mouse + Clique Esq.</span>
+                        <span className="font-bold text-cyan-400">Mouse + Clique</span>
                       </li>
-                      <li className="flex justify-between">
-                        <span className="text-slate-400">Warp / Fúria (Naves):</span>
+                      <li className="flex justify-between gap-2">
+                        <span className="text-slate-400">Warp / Fúria:</span>
                         <span className="font-bold text-fuchsia-300">Segurar [SHIFT]</span>
                       </li>
-                      <li className="flex justify-between">
+                      <li className="flex justify-between gap-2">
                         <span className="text-slate-400">Habilidade Maestria:</span>
                         <span className="font-bold text-amber-300">Tecla [Q]</span>
                       </li>
-                      <li className="flex justify-between">
-                        <span className="text-slate-400">Modo Homem de Ferro:</span>
-                        <span className="font-bold text-red-300">[SHIFT] ou [E]</span>
+                      <li className="flex justify-between gap-2">
+                        <span className="text-slate-400">Homem de Ferro:</span>
+                        <span className="font-bold text-red-300">[SHIFT] / [E]</span>
                       </li>
-                      <li className="flex justify-between">
+                      <li className="flex justify-between gap-2">
                         <span className="text-slate-400">Dragões Fogo/Gelo:</span>
-                        <span className="font-bold text-purple-300">[SHIFT] Trocar · [Q] Fusão</span>
+                        <span className="font-bold text-purple-300">[SHIFT] / [Q]</span>
                       </li>
-                      <li className="flex justify-between">
+                      <li className="flex justify-between gap-2">
                         <span className="text-slate-400">Pausar:</span>
                         <span className="font-bold text-white">[P] ou [Espaço]</span>
                       </li>
                     </ul>
                   </div>
 
-                  <div className="bg-slate-950/60 border border-white/10 rounded-xl p-3.5">
+                  <div className="bg-slate-950/60 border border-white/10 rounded-xl p-3">
                     <span className="text-xs font-mono font-bold text-rose-400 uppercase tracking-wider block mb-2">
                       MOBILE / TOUCHSCREEN
                     </span>
-                    <ul className="text-xs text-slate-300 flex flex-col gap-1.5 font-mono">
-                      <li className="flex justify-between">
-                        <span className="text-slate-400">Joystick Dinâmico Esq:</span>
+                    <ul className="text-[11px] sm:text-xs text-slate-300 flex flex-col gap-1.5 font-mono">
+                      <li className="flex justify-between gap-2">
+                        <span className="text-slate-400">Joystick Esq:</span>
                         <span className="font-bold text-cyan-300">Mover</span>
                       </li>
-                      <li className="flex justify-between">
-                        <span className="text-slate-400">Joystick Dinâmico Dir:</span>
+                      <li className="flex justify-between gap-2">
+                        <span className="text-slate-400">Joystick Dir:</span>
                         <span className="font-bold text-rose-400">Mirar & Atirar</span>
                       </li>
-                      <li className="flex justify-between">
-                        <span className="text-slate-400">Botões Táticos Dir:</span>
-                        <span className="font-bold text-amber-300">Warp & Skill</span>
+                      <li className="flex justify-between gap-2">
+                        <span className="text-slate-400">Botões Dir:</span>
+                        <span className="font-bold text-amber-300">Warp / Trocar / Fusão</span>
                       </li>
                     </ul>
                   </div>
@@ -1022,7 +1063,7 @@ export const GameHUD: React.FC<GameHUDProps> = ({
 
                 <button
                   onClick={() => setShowControlsModal(false)}
-                  className="mt-6 w-full py-3 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-display font-bold uppercase text-xs tracking-wider transition-colors cursor-pointer"
+                  className="mt-4 w-full py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-display font-bold uppercase text-xs tracking-wider transition-colors cursor-pointer"
                 >
                   FECHAR
                 </button>
@@ -1032,17 +1073,17 @@ export const GameHUD: React.FC<GameHUDProps> = ({
         </div>
       )}
 
-      {/* REBOOT CONFIRMATION MODAL (No native window.confirm) */}
+      {/* REBOOT CONFIRMATION MODAL */}
       {showRebootModal && onResetAll && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md pointer-events-auto">
-          <div className="bg-slate-900 border border-rose-500/30 rounded-2xl max-w-sm w-full p-6 shadow-2xl text-center">
-            <div className="w-12 h-12 rounded-xl bg-rose-500/15 border border-rose-500/30 flex items-center justify-center mx-auto mb-3 text-rose-400">
-              <RefreshCw className="w-6 h-6" />
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/85 backdrop-blur-md pointer-events-auto">
+          <div className="bg-slate-900 border border-rose-500/30 rounded-2xl max-w-sm w-full max-h-[92dvh] overflow-y-auto p-5 shadow-2xl text-center">
+            <div className="w-10 h-10 rounded-xl bg-rose-500/15 border border-rose-500/30 flex items-center justify-center mx-auto mb-2.5 text-rose-400">
+              <RefreshCw className="w-5 h-5" />
             </div>
-            <h3 className="text-lg font-display font-black uppercase text-white mb-1.5">
+            <h3 className="text-base sm:text-lg font-display font-black uppercase text-white mb-1">
               REBOOT COMPLETO
             </h3>
-            <p className="text-xs font-mono text-slate-400 leading-relaxed mb-5">
+            <p className="text-xs font-mono text-slate-400 leading-relaxed mb-4">
               Deseja apagar permanentemente todos os créditos, armas, upgrades, prestígios, tokens, maestrias e recordes?
             </p>
             <div className="grid grid-cols-2 gap-2.5">
@@ -1067,218 +1108,213 @@ export const GameHUD: React.FC<GameHUDProps> = ({
       )}
 
       {/* ========================================================= */}
-      {/* 3. TACTICAL PAUSE OVERLAY (GameState.PAUSED) */}
+      {/* 3. TACTICAL PAUSE OVERLAY (GameState.PAUSED)              */}
       {/* ========================================================= */}
       {gameState === GameState.PAUSED && (
-        <div className="absolute inset-0 pointer-events-auto bg-slate-950/85 backdrop-blur-lg flex flex-col items-center justify-center p-6 text-center select-none z-50">
-          <div className="p-4 rounded-full bg-slate-900 border border-cyan-500/30 mb-4 text-cyan-400 shadow-[0_0_30px_rgba(6,182,212,0.25)]">
-            <Pause className="w-8 h-8 animate-pulse" />
-          </div>
+        <div className="absolute inset-0 pointer-events-auto bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 overflow-y-auto select-none z-50">
+          <div className="w-full max-w-4xl my-auto grid grid-cols-1 landscape:grid-cols-12 md:grid-cols-12 gap-4 sm:gap-6 items-center">
+            {/* LEFT: Status & Telemetry */}
+            <div className="landscape:col-span-6 md:col-span-6 flex flex-col items-center landscape:items-start md:items-start text-center landscape:text-left md:text-left">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="p-2.5 rounded-full bg-slate-900 border border-cyan-500/30 text-cyan-400">
+                  <Pause className="w-5 h-5 animate-pulse" />
+                </div>
+                <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-900 border border-white/10 text-[11px] font-mono font-bold">
+                  {gameMode === GameMode.ALIEN ? (
+                    <>
+                      <Atom className="w-3.5 h-3.5 text-cyan-400" />
+                      <span className="text-cyan-300">MODO ALIEN</span>
+                    </>
+                  ) : (
+                    <>
+                      <Biohazard className="w-3.5 h-3.5 text-red-400" />
+                      <span className="text-red-300">MODO ZUMBI</span>
+                    </>
+                  )}
+                </div>
+              </div>
 
-          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-900 border border-white/10 text-xs font-mono font-bold mb-3">
-            {gameMode === GameMode.ALIEN ? (
-              <>
-                <Atom className="w-3.5 h-3.5 text-cyan-400 animate-spin-slow" />
-                <span className="text-cyan-300">MODO ALIEN EM ANDAMENTO</span>
-              </>
-            ) : (
-              <>
-                <Biohazard className="w-3.5 h-3.5 text-red-400" />
-                <span className="text-red-300">MODO ZUMBI EM ANDAMENTO</span>
-              </>
-            )}
-          </div>
+              <h2 className="text-2xl sm:text-4xl font-display font-black text-white tracking-tight uppercase mb-1">
+                OPERAÇÃO SUSPENSA
+              </h2>
+              <p className="text-slate-400 text-[11px] font-mono uppercase tracking-widest mb-4">
+                O combate está pausado temporariamente
+              </p>
 
-          <h2 className="text-3xl sm:text-4xl font-display font-black text-white tracking-tight uppercase mb-1">
-            OPERAÇÃO SUSPENSA
-          </h2>
-          <p className="text-slate-400 text-xs font-mono uppercase tracking-widest mb-6">
-            O combate está pausado temporariamente
-          </p>
-
-          {/* Match Telemetry Box */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 max-w-md w-full bg-slate-900/80 border border-white/10 rounded-2xl p-4 mb-6 backdrop-blur-md">
-            <div className="flex flex-col items-center p-2 bg-slate-950/50 rounded-xl">
-              <span className="text-[9px] font-mono text-slate-400 uppercase">Onda Atual</span>
-              <span className="text-base font-display font-black text-white">ONDA {wave}</span>
+              <div className="grid grid-cols-2 gap-2.5 w-full max-w-md bg-slate-900/85 border border-white/10 rounded-xl p-3">
+                <div className="flex flex-col items-center landscape:items-start md:items-start p-2 bg-slate-950/60 rounded-lg">
+                  <span className="text-[9px] font-mono text-slate-400 uppercase">Onda Atual</span>
+                  <span className="text-sm sm:text-base font-display font-black text-white">ONDA {wave}</span>
+                </div>
+                <div className="flex flex-col items-center landscape:items-start md:items-start p-2 bg-slate-950/60 rounded-lg">
+                  <span className="text-[9px] font-mono text-slate-400 uppercase">Score (Créditos)</span>
+                  <span className="text-sm sm:text-base font-mono-numbers font-bold text-amber-400 flex items-center gap-1">
+                    <Coins className="w-3.5 h-3.5 text-amber-400" />
+                    {player.score.toLocaleString()}
+                  </span>
+                </div>
+                <div className="flex flex-col items-center landscape:items-start md:items-start p-2 bg-slate-950/60 rounded-lg">
+                  <span className="text-[9px] font-mono text-slate-400 uppercase">Abates</span>
+                  <span className="text-sm sm:text-base font-mono-numbers font-bold text-rose-400">{player.kills}</span>
+                </div>
+                <div className="flex flex-col items-center landscape:items-start md:items-start p-2 bg-slate-950/60 rounded-lg">
+                  <span className="text-[9px] font-mono text-slate-400 uppercase">Nível</span>
+                  <span className="text-sm sm:text-base font-display font-black text-amber-400">LVL {player.level}</span>
+                </div>
+              </div>
             </div>
-            <div className="flex flex-col items-center p-2 bg-slate-950/50 rounded-xl">
-              <span className="text-[9px] font-mono text-slate-400 uppercase">Score (Créditos)</span>
-              <span className="text-base font-mono-numbers font-bold text-amber-400 flex items-center gap-1">
-                <Coins className="w-3.5 h-3.5 text-amber-400" />
-                {player.score.toLocaleString()}
-              </span>
+
+            {/* RIGHT: Action Options */}
+            <div className="landscape:col-span-6 md:col-span-6 flex flex-col gap-2.5 w-full max-w-sm mx-auto">
+              <button
+                id="btn-resume-game"
+                onClick={() => handleButtonClick(onPauseToggle)}
+                className="py-3 px-5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 text-slate-950 font-display font-black tracking-wider uppercase text-sm shadow-[0_0_20px_rgba(6,182,212,0.3)] hover:opacity-95 active:scale-95 transition-all cursor-pointer flex items-center justify-center gap-2"
+              >
+                <Play className="w-4 h-4 fill-slate-950" /> RETOMAR COMBATE
+              </button>
+
+              <button
+                id="btn-restart-paused"
+                onClick={() => handleButtonClick(onRestart)}
+                className="py-2.5 px-5 rounded-xl bg-slate-900 border border-white/10 text-slate-200 hover:text-white hover:bg-slate-800 font-display font-bold tracking-wider uppercase text-xs active:scale-95 transition-all cursor-pointer flex items-center justify-center gap-2"
+              >
+                <RefreshCw className="w-3.5 h-3.5" /> REINICIAR PARTIDA
+              </button>
+
+              <button
+                onClick={() => handleButtonClick(onOpenModeSelect)}
+                className="py-2.5 px-5 rounded-xl bg-slate-900 border border-cyan-500/30 text-cyan-300 hover:text-white hover:bg-slate-800 font-display font-bold tracking-wider uppercase text-xs active:scale-95 transition-all cursor-pointer flex items-center justify-center gap-2"
+              >
+                <Crosshair className="w-3.5 h-3.5" /> SELECIONAR OUTRO MODO
+              </button>
+
+              <button
+                onClick={() => handleButtonClick(onGoToMenu)}
+                className="py-2.5 px-5 rounded-xl bg-slate-950 border border-white/10 text-slate-400 hover:text-white font-mono text-xs uppercase tracking-wider transition-all cursor-pointer"
+              >
+                VOLTAR AO MENU PRINCIPAL
+              </button>
             </div>
-            <div className="flex flex-col items-center p-2 bg-slate-950/50 rounded-xl">
-              <span className="text-[9px] font-mono text-slate-400 uppercase">Abates</span>
-              <span className="text-base font-mono-numbers font-bold text-rose-400">{player.kills}</span>
-            </div>
-            <div className="flex flex-col items-center p-2 bg-slate-950/50 rounded-xl">
-              <span className="text-[9px] font-mono text-slate-400 uppercase">Nível</span>
-              <span className="text-base font-display font-black text-amber-400">LVL {player.level}</span>
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-3 w-full max-w-xs">
-            <button
-              id="btn-resume-game"
-              onClick={() => handleButtonClick(onPauseToggle)}
-              className="py-3.5 px-6 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 text-slate-950 font-display font-black tracking-wider uppercase text-sm shadow-[0_0_20px_rgba(6,182,212,0.3)] hover:opacity-95 active:scale-95 transition-all cursor-pointer flex items-center justify-center gap-2"
-            >
-              <Play className="w-4 h-4 fill-slate-950" /> RETOMAR COMBATE
-            </button>
-
-            <button
-              id="btn-restart-paused"
-              onClick={() => handleButtonClick(onRestart)}
-              className="py-3 px-6 rounded-xl bg-slate-900 border border-white/10 text-slate-200 hover:text-white hover:bg-slate-800 font-display font-bold tracking-wider uppercase text-xs active:scale-95 transition-all cursor-pointer flex items-center justify-center gap-2"
-            >
-              <RefreshCw className="w-3.5 h-3.5" /> REINICIAR PARTIDA
-            </button>
-
-            <button
-              onClick={() => handleButtonClick(onOpenModeSelect)}
-              className="py-3 px-6 rounded-xl bg-slate-900 border border-cyan-500/30 text-cyan-300 hover:text-white hover:bg-slate-800 font-display font-bold tracking-wider uppercase text-xs active:scale-95 transition-all cursor-pointer flex items-center justify-center gap-2"
-            >
-              <Crosshair className="w-3.5 h-3.5" /> SELECIONAR OUTRO MODO
-            </button>
-
-            <button
-              onClick={() => handleButtonClick(onGoToMenu)}
-              className="py-3 px-6 rounded-xl bg-slate-950 border border-white/5 text-slate-400 hover:text-white font-mono text-xs uppercase tracking-wider transition-all cursor-pointer"
-            >
-              VOLTAR AO MENU PRINCIPAL
-            </button>
           </div>
         </div>
       )}
 
       {/* ========================================================= */}
-      {/* 4. GAME OVER SCREEN (GameState.GAME_OVER) */}
+      {/* 4. GAME OVER SCREEN (GameState.GAME_OVER) - SPLIT LANDSCAPE */}
       {/* ========================================================= */}
       {gameState === GameState.GAME_OVER && (
-        <div className="absolute inset-0 pointer-events-auto bg-slate-950 flex flex-col items-center justify-center p-6 text-center select-none overflow-y-auto z-50">
-          {/* Ambient apocalyptic grid & red emergency glow */}
+        <div className="absolute inset-0 pointer-events-auto bg-slate-950 flex items-center justify-center p-3 sm:p-6 select-none overflow-y-auto z-50">
+          {/* Ambient apocalyptic grid */}
           <div
-            className="absolute inset-0 z-0 opacity-15 pointer-events-none"
+            className="fixed inset-0 z-0 opacity-15 pointer-events-none"
             style={{
               backgroundImage:
                 'linear-gradient(#ef4444 1px, transparent 1px), linear-gradient(90deg, #ef4444 1px, transparent 1px)',
               backgroundSize: '48px 48px',
             }}
           />
-          <div className="absolute -top-40 w-96 h-96 rounded-full bg-red-600/15 blur-3xl pointer-events-none" />
 
-          {/* Skull Failure Emblem */}
-          <div className="mb-4 text-rose-500 animate-pulse relative z-10">
-            <div className="w-20 h-20 rounded-2xl bg-rose-950/40 border border-rose-500/40 flex items-center justify-center shadow-[0_0_40px_rgba(244,63,94,0.3)]">
-              <Skull className="w-10 h-10 text-rose-500" />
+          <div className="relative z-10 w-full max-w-4xl my-auto grid grid-cols-1 landscape:grid-cols-12 md:grid-cols-12 gap-4 sm:gap-6 items-center">
+            {/* LEFT: Defeat Status & Debrief Metrics */}
+            <div className="landscape:col-span-6 md:col-span-6 flex flex-col items-center landscape:items-start md:items-start text-center landscape:text-left md:text-left">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-11 h-11 sm:w-14 sm:h-14 rounded-xl bg-rose-950/60 border border-rose-500/40 flex items-center justify-center shrink-0">
+                  <Skull className="w-6 h-6 sm:w-7 sm:h-7 text-rose-500" />
+                </div>
+                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-900 border border-white/10 text-[10px] sm:text-xs font-mono font-bold">
+                  {gameMode === GameMode.ALIEN ? (
+                    <>
+                      <Atom className="w-3.5 h-3.5 text-cyan-400" />
+                      <span className="text-cyan-300">MODO ALIEN FINALIZADO</span>
+                    </>
+                  ) : (
+                    <>
+                      <Biohazard className="w-3.5 h-3.5 text-red-400" />
+                      <span className="text-red-300">MODO ZUMBI FINALIZADO</span>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              <h2 className="text-2xl sm:text-4xl font-display font-black text-transparent bg-clip-text bg-gradient-to-r from-rose-400 via-red-500 to-rose-600 tracking-tight uppercase mb-1">
+                SINAIS VITAIS PERDIDOS
+              </h2>
+              <p className="text-slate-400 font-mono text-[10.5px] sm:text-xs tracking-wider uppercase mb-3">
+                {gameMode === GameMode.ALIEN
+                  ? 'Operativo neutralizado pela ofensiva alienígena'
+                  : 'O sobrevivente sucumbiu à horda de infectados'}
+              </p>
+
+              {/* After-Action Debrief (AAR) Card */}
+              <div className="grid grid-cols-2 gap-2.5 w-full max-w-md bg-slate-900/85 border border-white/10 rounded-xl p-3 shadow-2xl">
+                <div className="flex flex-col items-center landscape:items-start md:items-start p-2 bg-slate-950/60 rounded-lg border border-white/5">
+                  <span className="text-[9px] font-mono text-slate-400 uppercase font-bold">Onda Final</span>
+                  <span className="text-base sm:text-lg font-display font-black text-white">ONDA {wave}</span>
+                </div>
+
+                <div className="flex flex-col items-center landscape:items-start md:items-start p-2 bg-slate-950/60 rounded-lg border border-white/5">
+                  <span className="text-[9px] font-mono text-slate-400 uppercase font-bold">Score (Créditos)</span>
+                  <span className="text-base sm:text-lg font-mono-numbers font-bold text-amber-400 flex items-center gap-1">
+                    <Coins className="w-3.5 h-3.5 text-amber-400" />
+                    {player.score.toLocaleString()}
+                  </span>
+                </div>
+
+                <div className="flex flex-col items-center landscape:items-start md:items-start p-2 bg-slate-950/60 rounded-lg border border-white/5">
+                  <span className="text-[9px] font-mono text-slate-400 uppercase font-bold">Eliminados</span>
+                  <span className="text-base sm:text-lg font-mono-numbers font-bold text-rose-400 flex items-center gap-1">
+                    <Skull className="w-3.5 h-3.5" /> {player.kills}
+                  </span>
+                </div>
+
+                <div className="flex flex-col items-center landscape:items-start md:items-start p-2 bg-slate-950/60 rounded-lg border border-white/5">
+                  <span className="text-[9px] font-mono text-slate-400 uppercase font-bold">Nível Atingido</span>
+                  <span className="text-base sm:text-lg font-display font-black text-amber-400">LVL {player.level}</span>
+                </div>
+              </div>
+
+              {/* New High Score Banner */}
+              {player.score >= (gameMode === GameMode.ALIEN ? highScoreAlien : highScoreZombie) && player.score > 0 && (
+                <div className="mt-2.5 text-amber-300 text-[11px] font-mono font-bold tracking-wider uppercase bg-amber-500/10 border border-amber-500/30 py-1.5 px-3.5 rounded-lg animate-pulse flex items-center gap-1.5">
+                  <Award className="w-4 h-4 text-amber-400 shrink-0" />
+                  <span>NOVO RECORDE ({gameMode === GameMode.ALIEN ? 'ALIEN' : 'ZUMBI'})!</span>
+                </div>
+              )}
             </div>
-          </div>
 
-          {/* Mode Pill */}
-          <div className="relative z-10 flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-900 border border-white/10 text-xs font-mono font-bold mb-3">
-            {gameMode === GameMode.ALIEN ? (
-              <>
-                <Atom className="w-3.5 h-3.5 text-cyan-400 animate-spin-slow" />
-                <span className="text-cyan-300">OPERAÇÃO NO MODO ALIEN FINALIZADA</span>
-              </>
-            ) : (
-              <>
-                <Biohazard className="w-3.5 h-3.5 text-red-400" />
-                <span className="text-red-300">OPERAÇÃO NO MODO ZUMBI FINALIZADA</span>
-              </>
-            )}
-          </div>
+            {/* RIGHT: Game Over Actions */}
+            <div className="landscape:col-span-6 md:col-span-6 flex flex-col gap-2.5 w-full max-w-sm mx-auto">
+              <button
+                id="btn-try-again"
+                onClick={() => handleButtonClick(onRestart)}
+                className="py-3.5 px-6 rounded-xl bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 text-white font-display font-black tracking-wider uppercase text-sm shadow-[0_0_24px_rgba(244,63,94,0.35)] active:scale-95 transition-all cursor-pointer flex items-center justify-center gap-2"
+              >
+                <RefreshCw className="w-4 h-4" /> TENTAR NOVAMENTE
+              </button>
 
-          <h2 className="relative z-10 text-4xl sm:text-5xl font-display font-black text-transparent bg-clip-text bg-gradient-to-r from-rose-400 via-red-500 to-rose-600 tracking-tight uppercase mb-1">
-            SINAIS VITAIS PERDIDOS
-          </h2>
-          <p className="relative z-10 text-slate-400 font-mono text-xs tracking-widest uppercase mb-6">
-            {gameMode === GameMode.ALIEN
-              ? 'O operativo foi neutralizado pela ofensiva alienígena'
-              : 'O sobrevivente sucumbiu à horda de infectados'}
-          </p>
+              <button
+                onClick={() => handleButtonClick(onOpenModeSelect)}
+                className="py-2.5 px-6 rounded-xl bg-slate-900 border border-cyan-500/40 text-cyan-300 hover:text-white hover:bg-slate-800 font-display font-bold tracking-wider uppercase text-xs active:scale-95 transition-all cursor-pointer flex items-center justify-center gap-2 shadow-md"
+              >
+                <Crosshair className="w-3.5 h-3.5 text-cyan-400" /> TROCAR DE MODO
+              </button>
 
-          {/* After-Action Debrief (AAR) Card */}
-          <div className="relative z-10 grid grid-cols-2 sm:grid-cols-4 gap-3 w-full max-w-lg bg-slate-900/80 border border-white/10 rounded-2xl p-5 mb-6 backdrop-blur-md shadow-2xl">
-            <div className="flex flex-col items-center p-3 bg-slate-950/60 rounded-xl border border-white/5">
-              <span className="text-[9px] font-mono text-slate-400 uppercase tracking-wider mb-1 font-bold">
-                Onda Final
-              </span>
-              <span className="text-lg sm:text-xl font-display font-black text-white">
-                ONDA {wave}
-              </span>
+              <button
+                onClick={() => handleButtonClick(onOpenStore)}
+                className="py-2.5 px-6 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-200 font-display font-bold tracking-wider uppercase text-xs active:scale-95 transition-all cursor-pointer flex items-center justify-center gap-2"
+              >
+                <ShoppingCart className="w-3.5 h-3.5 text-amber-400" /> ARMARIA & UPGRADES
+              </button>
+
+              <button
+                id="btn-back-to-menu"
+                onClick={() => handleButtonClick(onGoToMenu)}
+                className="py-2.5 px-6 rounded-xl bg-slate-900 border border-white/10 text-slate-300 hover:text-white hover:bg-slate-800 font-mono text-xs uppercase tracking-wider active:scale-95 transition-all cursor-pointer flex items-center justify-center gap-2"
+              >
+                VOLTAR AO MENU
+              </button>
             </div>
-
-            <div className="flex flex-col items-center p-3 bg-slate-950/60 rounded-xl border border-white/5">
-              <span className="text-[9px] font-mono text-slate-400 uppercase tracking-wider mb-1 font-bold">
-                Score (Créditos)
-              </span>
-              <span className="text-lg sm:text-xl font-mono-numbers font-bold text-amber-400 flex items-center gap-1">
-                <Coins className="w-4 h-4 text-amber-400" />
-                {player.score.toLocaleString()}
-              </span>
-            </div>
-
-            <div className="flex flex-col items-center p-3 bg-slate-950/60 rounded-xl border border-white/5">
-              <span className="text-[9px] font-mono text-slate-400 uppercase tracking-wider mb-1 font-bold">
-                Eliminados
-              </span>
-              <span className="text-lg sm:text-xl font-mono-numbers font-bold text-rose-400 flex items-center gap-1">
-                <Skull className="w-3.5 h-3.5" /> {player.kills}
-              </span>
-            </div>
-
-            <div className="flex flex-col items-center p-3 bg-slate-950/60 rounded-xl border border-white/5">
-              <span className="text-[9px] font-mono text-slate-400 uppercase tracking-wider mb-1 font-bold">
-                Nível Atingido
-              </span>
-              <span className="text-lg sm:text-xl font-display font-black text-amber-400">
-                LVL {player.level}
-              </span>
-            </div>
-          </div>
-
-          {/* New High Score Banner */}
-          {player.score >= (gameMode === GameMode.ALIEN ? highScoreAlien : highScoreZombie) && player.score > 0 && (
-            <div className="relative z-10 text-amber-300 text-xs font-mono font-bold tracking-widest uppercase bg-amber-500/10 border border-amber-500/30 py-2 px-5 rounded-xl animate-pulse mb-6 flex items-center gap-2">
-              <Award className="w-4 h-4 text-amber-400" />
-              NOVO RECORDE PESSOAL NO {gameMode === GameMode.ALIEN ? 'MODO ALIEN' : 'MODO ZUMBI'}!
-            </div>
-          )}
-
-          {/* Game Over Actions */}
-          <div className="relative z-10 flex flex-col gap-3 w-full max-w-xs">
-            <button
-              id="btn-try-again"
-              onClick={() => handleButtonClick(onRestart)}
-              className="py-4 px-8 rounded-xl bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 text-white font-display font-black tracking-wider uppercase text-sm shadow-[0_0_30px_rgba(244,63,94,0.4)] hover:shadow-[0_0_40px_rgba(244,63,94,0.6)] active:scale-95 transition-all cursor-pointer flex items-center justify-center gap-2"
-            >
-              <RefreshCw className="w-4 h-4" /> TENTAR NOVAMENTE
-            </button>
-
-            <button
-              onClick={() => handleButtonClick(onOpenModeSelect)}
-              className="py-3 px-8 rounded-xl bg-slate-900 border border-cyan-500/40 text-cyan-300 hover:text-white hover:bg-slate-800 font-display font-bold tracking-wider uppercase text-xs active:scale-95 transition-all cursor-pointer flex items-center justify-center gap-2 shadow-md"
-            >
-              <Crosshair className="w-3.5 h-3.5 text-cyan-400" /> TROCAR DE MODO
-            </button>
-
-            <button
-              onClick={() => handleButtonClick(onOpenStore)}
-              className="py-3 px-8 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-200 font-display font-bold tracking-wider uppercase text-xs active:scale-95 transition-all cursor-pointer flex items-center justify-center gap-2"
-            >
-              <ShoppingCart className="w-3.5 h-3.5 text-amber-400" /> ARMARIA & UPGRADES
-            </button>
-
-            <button
-              id="btn-back-to-menu"
-              onClick={() => handleButtonClick(onGoToMenu)}
-              className="py-3 px-8 rounded-xl bg-slate-900 border border-white/10 text-slate-300 hover:text-white hover:bg-slate-800 font-mono text-xs uppercase tracking-wider active:scale-95 transition-all cursor-pointer flex items-center justify-center gap-2"
-            >
-              VOLTAR AO MENU
-            </button>
           </div>
         </div>
       )}

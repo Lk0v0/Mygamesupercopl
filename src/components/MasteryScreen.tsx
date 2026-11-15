@@ -94,11 +94,11 @@ export const MasteryScreen: React.FC<MasteryScreenProps> = ({
   };
 
   return (
-    <div className="absolute inset-0 z-50 flex items-center justify-center bg-slate-950/95 backdrop-blur-xl p-3 sm:p-6 overflow-hidden select-none">
-      <div className="w-full max-w-6xl h-[92vh] bg-slate-900/95 border border-white/10 rounded-2xl flex flex-col overflow-hidden shadow-2xl">
+    <div className="absolute inset-0 z-50 flex items-center justify-center bg-slate-950/95 p-2 sm:p-4 overflow-hidden select-none">
+      <div className="w-full max-w-6xl h-[94dvh] bg-slate-900 border border-white/10 rounded-2xl flex flex-col overflow-hidden shadow-2xl">
         {/* Top Bar */}
-        <header className="px-5 sm:px-7 py-4 border-b border-white/10 flex flex-wrap items-center justify-between gap-4 shrink-0">
-          <div className="flex items-center gap-3">
+        <header className="px-4 sm:px-6 py-2.5 sm:py-3.5 border-b border-white/10 flex flex-wrap items-center justify-between gap-2 sm:gap-4 shrink-0">
+          <div className="flex items-center gap-2.5">
             <button
               onClick={() => {
                 sound.playClick();
@@ -110,23 +110,23 @@ export const MasteryScreen: React.FC<MasteryScreenProps> = ({
               <ArrowLeft className="w-4 h-4" />
             </button>
             <div>
-              <h2 className="text-lg sm:text-xl font-display font-bold text-white tracking-tight">
+              <h2 className="text-base sm:text-xl font-display font-bold text-white tracking-tight">
                 Maestria das Naves · Árvore de Habilidades
               </h2>
-              <p className="text-xs text-slate-400">
+              <p className="hidden md:block text-xs text-slate-400">
                 Desbloqueie passivas de combate e habilidades ativas [Q] pilotando ou treinando cada nave
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-3 text-xs font-mono text-amber-300 font-bold tabular-nums">
+          <div className="flex items-center gap-2 text-xs font-mono text-amber-300 font-bold tabular-nums">
             <Coins className="w-4 h-4 text-amber-400" />
             <span>{coins.toLocaleString()} CRED</span>
           </div>
         </header>
 
         {/* Ship Selector Tabs & XP Strip */}
-        <div className="px-5 sm:px-7 py-3 border-b border-white/10 bg-slate-950/40 flex flex-col lg:flex-row lg:items-center justify-between gap-3 shrink-0">
+        <div className="px-4 sm:px-6 py-2 sm:py-3 border-b border-white/10 bg-slate-950/50 flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-3 shrink-0">
           <div className="flex items-center gap-1 p-1 bg-slate-950 border border-white/10 rounded-lg overflow-x-auto">
             {SHIPS_ORDER.map((shipKey) => {
               const sMeta = SHIP_META[shipKey];
@@ -207,26 +207,26 @@ export const MasteryScreen: React.FC<MasteryScreenProps> = ({
         </div>
 
         {/* Main Split Area: Left Interactive Tree + Right Node Inspector */}
-        <div className="flex-1 overflow-y-auto lg:overflow-hidden grid grid-cols-1 lg:grid-cols-12">
+        <div className="flex-1 overflow-y-auto sm:overflow-hidden grid grid-cols-1 sm:grid-cols-12">
           {/* Left 7 Cols: Interactive Skill Tree Canvas */}
-          <div className="lg:col-span-7 p-5 sm:p-7 flex flex-col justify-between bg-slate-950/60 border-b lg:border-b-0 lg:border-r border-white/10 relative min-h-[460px]">
-            <div className="flex items-center justify-between text-xs font-mono mb-3">
+          <div className="sm:col-span-7 p-3 sm:p-5 flex flex-col justify-between bg-slate-950/60 border-b sm:border-b-0 sm:border-r border-white/10 relative min-h-[260px] sm:min-h-0">
+            <div className="flex items-center justify-between text-[11px] sm:text-xs font-mono mb-2">
               <div className="flex items-center gap-2 text-slate-300">
                 <span style={{ color: meta.accentColor }} className="font-bold">
                   {meta.name}
                 </span>
                 <span className="text-white/20">·</span>
                 <span className="text-slate-400">
-                  {isShipOwned ? 'Nave Desbloqueada' : 'Compre na Armaria para pilotar'}
+                  {isShipOwned ? 'Nave Desbloqueada' : 'Compre na Armaria'}
                 </span>
               </div>
               <div className="text-emerald-300 font-bold tabular-nums">
-                Pontos Disponíveis: {availablePoints}
+                Pontos: {availablePoints}
               </div>
             </div>
 
             {/* Skill Tree Node Graph */}
-            <div className="relative flex-1 w-full max-w-xl mx-auto min-h-[380px]">
+            <div className="relative flex-1 w-full max-w-xl mx-auto min-h-[230px] sm:min-h-[260px]">
               {/* SVG Connector Branches */}
               <svg
                 className="absolute inset-0 w-full h-full pointer-events-none"
@@ -292,12 +292,12 @@ export const MasteryScreen: React.FC<MasteryScreenProps> = ({
                         ? 'rgba(52, 211, 153, 0.7)'
                         : 'rgba(255, 255, 255, 0.14)',
                     }}
-                    className={`absolute -translate-x-1/2 -translate-y-1/2 w-36 sm:w-44 p-2.5 rounded-xl border text-left transition-all cursor-pointer backdrop-blur-md ${
+                    className={`absolute -translate-x-1/2 -translate-y-1/2 w-28 sm:w-36 md:w-44 p-1.5 sm:p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
                       unlocked
-                        ? 'bg-slate-900/95 shadow-lg'
+                        ? 'bg-slate-900 shadow-lg'
                         : unlockable
-                        ? 'bg-slate-900/90 hover:bg-slate-800/90'
-                        : 'bg-slate-950/85 opacity-75 hover:opacity-100'
+                        ? 'bg-slate-900 hover:bg-slate-800'
+                        : 'bg-slate-950 opacity-80 hover:opacity-100'
                     } ${isSelected ? 'ring-2 ring-white/40 scale-[1.03] z-20' : 'z-10'}`}
                   >
                     <div className="flex items-center justify-between gap-1 mb-1">
@@ -327,15 +327,15 @@ export const MasteryScreen: React.FC<MasteryScreenProps> = ({
               })}
             </div>
 
-            <div className="flex items-center justify-between text-[11px] font-mono text-slate-500 pt-2">
+            <div className="hidden md:flex items-center justify-between text-[11px] font-mono text-slate-500 pt-2">
               <span>Nível 1 → Ramos Passiva / Habilidade → Suprema</span>
               <span>Ganhe XP abatendo inimigos com a nave</span>
             </div>
           </div>
 
           {/* Right 5 Cols: Selected Node Inspector */}
-          <div className="lg:col-span-5 p-5 sm:p-7 flex flex-col justify-between gap-6 bg-slate-900/60">
-            <div className="space-y-5">
+          <div className="sm:col-span-5 p-3.5 sm:p-5 flex flex-col justify-between gap-3 sm:gap-5 bg-slate-900/80 overflow-y-auto">
+            <div className="space-y-3 sm:space-y-4">
               <div className="flex items-center justify-between gap-2">
                 <span className="text-xs font-mono text-slate-400">
                   Tier {selectedNode.tier} · {selectedNode.kind === 'HABILIDADE' ? 'Habilidade Especial' : 'Aprimoramento Passivo'}

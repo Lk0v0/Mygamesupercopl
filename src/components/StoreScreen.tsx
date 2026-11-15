@@ -492,42 +492,38 @@ export const StoreScreen: React.FC<StoreScreenProps> = ({
   });
 
   return (
-    <div className="absolute inset-0 z-50 flex items-center justify-center bg-slate-950/95 backdrop-blur-xl p-3 md:p-6 overflow-hidden select-none">
-      <div className="w-full max-w-6xl h-[95vh] bg-slate-900/90 border border-cyan-500/20 rounded-3xl p-5 md:p-7 flex flex-col shadow-[0_0_50px_rgba(6,182,212,0.15)] relative overflow-hidden">
-        
-        {/* Subtle background tech glow */}
-        <div className="absolute -top-32 -left-32 w-80 h-80 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute -bottom-32 -right-32 w-80 h-80 bg-blue-600/10 rounded-full blur-3xl pointer-events-none" />
+    <div className="absolute inset-0 z-50 flex items-center justify-center bg-slate-950/95 p-2 sm:p-4 overflow-hidden select-none">
+      <div className="w-full max-w-6xl h-[94dvh] bg-slate-900 border border-cyan-500/20 rounded-2xl sm:rounded-3xl p-3 sm:p-5 flex flex-col shadow-[0_0_40px_rgba(6,182,212,0.12)] relative overflow-hidden">
 
         {/* Top Header */}
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-5 border-b border-white/10 shrink-0 relative z-10">
-          <div>
-            <div className="flex items-center gap-2 text-cyan-400 text-xs font-mono font-black tracking-widest uppercase mb-1">
-              <Sparkles className="w-4 h-4 text-cyan-400 animate-pulse" />
+        <div className="flex flex-wrap sm:flex-nowrap items-center justify-between gap-2 sm:gap-4 pb-2.5 sm:pb-4 border-b border-white/10 shrink-0 relative z-10">
+          <div className="min-w-0">
+            <div className="hidden sm:flex items-center gap-2 text-cyan-400 text-[10px] font-mono font-black tracking-widest uppercase mb-0.5">
+              <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
               <span>CENTRO DE ARMAMENTOS & SOBREVIVÊNCIA</span>
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-cyan-500/15 border border-cyan-500/30 text-[10px] text-cyan-300 font-sans font-bold">
                 MUNIÇÃO INFINITA ∞
               </span>
             </div>
-            <h2 className="text-2xl md:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-blue-400 to-indigo-400 uppercase italic tracking-wider">
+            <h2 className="text-lg sm:text-2xl md:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-blue-400 to-indigo-400 uppercase italic tracking-wider truncate">
               Loja & Armaria Tática
             </h2>
-            <p className="text-slate-400 text-xs md:text-sm mt-0.5">
+            <p className="hidden md:block text-slate-400 text-xs mt-0.5">
               Desbloqueie armas com munição infinita e equipe <span className="text-cyan-300 font-bold">1 arma principal</span> para dominar as hordas!
             </p>
           </div>
 
           {/* Right Wallet & Actions */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 shrink-0">
             {/* Wallet Display */}
-            <div className="bg-slate-950/80 border border-cyan-500/30 px-4 py-2.5 rounded-2xl flex items-center gap-3 shadow-[0_0_20px_rgba(6,182,212,0.15)]">
-              <div className="p-2 rounded-xl bg-amber-500/15 border border-amber-500/30">
-                <Coins className="w-5 h-5 text-amber-400 fill-amber-400/20 animate-pulse" />
+            <div className="bg-slate-950/85 border border-cyan-500/30 px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-xl flex items-center gap-2">
+              <div className="p-1.5 rounded-lg bg-amber-500/15 border border-amber-500/30">
+                <Coins className="w-4 h-4 text-amber-400 fill-amber-400/20" />
               </div>
               <div className="flex flex-col">
-                <span className="text-[9px] font-mono text-slate-400 font-bold tracking-widest uppercase">CRÉDITOS DISPONÍVEIS</span>
-                <span className="text-xl md:text-2xl font-black text-white font-mono flex items-center gap-1.5 leading-none mt-0.5">
-                  {coins.toLocaleString()} <span className="text-xs text-amber-400 font-bold">CRED</span>
+                <span className="hidden sm:block text-[9px] font-mono text-slate-400 font-bold tracking-widest uppercase leading-none">CRÉDITOS</span>
+                <span className="text-sm sm:text-lg font-black text-white font-mono flex items-center gap-1 leading-none mt-0.5 tabular-nums">
+                  {coins.toLocaleString()} <span className="text-[10px] text-amber-400 font-bold">CRED</span>
                 </span>
               </div>
             </div>
@@ -540,7 +536,7 @@ export const StoreScreen: React.FC<StoreScreenProps> = ({
                   onAddTestCoins();
                   showSuccess('+1.000 Créditos adicionados para teste!');
                 }}
-                className="px-3 py-2.5 rounded-2xl bg-amber-500/15 border border-amber-500/30 hover:bg-amber-500/25 text-amber-300 hover:text-amber-200 text-xs font-mono font-bold tracking-wider transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
+                className="px-2.5 py-2 rounded-xl bg-amber-500/15 border border-amber-500/30 hover:bg-amber-500/25 text-amber-300 hover:text-amber-200 text-xs font-mono font-bold tracking-wider transition-colors flex items-center gap-1 cursor-pointer"
                 title="Adicionar moedas de teste"
               >
                 <PlusCircle className="w-4 h-4 text-amber-400" />
@@ -554,10 +550,10 @@ export const StoreScreen: React.FC<StoreScreenProps> = ({
                 sound.playPowerup();
                 onClose();
               }}
-              className="p-2.5 rounded-2xl bg-slate-800/80 border border-white/10 hover:border-white/30 text-slate-400 hover:text-white hover:bg-slate-700 transition-all cursor-pointer"
+              className="p-2 rounded-xl bg-slate-800/80 border border-white/10 hover:border-white/30 text-slate-400 hover:text-white hover:bg-slate-700 transition-colors cursor-pointer"
               title="Fechar Loja"
             >
-              <X className="w-5 h-5" />
+              <X className="w-4 h-4 sm:w-5 sm:h-5" />
             </button>
           </div>
         </div>
@@ -577,64 +573,64 @@ export const StoreScreen: React.FC<StoreScreenProps> = ({
         )}
 
         {/* Navigation Tabs */}
-        <div className="flex items-center gap-2 py-4 overflow-x-auto shrink-0 scrollbar-none">
+        <div className="flex items-center gap-2 py-2 sm:py-3 overflow-x-auto shrink-0 scrollbar-none">
           <button
             onClick={() => { sound.playPowerup(); setActiveTab('ALL'); }}
-            className={`px-4 py-2 rounded-xl text-xs font-black tracking-wider uppercase transition-all whitespace-nowrap cursor-pointer ${
+            className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl text-[11px] sm:text-xs font-black tracking-wider uppercase transition-colors whitespace-nowrap cursor-pointer ${
               activeTab === 'ALL'
-                ? 'bg-cyan-500 text-slate-950 shadow-[0_0_15px_rgba(6,182,212,0.4)]'
+                ? 'bg-cyan-500 text-slate-950 shadow-[0_0_12px_rgba(6,182,212,0.35)]'
                 : 'bg-slate-950/60 border border-white/10 text-slate-400 hover:text-white hover:bg-slate-800/80'
             }`}
           >
-            Todas as Armas ({WEAPON_CATALOG.length})
+            Todas ({WEAPON_CATALOG.length})
           </button>
           <button
             onClick={() => { sound.playPowerup(); setActiveTab('BALLISTIC'); }}
-            className={`px-4 py-2 rounded-xl text-xs font-black tracking-wider uppercase transition-all whitespace-nowrap cursor-pointer ${
+            className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl text-[11px] sm:text-xs font-black tracking-wider uppercase transition-colors whitespace-nowrap cursor-pointer ${
               activeTab === 'BALLISTIC'
-                ? 'bg-cyan-500 text-slate-950 shadow-[0_0_15px_rgba(6,182,212,0.4)]'
+                ? 'bg-cyan-500 text-slate-950 shadow-[0_0_12px_rgba(6,182,212,0.35)]'
                 : 'bg-slate-950/60 border border-white/10 text-slate-400 hover:text-white hover:bg-slate-800/80'
             }`}
           >
-            Balísticas & Leves
+            Balísticas
           </button>
           <button
             onClick={() => { sound.playPowerup(); setActiveTab('HEAVY'); }}
-            className={`px-4 py-2 rounded-xl text-xs font-black tracking-wider uppercase transition-all whitespace-nowrap cursor-pointer ${
+            className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl text-[11px] sm:text-xs font-black tracking-wider uppercase transition-colors whitespace-nowrap cursor-pointer ${
               activeTab === 'HEAVY'
-                ? 'bg-cyan-500 text-slate-950 shadow-[0_0_15px_rgba(6,182,212,0.4)]'
+                ? 'bg-cyan-500 text-slate-950 shadow-[0_0_12px_rgba(6,182,212,0.35)]'
                 : 'bg-slate-950/60 border border-white/10 text-slate-400 hover:text-white hover:bg-slate-800/80'
             }`}
           >
-            Pesadas & Artilharia
+            Pesadas
           </button>
           <button
             onClick={() => { sound.playPowerup(); setActiveTab('ENERGY'); }}
-            className={`px-4 py-2 rounded-xl text-xs font-black tracking-wider uppercase transition-all whitespace-nowrap cursor-pointer ${
+            className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl text-[11px] sm:text-xs font-black tracking-wider uppercase transition-colors whitespace-nowrap cursor-pointer ${
               activeTab === 'ENERGY'
-                ? 'bg-cyan-500 text-slate-950 shadow-[0_0_15px_rgba(6,182,212,0.4)]'
+                ? 'bg-cyan-500 text-slate-950 shadow-[0_0_12px_rgba(6,182,212,0.35)]'
                 : 'bg-slate-950/60 border border-white/10 text-slate-400 hover:text-white hover:bg-slate-800/80'
             }`}
           >
-            Energia & Alienígenas
+            Energia & Alien
           </button>
           <button
             onClick={() => { sound.playPowerup(); setActiveTab('UPGRADES'); }}
-            className={`px-4 py-2 rounded-xl text-xs font-black tracking-wider uppercase transition-all whitespace-nowrap cursor-pointer ${
+            className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl text-[11px] sm:text-xs font-black tracking-wider uppercase transition-colors whitespace-nowrap cursor-pointer ${
               activeTab === 'UPGRADES'
-                ? 'bg-emerald-500 text-slate-950 shadow-[0_0_15px_rgba(168,85,247,0.4)]'
+                ? 'bg-emerald-500 text-slate-950 shadow-[0_0_12px_rgba(16,185,129,0.35)]'
                 : 'bg-slate-950/60 border border-white/10 text-emerald-400/90 hover:text-emerald-300 hover:bg-slate-800/80'
             }`}
           >
-            ★ Upgrades de Sobrevivente
+            ★ Upgrades
           </button>
         </div>
 
         {/* Scrollable Main Catalog Area */}
-        <div className="flex-1 overflow-y-auto pr-1 pb-4 space-y-4">
+        <div className="flex-1 overflow-y-auto pr-1 pb-3 space-y-3">
           {/* WEAPONS GRID */}
           {activeTab !== 'UPGRADES' && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {filteredWeapons.map((item) => {
                 const Icon = item.icon;
                 const isUnlocked = unlockedWeapons.includes(item.type) || item.price === 0;
@@ -644,12 +640,12 @@ export const StoreScreen: React.FC<StoreScreenProps> = ({
                 return (
                   <div
                     key={item.type}
-                    className={`rounded-2xl p-4 flex flex-col justify-between transition-all relative overflow-hidden backdrop-blur-md ${
+                    className={`rounded-2xl p-3.5 sm:p-4 flex flex-col justify-between transition-colors relative overflow-hidden ${
                       isEquipped
-                        ? 'bg-cyan-950/40 border-2 border-cyan-400 shadow-[0_0_25px_rgba(6,182,212,0.25)]'
+                        ? 'bg-cyan-950/45 border-2 border-cyan-400 shadow-[0_0_20px_rgba(6,182,212,0.2)]'
                         : isUnlocked
-                          ? 'bg-slate-950/60 border border-white/15 hover:border-cyan-500/40'
-                          : 'bg-slate-950/40 border border-white/5 hover:border-white/20 opacity-95'
+                          ? 'bg-slate-950/75 border border-white/15 hover:border-cyan-500/40'
+                          : 'bg-slate-950/55 border border-white/10 hover:border-white/20 opacity-95'
                     }`}
                   >
                     {/* Top indicator ribbon */}
@@ -806,10 +802,10 @@ export const StoreScreen: React.FC<StoreScreenProps> = ({
 
           {/* SURVIVOR UPGRADES TAB */}
           {activeTab === 'UPGRADES' && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               
               {/* Max Health Upgrade */}
-              <div className="bg-slate-950/60 border border-white/10 rounded-2xl p-5 flex flex-col justify-between">
+              <div className="bg-slate-950/75 border border-white/10 rounded-2xl p-3.5 sm:p-4 flex flex-col justify-between">
                 <div className="flex items-start gap-4">
                   <div className="p-3.5 rounded-2xl bg-rose-500/15 border border-rose-500/30 text-rose-400 shrink-0">
                     <Heart className="w-7 h-7" />
@@ -849,7 +845,7 @@ export const StoreScreen: React.FC<StoreScreenProps> = ({
               </div>
 
               {/* Energy Shield Upgrade */}
-              <div className="bg-slate-950/60 border border-white/10 rounded-2xl p-5 flex flex-col justify-between">
+              <div className="bg-slate-950/75 border border-white/10 rounded-2xl p-3.5 sm:p-4 flex flex-col justify-between">
                 <div className="flex items-start gap-4">
                   <div className="p-3.5 rounded-2xl bg-cyan-500/15 border border-cyan-500/30 text-cyan-400 shrink-0">
                     <Shield className="w-7 h-7" />
@@ -889,7 +885,7 @@ export const StoreScreen: React.FC<StoreScreenProps> = ({
               </div>
 
               {/* Movement Speed Upgrade */}
-              <div className="bg-slate-950/60 border border-white/10 rounded-2xl p-5 flex flex-col justify-between">
+              <div className="bg-slate-950/75 border border-white/10 rounded-2xl p-3.5 sm:p-4 flex flex-col justify-between">
                 <div className="flex items-start gap-4">
                   <div className="p-3.5 rounded-2xl bg-amber-500/15 border border-amber-500/30 text-amber-400 shrink-0">
                     <Gauge className="w-7 h-7" />
@@ -938,7 +934,7 @@ export const StoreScreen: React.FC<StoreScreenProps> = ({
               </div>
 
               {/* Global Weapon Damage Upgrade */}
-              <div className="bg-slate-950/60 border border-white/10 rounded-2xl p-5 flex flex-col justify-between">
+              <div className="bg-slate-950/75 border border-white/10 rounded-2xl p-3.5 sm:p-4 flex flex-col justify-between">
                 <div className="flex items-start gap-4">
                   <div className="p-3.5 rounded-2xl bg-purple-500/15 border border-purple-500/30 text-purple-400 shrink-0">
                     <Sparkles className="w-7 h-7" />
@@ -987,7 +983,7 @@ export const StoreScreen: React.FC<StoreScreenProps> = ({
               </div>
 
               {/* Luck / Better Power-Up Rarity Boost Upgrade */}
-              <div className="md:col-span-2 bg-gradient-to-br from-slate-950/80 via-emerald-950/25 to-amber-950/20 border border-emerald-500/30 rounded-2xl p-5 flex flex-col justify-between shadow-[0_0_24px_rgba(16,185,129,0.12)]">
+              <div className="sm:col-span-2 bg-gradient-to-br from-slate-950/85 via-emerald-950/25 to-amber-950/20 border border-emerald-500/30 rounded-2xl p-3.5 sm:p-4 flex flex-col justify-between">
                 <div className="flex items-start gap-4">
                   <div className="p-3.5 rounded-2xl bg-emerald-500/15 border border-emerald-400/40 text-emerald-400 shrink-0">
                     <Star className="w-7 h-7" />
@@ -1048,16 +1044,16 @@ export const StoreScreen: React.FC<StoreScreenProps> = ({
         </div>
 
         {/* Bottom Bar: Quick Summary and Exit */}
-        <div className="pt-4 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0">
-          <div className="flex items-center gap-2 text-xs text-slate-400">
-            <span className="px-2 py-0.5 rounded bg-cyan-500/15 border border-cyan-500/30 font-mono text-cyan-300 font-bold uppercase text-[10px]">
-              Arma em Combate
+        <div className="pt-2.5 sm:pt-3.5 border-t border-white/10 flex flex-row items-center justify-between gap-2 shrink-0">
+          <div className="flex items-center gap-2 text-xs text-slate-400 min-w-0">
+            <span className="hidden sm:inline px-2 py-0.5 rounded bg-cyan-500/15 border border-cyan-500/30 font-mono text-cyan-300 font-bold uppercase text-[10px]">
+              Arma
             </span>
-            <span className="text-white font-bold">
+            <span className="text-white font-bold truncate">
               {WEAPON_CATALOG.find(w => w.type === equippedWeapon)?.name || 'Pistola Tática'}
             </span>
-            <span className="text-slate-500">•</span>
-            <span className="text-cyan-400 font-mono text-[11px]">Munição Infinita Ativa</span>
+            <span className="hidden sm:inline text-slate-500">•</span>
+            <span className="hidden sm:inline text-cyan-400 font-mono text-[11px]">Munição ∞</span>
           </div>
 
           <button
@@ -1065,7 +1061,7 @@ export const StoreScreen: React.FC<StoreScreenProps> = ({
               sound.playPowerup();
               onClose();
             }}
-            className="w-full sm:w-auto px-7 py-3 rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-black text-xs tracking-widest uppercase transition-all shadow-[0_0_20px_rgba(6,182,212,0.3)] active:scale-[0.98] cursor-pointer"
+            className="px-5 sm:px-7 py-2 sm:py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-black text-xs tracking-widest uppercase transition-all shadow-[0_0_15px_rgba(6,182,212,0.25)] active:scale-[0.98] cursor-pointer shrink-0"
           >
             Confirmar e Voltar
           </button>

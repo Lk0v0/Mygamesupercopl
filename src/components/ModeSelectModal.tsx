@@ -43,32 +43,32 @@ export const ModeSelectModal: React.FC<ModeSelectModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-slate-950/92 backdrop-blur-md animate-in fade-in duration-200 select-none">
-      <div className="relative w-full max-w-5xl bg-slate-900/95 border border-white/10 rounded-2xl md:rounded-3xl p-5 md:p-8 shadow-2xl flex flex-col overflow-hidden max-h-[95vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/92 animate-in fade-in duration-200 select-none">
+      <div className="relative w-full max-w-5xl bg-slate-900/95 border border-white/10 rounded-2xl md:rounded-3xl p-3.5 sm:p-6 shadow-2xl flex flex-col overflow-hidden max-h-[94dvh]">
         
         {/* Ambient atmospheric glows */}
         <div className="absolute -top-32 -left-32 w-80 h-80 bg-red-600/15 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute -bottom-32 -right-32 w-80 h-80 bg-cyan-500/15 rounded-full blur-3xl pointer-events-none" />
 
         {/* Header Bar */}
-        <div className="flex items-center justify-between pb-4 border-b border-white/10 shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-red-500/20 via-slate-800 to-cyan-500/20 border border-white/15 flex items-center justify-center text-white shadow-md">
-              <Crosshair className="w-5 h-5 text-cyan-400" />
+        <div className="flex items-center justify-between pb-2.5 sm:pb-4 border-b border-white/10 shrink-0">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-red-500/20 via-slate-800 to-cyan-500/20 border border-white/15 flex items-center justify-center text-white shadow-md shrink-0">
+              <Crosshair className="w-4 h-4 sm:w-5 sm:h-5 text-cyan-400" />
             </div>
 
-            <div>
+            <div className="min-w-0">
               <div className="flex items-center gap-2 text-xs text-slate-400">
-                <span className="font-semibold text-cyan-400 uppercase tracking-wider text-[10px]">
+                <span className="font-semibold text-cyan-400 uppercase tracking-wider text-[9px] sm:text-[10px]">
                   OPERAÇÃO TÁTICA
                 </span>
-                <span aria-hidden="true" className="text-white/20">·</span>
-                <span className="text-slate-400 font-mono text-[10px]">
+                <span aria-hidden="true" className="hidden sm:inline text-white/20">·</span>
+                <span className="hidden sm:inline text-slate-400 font-mono text-[10px]">
                   SELEÇÃO DE TEATRO DE GUERRA
                 </span>
               </div>
-              <h2 className="text-xl md:text-2xl font-display font-black text-white tracking-tight flex items-center gap-2">
-                <span>ESCOLHA SEU MODO DE JOGO</span>
+              <h2 className="text-base sm:text-xl md:text-2xl font-display font-black text-white tracking-tight truncate">
+                ESCOLHA SEU MODO DE JOGO
               </h2>
             </div>
           </div>
@@ -78,25 +78,25 @@ export const ModeSelectModal: React.FC<ModeSelectModalProps> = ({
               sound.playClick();
               onClose();
             }}
-            className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition-colors cursor-pointer border border-white/10"
+            className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition-colors cursor-pointer border border-white/10 shrink-0"
             aria-label="Fechar Seletor de Modo"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4 sm:w-5 sm:h-5" />
           </button>
         </div>
 
         {/* Quick Subtitle / Guide */}
-        <div className="py-2.5 flex items-center justify-between text-xs text-slate-300">
-          <p className="text-[11px] sm:text-xs text-slate-400">
-            Selecione a ameaça hostil para iniciar a missão de combate. Cada modo possui inimigos, mecânicas e projéteis exclusivos.
+        <div className="hidden sm:flex py-2 items-center justify-between text-xs text-slate-300 shrink-0">
+          <p className="text-[11px] text-slate-400">
+            Selecione a ameaça hostil para iniciar a missão de combate.
           </p>
-          <span className="hidden sm:inline-block text-[10px] font-mono text-cyan-400 bg-cyan-950/60 border border-cyan-500/30 px-2 py-0.5 rounded">
-            MUNIÇÃO 100% INFINITA EM AMBOS
+          <span className="text-[10px] font-mono text-cyan-400 bg-cyan-950/60 border border-cyan-500/30 px-2 py-0.5 rounded">
+            MUNIÇÃO 100% INFINITA
           </span>
         </div>
 
-        {/* Mode Cards Grid (Two distinct worlds: Zombie vs Alien) */}
-        <div className="flex-1 overflow-y-auto py-2 pr-1 grid grid-cols-1 md:grid-cols-2 gap-5 custom-scrollbar">
+        {/* Mode Cards Grid (Side-by-side on mobile landscape & desktop) */}
+        <div className="flex-1 overflow-y-auto py-2 pr-1 grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-5 custom-scrollbar">
           
           {/* ========================================================= */}
           {/* CARD 1: MODO ZUMBI */}

@@ -371,6 +371,11 @@ export default function App() {
   
   const [coins, setCoins] = useState<number>(0);
   const [activeBoss, setActiveBoss] = useState<ActiveBossInfo | null>(null);
+  const lastBossHudSyncRef = useRef<{ id: string | null; hp: number; ts: number }>({
+    id: null,
+    hp: -1,
+    ts: 0,
+  });
   const [maxShieldLevel, setMaxShieldLevel] = useState<number>(0);
   const [maxHealthLevel, setMaxHealthLevel] = useState<number>(0);
   const [speedLevel, setSpeedLevel] = useState<number>(0);
@@ -3322,7 +3327,7 @@ export default function App() {
           alpha: 0.6,
           color: finalSplatColor,
         });
-        if (bloodSplatsRef.current.length > 200) {
+        if (bloodSplatsRef.current.length > 140) {
           bloodSplatsRef.current.shift();
         }
 
@@ -6243,35 +6248,44 @@ export default function App() {
           z.y = p.y + Math.sin(pushAngle) * (p.radius + z.radius + 1);
         }
 
-        // Avoid overlap with other zombies (push-away physics)
-        for (let j = 0; j < zombies.length; j++) {
-          if (i === j) continue;
+        // Avoid overlap with other zombies (fast pairwise push-away physics with AABB + squared distance)
+        for (let j = i + 1; j < zombies.length; j++) {
           const other = zombies[j];
-          const zdx = other.x - z.x;
-          const zdy = other.y - z.y;
-          const distBetween = Math.hypot(zdx, zdy);
           const minDist = z.radius + other.radius;
-
-          if (distBetween < minDist) {
-            const overlap = minDist - distBetween;
-            const pushAngle = Math.atan2(zdy, zdx);
-            
-            // Push away slightly
-            z.x -= Math.cos(pushAngle) * overlap * 0.5;
-            z.y -= Math.sin(pushAngle) * overlap * 0.5;
-            other.x += Math.cos(pushAngle) * overlap * 0.5;
-            other.y += Math.sin(pushAngle) * overlap * 0.5;
+          const zdx = other.x - z.x;
+          if (zdx > minDist || zdx < -minDist) continue;
+          const zdy = other.y - z.y;
+          if (zdy > minDist || zdy < -minDist) continue;
+          const distSq = zdx * zdx + zdy * zdy;
+          if (distSq < minDist * minDist) {
+            if (distSq > 0.0001) {
+              const dist = Math.sqrt(distSq);
+              const push = ((minDist - dist) * 0.5) / dist;
+              const px = zdx * push;
+              const py = zdy * push;
+              z.x -= px;
+              z.y -= py;
+              other.x += px;
+              other.y += py;
+            } else {
+              z.x -= 0.5;
+              other.x += 0.5;
+            }
           }
         }
 
-        // Check collision against bullets
+        // Check collision against bullets (fast AABB + squared distance)
         const bulletList = bulletsRef.current;
         for (let j = bulletList.length - 1; j >= 0; j--) {
           const b = bulletList[j];
           if (b.isEnemy) continue; // Enemy projectiles don't hit zombies/aliens
-          const distToBullet = Math.hypot(b.x - z.x, b.y - z.y);
+          const hitR = z.radius + b.radius;
+          const bdx = b.x - z.x;
+          if (bdx > hitR || bdx < -hitR) continue;
+          const bdy = b.y - z.y;
+          if (bdy > hitR || bdy < -hitR) continue;
 
-          if (distToBullet < z.radius + b.radius) {
+          if (bdx * bdx + bdy * bdy < hitR * hitR) {
             // Bullet Hit Zombie!
             let hitDamage = b.damage;
             if (p.critChance && Math.random() < p.critChance) {
@@ -6397,7 +6411,7 @@ export default function App() {
                 alpha: 0.35 + Math.random() * 0.25,
                 color: dropColor,
               });
-              if (bloodSplatsRef.current.length > 250) {
+              if (bloodSplatsRef.current.length > 140) {
                 bloodSplatsRef.current.shift();
               }
             }
@@ -6417,20 +6431,32 @@ export default function App() {
       }
       zombiesRef.current = activeZombies;
 
-      // Update active boss state for HUD
+      // Update active boss state for HUD (throttled to avoid 60Hz React re-renders)
       const liveBoss = activeZombies.find(z => z.isBoss && z.hp > 0);
       if (liveBoss) {
-        setActiveBoss({
-          id: liveBoss.id,
-          name: liveBoss.bossName || 'CHEFE SUPREMO',
-          title: liveBoss.bossTitle || 'AMEAÇA DE NÍVEL ALFA',
-          hp: Math.round(liveBoss.hp),
-          maxHp: Math.round(liveBoss.maxHp),
-          type: liveBoss.type,
-          color: liveBoss.color,
-        });
-      } else {
-        setActiveBoss(prev => prev ? null : prev);
+        const roundedHp = Math.round(liveBoss.hp);
+        const lastSync = lastBossHudSyncRef.current;
+        if (
+          lastSync.id !== liveBoss.id ||
+          (roundedHp !== lastSync.hp && now - lastSync.ts >= 120)
+        ) {
+          lastSync.id = liveBoss.id;
+          lastSync.hp = roundedHp;
+          lastSync.ts = now;
+          setActiveBoss({
+            id: liveBoss.id,
+            name: liveBoss.bossName || 'CHEFE SUPREMO',
+            title: liveBoss.bossTitle || 'AMEAÇA DE NÍVEL ALFA',
+            hp: roundedHp,
+            maxHp: Math.round(liveBoss.maxHp),
+            type: liveBoss.type,
+            color: liveBoss.color,
+          });
+        }
+      } else if (lastBossHudSyncRef.current.id !== null) {
+        lastBossHudSyncRef.current.id = null;
+        lastBossHudSyncRef.current.hp = -1;
+        setActiveBoss(prev => (prev ? null : prev));
       }
 
       // 5. UPDATE CONSUMABLE ITEM DROPS
@@ -6548,6 +6574,9 @@ export default function App() {
           activeParticles.push(pt);
         }
       }
+      if (activeParticles.length > 260) {
+        activeParticles.splice(0, activeParticles.length - 260);
+      }
       particlesRef.current = activeParticles;
 
       // 7. SMOOTH CAMERA INTERPOLATION (LERP)
@@ -6600,7 +6629,7 @@ export default function App() {
     const drawGame = (time: number) => {
       const canvas = canvasRef.current;
       if (!canvas) return;
-      const ctx = canvas.getContext('2d');
+      const ctx = canvas.getContext('2d', { alpha: false }) as CanvasRenderingContext2D | null;
       if (!ctx) return;
 
       const p = playerRef.current;
@@ -6619,98 +6648,109 @@ export default function App() {
         camY += (Math.random() * 2 - 1) * screenShakeRef.current;
       }
 
-      // 1. DRAW TILE GRID LINES (Mode themed)
-      ctx.save();
+      // Camera viewport bounds for frustum culling
+      const viewLeft = camX;
+      const viewTop = camY;
+      const viewRight = camX + canvas.width;
+      const viewBottom = camY + canvas.height;
+
+      // 1. DRAW TILE GRID LINES (Batched into a single path stroke for max FPS)
       const isAlienStage = modeRef.current === GameMode.ALIEN;
-      ctx.strokeStyle = isAlienStage ? 'rgba(6, 182, 212, 0.18)' : 'rgba(51, 65, 85, 0.25)'; // cyber cyan or slate
+      ctx.strokeStyle = isAlienStage ? 'rgba(6, 182, 212, 0.18)' : 'rgba(51, 65, 85, 0.25)';
       ctx.lineWidth = 1;
       const gridSize = 80;
-      
-      // Calculate start and end rows/columns intersecting viewport
       const startX = Math.floor(camX / gridSize) * gridSize;
       const startY = Math.floor(camY / gridSize) * gridSize;
       const endX = startX + canvas.width + gridSize;
       const endY = startY + canvas.height + gridSize;
+      const minLineY = Math.max(0, camY) - camY;
+      const maxLineY = Math.min(ARENA_SIZE, camY + canvas.height) - camY;
+      const minLineX = Math.max(0, camX) - camX;
+      const maxLineX = Math.min(ARENA_SIZE, camX + canvas.width) - camX;
 
+      ctx.beginPath();
       for (let x = startX; x <= endX; x += gridSize) {
         if (x >= 0 && x <= ARENA_SIZE) {
-          ctx.beginPath();
-          ctx.moveTo(x - camX, Math.max(0, camY) - camY);
-          ctx.lineTo(x - camX, Math.min(ARENA_SIZE, camY + canvas.height) - camY);
-          ctx.stroke();
+          const sx = x - camX;
+          ctx.moveTo(sx, minLineY);
+          ctx.lineTo(sx, maxLineY);
         }
       }
       for (let y = startY; y <= endY; y += gridSize) {
         if (y >= 0 && y <= ARENA_SIZE) {
-          ctx.beginPath();
-          ctx.moveTo(Math.max(0, camX) - camX, y - camY);
-          ctx.lineTo(Math.min(ARENA_SIZE, camX + canvas.width) - camX, y - camY);
-          ctx.stroke();
+          const sy = y - camY;
+          ctx.moveTo(minLineX, sy);
+          ctx.lineTo(maxLineX, sy);
         }
       }
-      ctx.restore();
+      ctx.stroke();
 
-      // 2. DRAW ARENA BOUNDARY BORDERS
-      ctx.save();
-      if (isAlienStage) {
-        ctx.strokeStyle = '#06b6d4'; // glowing cyber cyan border
-        ctx.shadowColor = '#06b6d4';
-        ctx.shadowBlur = 12;
-      } else {
-        ctx.strokeStyle = '#7f1d1d'; // dark red border
-      }
+      // 2. DRAW ARENA BOUNDARY BORDERS (No shadowBlur)
+      ctx.strokeStyle = isAlienStage ? '#06b6d4' : '#7f1d1d';
       ctx.lineWidth = 10;
       ctx.strokeRect(-camX, -camY, ARENA_SIZE, ARENA_SIZE);
-      ctx.restore();
 
-      // 3. DRAW PERMANENT BLOOD SPLATTERS
+      // 3. DRAW PERMANENT BLOOD SPLATTERS (Culled + no per-splat save/restore)
       const splats = bloodSplatsRef.current;
       for (let i = 0; i < splats.length; i++) {
         const s = splats[i];
-        ctx.save();
+        if (
+          s.x + s.radius < viewLeft ||
+          s.x - s.radius > viewRight ||
+          s.y + s.radius < viewTop ||
+          s.y - s.radius > viewBottom
+        ) {
+          continue;
+        }
         ctx.globalAlpha = s.alpha;
         ctx.fillStyle = s.color;
         ctx.beginPath();
         ctx.arc(s.x - camX, s.y - camY, s.radius, 0, Math.PI * 2);
         ctx.fill();
-        ctx.restore();
       }
+      ctx.globalAlpha = 1;
 
-      // 3b. DRAW MUZZLE FLASH AMBIENT GLOW
+      // 3b. DRAW MUZZLE FLASH AMBIENT GLOW (Fast layered circles instead of createRadialGradient)
       if (muzzleFlashIntensityRef.current > 0) {
-        const weaponStats = p.weapons[p.currentWeapon] || p.weapons[WeaponType.PISTOL] || INITIAL_WEAPONS[WeaponType.PISTOL];
-        const weaponColor = weaponStats.color;
-        
-        // Map weapon type to rgb string
-        let rgbColor = '251, 191, 36'; // default pistol orange
-        if (p.currentWeapon === WeaponType.SHOTGUN) rgbColor = '248, 113, 113'; // red
-        else if (p.currentWeapon === WeaponType.MACHINE_GUN) rgbColor = '167, 139, 250'; // purple
-        else if (p.currentWeapon === WeaponType.PLASMA_RIFLE) rgbColor = '56, 189, 248'; // cyan
+        let rgbColor = '251, 191, 36';
+        if (p.currentWeapon === WeaponType.SHOTGUN) rgbColor = '248, 113, 113';
+        else if (p.currentWeapon === WeaponType.MACHINE_GUN) rgbColor = '167, 139, 250';
+        else if (p.currentWeapon === WeaponType.PLASMA_RIFLE) rgbColor = '56, 189, 248';
 
-        const flashX = p.x + Math.cos(p.angle) * (p.radius + 15);
-        const flashY = p.y + Math.sin(p.angle) * (p.radius + 15);
-        
+        const flashX = p.x + Math.cos(p.angle) * (p.radius + 15) - camX;
+        const flashY = p.y + Math.sin(p.angle) * (p.radius + 15) - camY;
+        const glowRadius =
+          (p.currentWeapon === WeaponType.PLASMA_RIFLE
+            ? 150
+            : p.currentWeapon === WeaponType.SHOTGUN
+              ? 130
+              : 95) * muzzleFlashIntensityRef.current;
+
         ctx.save();
-        const glowRadius = (p.currentWeapon === WeaponType.PLASMA_RIFLE ? 180 : p.currentWeapon === WeaponType.SHOTGUN ? 150 : 110) * muzzleFlashIntensityRef.current;
-        const grad = ctx.createRadialGradient(
-          flashX - camX, flashY - camY, 0,
-          flashX - camX, flashY - camY, glowRadius
-        );
-        grad.addColorStop(0, `rgba(${rgbColor}, ${0.35 * muzzleFlashIntensityRef.current})`);
-        grad.addColorStop(0.5, `rgba(${rgbColor}, ${0.08 * muzzleFlashIntensityRef.current})`);
-        grad.addColorStop(1, 'rgba(0,0,0,0)');
-        
-        ctx.fillStyle = grad;
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.fillStyle = `rgba(${rgbColor}, ${(0.14 * muzzleFlashIntensityRef.current).toFixed(3)})`;
         ctx.beginPath();
-        ctx.arc(flashX - camX, flashY - camY, glowRadius, 0, Math.PI * 2);
+        ctx.arc(flashX, flashY, glowRadius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = `rgba(${rgbColor}, ${(0.24 * muzzleFlashIntensityRef.current).toFixed(3)})`;
+        ctx.beginPath();
+        ctx.arc(flashX, flashY, glowRadius * 0.45, 0, Math.PI * 2);
         ctx.fill();
         ctx.restore();
       }
 
-      // 4. DRAW CONSUMABLE ITEM DROPS
+      // 4. DRAW CONSUMABLE ITEM DROPS (Culled + fast glow ring instead of shadowBlur)
       const drops = itemDropsRef.current;
       for (let i = 0; i < drops.length; i++) {
         const d = drops[i];
+        if (
+          d.x + 28 < viewLeft ||
+          d.x - 28 > viewRight ||
+          d.y + 28 < viewTop ||
+          d.y - 28 > viewBottom
+        ) {
+          continue;
+        }
         ctx.save();
         
         // Pulse scaling animation
@@ -6721,9 +6761,13 @@ export default function App() {
         ctx.translate(screenX, screenY);
         ctx.scale(pulse, pulse);
 
-        // Draw shadow glow
-        ctx.shadowBlur = 10;
-        ctx.shadowColor = d.color;
+        // Fast translucent halo ring (replaces shadowBlur)
+        ctx.globalAlpha = 0.25;
+        ctx.fillStyle = d.color;
+        ctx.beginPath();
+        ctx.arc(0, 0, 14, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
 
         ctx.fillStyle = d.color;
         ctx.beginPath();
@@ -6768,7 +6812,7 @@ export default function App() {
           ctx.lineTo(3, -1);
           ctx.stroke();
         } else {
-          // Weapon Unlock crate! (Glowing Purple box with rotating question mark or gun shape)
+          // Weapon Unlock crate!
           ctx.roundRect(-10, -10, 20, 20, 4);
           ctx.fill();
           ctx.strokeStyle = '#ffffff';
@@ -6783,18 +6827,37 @@ export default function App() {
         ctx.restore();
       }
 
-      // 5. DRAW FLAMETHROWER STREAM AND BULLETS
+      // 5. DRAW FLAMETHROWER STREAM AND BULLETS (Culled to viewport)
       renderFlamethrowerStream(ctx, flameStreamRef.current, camX, camY, time);
 
       const bullets = bulletsRef.current;
       for (let i = 0; i < bullets.length; i++) {
-        renderBulletVisual(ctx, bullets[i], camX, camY, time);
+        const b = bullets[i];
+        const bPad = b.radius + 36;
+        if (
+          b.x + bPad < viewLeft ||
+          b.x - bPad > viewRight ||
+          b.y + bPad < viewTop ||
+          b.y - bPad > viewBottom
+        ) {
+          continue;
+        }
+        renderBulletVisual(ctx, b, camX, camY, time);
       }
 
-      // 6. DRAW ZOMBIES
+      // 6. DRAW ZOMBIES (Frustum culled + cached shading instead of radial gradient & shadowBlur)
       const zombies = zombiesRef.current;
       for (let i = 0; i < zombies.length; i++) {
         const z = zombies[i];
+        const zPad = z.radius + 45;
+        if (
+          z.x + zPad < viewLeft ||
+          z.x - zPad > viewRight ||
+          z.y + zPad < viewTop ||
+          z.y - zPad > viewBottom
+        ) {
+          continue;
+        }
         const szX = z.x - camX;
         const szY = z.y - camY;
 
@@ -6816,27 +6879,23 @@ export default function App() {
                         z.type === ZombieType.ALIEN_DREADNOUGHT ||
                         z.type === ZombieType.ALIEN_LEVIATHAN;
 
-        // Draw main body circle with mode-specific gradient
-        const gradient = ctx.createRadialGradient(0, 0, z.radius * 0.2, 0, 0, z.radius);
-        gradient.addColorStop(0, z.color);
-        gradient.addColorStop(0.8, darkenColor(z.color, 35));
-        gradient.addColorStop(1, isAlien ? '#0f172a' : '#022c22');
-
-        ctx.fillStyle = gradient;
+        // Fast layered shading (replaces expensive per-zombie createRadialGradient)
+        ctx.fillStyle = darkenColor(z.color, 35);
         ctx.beginPath();
         ctx.arc(0, 0, z.radius, 0, Math.PI * 2);
         ctx.fill();
 
-        // Fire aura if burning
+        ctx.fillStyle = z.color;
+        ctx.beginPath();
+        ctx.arc(0, 0, z.radius * 0.78, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Fire aura if burning (fast layered translucent halo without shadowBlur)
         if (z.isOnFire) {
-          ctx.save();
-          ctx.fillStyle = 'rgba(249, 115, 22, 0.4)';
-          ctx.shadowColor = '#ff4500';
-          ctx.shadowBlur = 18;
+          ctx.fillStyle = 'rgba(249, 115, 22, 0.34)';
           ctx.beginPath();
-          ctx.arc(0, 0, z.radius + 5, 0, Math.PI * 2);
+          ctx.arc(0, 0, z.radius + 6, 0, Math.PI * 2);
           ctx.fill();
-          ctx.restore();
         }
 
         // Stroke outline
@@ -7431,17 +7490,20 @@ export default function App() {
 
           ctx.restore();
 
-          // D: Draw pulsing glowing cyan shield if shield is active
+          // D: Draw pulsing glowing cyan shield if shield is active (fast dual-stroke halo)
           if (p.shield > 0) {
-            ctx.save();
-            ctx.strokeStyle = 'rgba(34, 211, 238, 0.45)';
-            ctx.shadowColor = '#22d3ee';
-            ctx.shadowBlur = 12;
-            ctx.lineWidth = 3 + Math.sin(time / 150) * 1.2; // pulse stroke
+            const pulseW = 2.5 + Math.sin(time / 150) * 1.0;
+            ctx.strokeStyle = 'rgba(34, 211, 238, 0.20)';
+            ctx.lineWidth = pulseW + 5;
             ctx.beginPath();
             ctx.arc(spX, spY, p.radius + 8, 0, Math.PI * 2);
             ctx.stroke();
-            ctx.restore();
+
+            ctx.strokeStyle = 'rgba(34, 211, 238, 0.55)';
+            ctx.lineWidth = pulseW;
+            ctx.beginPath();
+            ctx.arc(spX, spY, p.radius + 8, 0, Math.PI * 2);
+            ctx.stroke();
           }
 
           // E: Render Ice & Fire Dragon dual companions (or Mega Purple Dragon when fused!) + elemental beam
@@ -7538,16 +7600,24 @@ export default function App() {
         }
       }
 
-      // 8. DRAW PARTICLES
+      // 8. DRAW PARTICLES (Frustum culled + fast layered rendering without shadowBlur/gradients)
       const particles = particlesRef.current;
       for (let i = 0; i < particles.length; i++) {
         const pt = particles[i];
+        if (!pt.points) {
+          const pPad = pt.radius + 40;
+          if (
+            pt.x + pPad < viewLeft ||
+            pt.x - pPad > viewRight ||
+            pt.y + pPad < viewTop ||
+            pt.y - pPad > viewBottom
+          ) {
+            continue;
+          }
+        }
         ctx.save();
         ctx.globalAlpha = pt.alpha;
         ctx.fillStyle = pt.color;
-
-        ctx.shadowBlur = pt.type === 'SPARK' || pt.type === 'LEVEL_UP' || pt.type === 'PLASMA_RING' || pt.type === 'RAY_RING' || pt.type === 'MYTHIC_NOVA' || pt.type === 'ENERGY_ARC' || pt.type === 'MUZZLE_FLARE' ? 12 : 0;
-        ctx.shadowColor = pt.color;
 
         if (pt.type === 'CASING' && pt.rotation !== undefined) {
           ctx.translate(pt.x - camX, pt.y - camY);
@@ -7572,7 +7642,6 @@ export default function App() {
           ctx.arc(pt.x - camX, pt.y - camY, pt.radius, 0, Math.PI * 2);
           ctx.stroke();
 
-          // Draw bright superheated core line
           ctx.strokeStyle = '#ffffff';
           ctx.lineWidth = 1;
           ctx.beginPath();
@@ -7593,19 +7662,25 @@ export default function App() {
         } else if (pt.type === 'EXPLOSION') {
           const rx = pt.x - camX;
           const ry = pt.y - camY;
-          const expGrad = ctx.createRadialGradient(rx, ry, 0, rx, ry, Math.max(1, pt.radius));
-          expGrad.addColorStop(0, '#ffffff');
-          expGrad.addColorStop(0.2, '#fef08a');
-          expGrad.addColorStop(0.6, '#f97316');
-          expGrad.addColorStop(1, 'rgba(239, 68, 68, 0)');
-          ctx.fillStyle = expGrad;
+          const rad = Math.max(1, pt.radius);
+          ctx.globalCompositeOperation = 'lighter';
+          ctx.fillStyle = 'rgba(249, 115, 22, 0.35)';
           ctx.beginPath();
-          ctx.arc(rx, ry, pt.radius, 0, Math.PI * 2);
+          ctx.arc(rx, ry, rad, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = 'rgba(254, 240, 138, 0.55)';
+          ctx.beginPath();
+          ctx.arc(rx, ry, rad * 0.55, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = '#ffffff';
+          ctx.beginPath();
+          ctx.arc(rx, ry, rad * 0.22, 0, Math.PI * 2);
           ctx.fill();
         } else if (pt.type === 'FLAME') {
           const rx = pt.x - camX;
           const ry = pt.y - camY;
-          const velAngle = Math.hypot(pt.vx, pt.vy) > 4 ? Math.atan2(pt.vy, pt.vx) : -Math.PI / 2;
+          const speedSq = pt.vx * pt.vx + pt.vy * pt.vy;
+          const velAngle = speedSq > 16 ? Math.atan2(pt.vy, pt.vx) : -Math.PI / 2;
           const tongueLen = Math.max(8, pt.radius * 3.4);
           const tongueHalfW = Math.max(2, pt.radius * 1.05);
 
@@ -7613,13 +7688,7 @@ export default function App() {
           ctx.rotate(velAngle);
           ctx.globalCompositeOperation = 'lighter';
 
-          const tongueGrad = ctx.createLinearGradient(-tongueLen * 0.25, 0, tongueLen, 0);
-          tongueGrad.addColorStop(0, '#ffffff');
-          tongueGrad.addColorStop(0.28, pt.color);
-          tongueGrad.addColorStop(0.7, '#ea580c');
-          tongueGrad.addColorStop(1, 'rgba(185, 28, 28, 0)');
-
-          ctx.fillStyle = tongueGrad;
+          ctx.fillStyle = pt.color;
           ctx.beginPath();
           ctx.moveTo(-tongueLen * 0.2, 0);
           ctx.quadraticCurveTo(tongueLen * 0.15, -tongueHalfW, tongueLen, 0);
@@ -7627,7 +7696,6 @@ export default function App() {
           ctx.closePath();
           ctx.fill();
 
-          // Sharp white-yellow inner flame lick
           ctx.fillStyle = 'rgba(254, 249, 195, 0.85)';
           ctx.beginPath();
           ctx.moveTo(-tongueLen * 0.1, 0);
@@ -7648,7 +7716,6 @@ export default function App() {
           }
           ctx.stroke();
 
-          // Thin hot white core
           ctx.strokeStyle = '#ffffff';
           ctx.lineWidth = 0.8;
           ctx.beginPath();
@@ -7664,32 +7731,23 @@ export default function App() {
         } else if (pt.type === 'MUZZLE_FLARE') {
           const rx = pt.x - camX;
           const ry = pt.y - camY;
+          ctx.globalCompositeOperation = 'lighter';
 
-          // Layer 1: Outer glowing radial flare
-          const grad = ctx.createRadialGradient(rx, ry, 0, rx, ry, pt.radius);
-          grad.addColorStop(0, '#ffffff');
-          grad.addColorStop(0.2, pt.color);
-          grad.addColorStop(1, 'rgba(0,0,0,0)');
-
-          ctx.fillStyle = grad;
+          ctx.fillStyle = pt.color;
           ctx.beginPath();
-          ctx.arc(rx, ry, pt.radius, 0, Math.PI * 2);
+          ctx.arc(rx, ry, pt.radius * 0.65, 0, Math.PI * 2);
           ctx.fill();
 
-          // Layer 2: Cross spikes to look like photographic camera lens flare
           ctx.strokeStyle = pt.color;
           ctx.lineWidth = pt.radius * 0.25;
           ctx.lineCap = 'round';
           ctx.beginPath();
-          // Horizontal lens flare spike
           ctx.moveTo(rx - pt.radius * 1.4, ry);
           ctx.lineTo(rx + pt.radius * 1.4, ry);
-          // Vertical lens flare spike
           ctx.moveTo(rx, ry - pt.radius * 0.7);
           ctx.lineTo(rx, ry + pt.radius * 0.7);
           ctx.stroke();
 
-          // Super hot center core line
           ctx.strokeStyle = '#ffffff';
           ctx.lineWidth = pt.radius * 0.1;
           ctx.beginPath();
@@ -7795,8 +7853,6 @@ export default function App() {
           const flatlineAlpha = Math.min(1, (progress - 0.25) * 2);
           ctx.strokeStyle = `rgba(239, 68, 68, ${flatlineAlpha * 0.85})`;
           ctx.lineWidth = 2.5;
-          ctx.shadowColor = '#ef4444';
-          ctx.shadowBlur = 12;
 
           ctx.beginPath();
           ctx.moveTo(0, canvas.height / 2 + 55);
@@ -7820,27 +7876,28 @@ export default function App() {
         // Large bold failure announcement
         ctx.font = '900 32px Chakra Petch, sans-serif';
         ctx.fillStyle = `rgba(239, 68, 68, ${Math.min(1, progress * 1.6)})`;
-        ctx.shadowColor = '#ef4444';
-        ctx.shadowBlur = 18;
         ctx.fillText('SINAL DO OPERADOR PERDIDO', canvas.width / 2 + glitchX, canvas.height / 2 - 20 + glitchY);
 
         ctx.font = 'bold 12px monospace';
         ctx.fillStyle = `rgba(254, 202, 202, ${Math.min(1, progress * 1.5)})`;
-        ctx.shadowBlur = 0;
         ctx.fillText('COLAPSO DE SINAIS VITAIS // EXTRAÇÃO TÁTICA ABORTADA', canvas.width / 2, canvas.height / 2 + 18);
 
         ctx.restore();
       }
     };
 
-    // Helper functions to darken hex colors for gradient styling
+    // Cached helper to darken hex colors without per-frame hex parsing overhead
+    const darkColorCache = new Map<string, string>();
     const darkenColor = (hex: string, percent: number) => {
-      let num = parseInt(hex.replace('#', ''), 16),
+      const key = `${hex}_${percent}`;
+      const cached = darkColorCache.get(key);
+      if (cached) return cached;
+      const num = parseInt(hex.replace('#', ''), 16),
         amt = Math.round(2.55 * percent),
         R = (num >> 16) - amt,
         G = ((num >> 8) & 0x00ff) - amt,
         B = (num & 0x0000ff) - amt;
-      return (
+      const res =
         '#' +
         (
           0x1000000 +
@@ -7849,8 +7906,9 @@ export default function App() {
           (B < 0 ? 0 : B > 255 ? 255 : B)
         )
           .toString(16)
-          .slice(1)
-      );
+          .slice(1);
+      darkColorCache.set(key, res);
+      return res;
     };
 
     // Resize canvas to match the exact dimensions of its screen parent container
@@ -7887,7 +7945,7 @@ export default function App() {
   }, [gameState, syncHudPlayer]);
 
   return (
-    <div className="relative w-screen h-screen overflow-hidden bg-slate-950 font-sans text-white flex flex-col">
+    <div className="relative w-full h-[100dvh] overflow-hidden bg-slate-950 font-sans text-white flex flex-col select-none">
       {/* 1. Main Canvas Stage container */}
       <div id="game-stage" ref={containerRef} className="relative flex-1 w-full h-full">
         <canvas
@@ -7895,10 +7953,8 @@ export default function App() {
           className="absolute inset-0 block w-full h-full cursor-crosshair touch-none"
         />
 
-        {/* Cinematic Ambient Shading & Depth Effects (Sleek Interface theme) */}
-        <div className="absolute inset-0 pointer-events-none z-30 ring-inset ring-[40px] ring-slate-950/45 blur-2xl opacity-50" />
-        <div className="absolute top-0 w-full h-32 bg-gradient-to-b from-slate-950 to-transparent z-10 opacity-75 pointer-events-none" />
-        <div className="absolute bottom-0 w-full h-48 bg-gradient-to-t from-slate-950 to-transparent z-10 opacity-75 pointer-events-none" />
+        {/* Fast radial vignette (replaces heavy GPU blur-2xl layer) */}
+        <div className="absolute inset-0 pointer-events-none z-30 bg-[radial-gradient(ellipse_at_center,transparent_58%,rgba(2,6,23,0.68)_100%)]" />
 
         {/* 2. Visual overlays (Start Menu, HUD bar, Paused screen, Game Over) */}
         <GameHUD
