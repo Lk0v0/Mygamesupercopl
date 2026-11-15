@@ -164,24 +164,7 @@ export const GameHUD: React.FC<GameHUDProps> = ({
   const [showControlsModal, setShowControlsModal] = useState(false);
   const [showRebootModal, setShowRebootModal] = useState(false);
   const [waveAlert, setWaveAlert] = useState<number | null>(null);
-  const [bossBanner, setBossBanner] = useState<{ name: string; title: string } | null>(null);
   const prevWaveRef = useRef(wave);
-  const prevBossIdRef = useRef<string | null>(null);
-
-  // Trigger dramatic Boss arrival banner
-  useEffect(() => {
-    if (activeBoss && activeBoss.id !== prevBossIdRef.current) {
-      setBossBanner({ name: activeBoss.name, title: activeBoss.title });
-      const timer = setTimeout(() => {
-        setBossBanner(null);
-      }, 3500);
-      prevBossIdRef.current = activeBoss.id;
-      return () => clearTimeout(timer);
-    }
-    if (!activeBoss) {
-      prevBossIdRef.current = null;
-    }
-  }, [activeBoss]);
 
   // Trigger brief dramatic tactical banner when wave increments
   useEffect(() => {
@@ -317,36 +300,7 @@ export const GameHUD: React.FC<GameHUDProps> = ({
             </div>
           )}
 
-          {/* Dramatic Boss Arrival Warning Banner */}
-          {bossBanner && (
-            <div className="absolute top-12 sm:top-16 left-1/2 -translate-x-1/2 z-50 pointer-events-none animate-in fade-in zoom-in-95 duration-300 w-full max-w-md px-3">
-              <div className={`p-2 sm:p-3 rounded-xl border shadow-2xl flex items-center gap-2.5 ${
-                gameMode === GameMode.ALIEN
-                  ? 'bg-cyan-950/95 border-cyan-400 shadow-[0_0_24px_rgba(6,182,212,0.5)]'
-                  : 'bg-red-950/95 border-red-500 shadow-[0_0_24px_rgba(239,68,68,0.5)]'
-              }`}>
-                <div className={`p-2 rounded-lg shrink-0 ${gameMode === GameMode.ALIEN ? 'bg-cyan-500 text-slate-950' : 'bg-red-600 text-white'}`}>
-                  {gameMode === GameMode.ALIEN ? (
-                    <Orbit className="w-5 h-5 animate-spin-slow" />
-                  ) : (
-                    <Skull className="w-5 h-5 animate-pulse" />
-                  )}
-                </div>
-                <div className="flex flex-col text-left min-w-0">
-                  <span className="text-[9px] font-mono font-black tracking-widest uppercase text-amber-400 flex items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping" />
-                    <span>ALERTA DE CHEFE SUPREMO</span>
-                  </span>
-                  <span className="text-xs sm:text-base font-display font-black text-white tracking-wide uppercase truncate">
-                    {bossBanner.name}
-                  </span>
-                  <span className="text-[9px] font-mono text-slate-300 truncate">
-                    {bossBanner.title}
-                  </span>
-                </div>
-              </div>
-            </div>
-          )}
+
 
           {/* Dedicated Top Boss Health Bar */}
           {activeBoss && (

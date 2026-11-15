@@ -2204,38 +2204,21 @@ export default function App() {
     const p = playerRef.current;
 
     // Determine drop type
-    if (rand < 0.30) {
+    if (rand < 0.35) {
       type = DropType.HEALTH;
       color = '#10b981'; // Green (Health)
-    } else if (rand < 0.55) {
+    } else if (rand < 0.70) {
       type = DropType.AMMO;
       color = '#ef4444'; // Red (Ammo)
-    } else if (rand < 0.80) {
+    } else if (rand < 0.90) {
       type = DropType.PISTOL_CLIP;
       color = '#fbbf24'; // Yellow/Gold (Pistol Clip)
-    } else if (p.maxShield > 0 && rand < 0.9) {
+    } else if (p.maxShield > 0) {
       type = DropType.SHIELD;
       color = '#22d3ee'; // Cyan (Shield)
     } else {
-      // Small chance to drop an actual weapon if they are locked!
-      const lockedWeapons = [];
-      if (!p.weapons[WeaponType.SHOTGUN].unlocked) lockedWeapons.push(DropType.WEAPON_SHOTGUN);
-      if (!p.weapons[WeaponType.MACHINE_GUN].unlocked) lockedWeapons.push(DropType.WEAPON_MACHINE_GUN);
-      if (!p.weapons[WeaponType.PLASMA_RIFLE].unlocked) lockedWeapons.push(DropType.WEAPON_PLASMA_RIFLE);
-      if (!p.weapons[WeaponType.MINIGUN].unlocked) lockedWeapons.push(DropType.WEAPON_MINIGUN);
-      if (!p.weapons[WeaponType.ROCKET_LAUNCHER].unlocked) lockedWeapons.push(DropType.WEAPON_ROCKET_LAUNCHER);
-      if (!p.weapons[WeaponType.FLAMETHROWER].unlocked) lockedWeapons.push(DropType.WEAPON_FLAMETHROWER);
-      if (!p.weapons[WeaponType.RAYGUN].unlocked) lockedWeapons.push(DropType.WEAPON_RAYGUN);
-      if (!p.weapons[WeaponType.RAY_RIFLE].unlocked) lockedWeapons.push(DropType.WEAPON_RAY_RIFLE);
-      if (!p.weapons[WeaponType.LASER_MINIGUN].unlocked) lockedWeapons.push(DropType.WEAPON_LASER_MINIGUN);
-
-      if (lockedWeapons.length > 0) {
-        type = lockedWeapons[Math.floor(Math.random() * lockedWeapons.length)];
-        color = '#a855f7'; // Purple (Weapon Unlock Drop!)
-      } else {
-        type = DropType.AMMO; // Default back to ammo
-        color = '#ef4444';
-      }
+      type = DropType.HEALTH;
+      color = '#10b981';
     }
 
     itemDropsRef.current.push({
@@ -6596,38 +6579,6 @@ export default function App() {
             }
             p.shield = Math.min(p.maxShield, p.shield + 25);
             createCollectParticles(d.x, d.y, '#22d3ee');
-          } else if (
-            d.type === DropType.WEAPON_SHOTGUN || 
-            d.type === DropType.WEAPON_MACHINE_GUN || 
-            d.type === DropType.WEAPON_PLASMA_RIFLE || 
-            d.type === DropType.WEAPON_MINIGUN ||
-            d.type === DropType.WEAPON_ROCKET_LAUNCHER ||
-            d.type === DropType.WEAPON_FLAMETHROWER ||
-            d.type === DropType.WEAPON_RAYGUN ||
-            d.type === DropType.WEAPON_RAY_RIFLE ||
-            d.type === DropType.WEAPON_LASER_MINIGUN
-          ) {
-            const wt = d.type === DropType.WEAPON_SHOTGUN ? WeaponType.SHOTGUN : 
-                       d.type === DropType.WEAPON_MACHINE_GUN ? WeaponType.MACHINE_GUN :
-                       d.type === DropType.WEAPON_PLASMA_RIFLE ? WeaponType.PLASMA_RIFLE :
-                       d.type === DropType.WEAPON_MINIGUN ? WeaponType.MINIGUN :
-                       d.type === DropType.WEAPON_ROCKET_LAUNCHER ? WeaponType.ROCKET_LAUNCHER :
-                       d.type === DropType.WEAPON_FLAMETHROWER ? WeaponType.FLAMETHROWER :
-                       d.type === DropType.WEAPON_RAYGUN ? WeaponType.RAYGUN :
-                       d.type === DropType.WEAPON_RAY_RIFLE ? WeaponType.RAY_RIFLE : WeaponType.LASER_MINIGUN;
-            
-            p.weapons[wt].unlocked = true;
-            p.weapons[wt].currentAmmo = Infinity;
-            p.weapons[wt].ammoCapacity = Infinity;
-            p.currentWeapon = wt;
-            setEquippedWeapon(wt);
-            setUnlockedWeapons(prev => {
-              const updated = prev.includes(wt) ? prev : [...prev, wt];
-              localStorage.setItem('zombie_shooter_unlocked_weapons', JSON.stringify(updated));
-              return updated;
-            });
-            localStorage.setItem('zombie_shooter_equipped_weapon', wt);
-            createCollectParticles(d.x, d.y, d.color);
           }
 
           p.score = p.coinsEarned || 0;
