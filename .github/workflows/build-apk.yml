@@ -55,15 +55,70 @@ jobs:
             done
           fi
 
-      - name: Build Debug APK
+      - name: Configure Keystore, Version Code & Signing
+        run: |
+          mkdir -p android/app
+          cp keystore/release.keystore android/app/release.keystore
+          node -e '
+          const fs = require("fs");
+          const gradlePath = "android/app/build.gradle";
+          if (!fs.existsSync(gradlePath)) {
+            console.error("build.gradle not found at " + gradlePath);
+            process.exit(1);
+          }
+          let gradle = fs.readFileSync(gradlePath, "utf8");
+
+          const runNumber = process.env.GITHUB_RUN_NUMBER || "1";
+          const autoVersionCode = 1000 + parseInt(runNumber, 10);
+          const autoVersionName = "1.0." + runNumber;
+
+          gradle = gradle.replace(/versionCode\s+\d+/, "versionCode " + autoVersionCode);
+          gradle = gradle.replace(/versionName\s+"[^"]+"/, "versionName \"" + autoVersionName + "\"");
+
+          const signingConfigBlock = `
+    signingConfigs {
+        release {
+            storeFile file("release.keystore")
+            storePassword "zombieshooter123"
+            keyAlias "zombieshooter"
+            keyPassword "zombieshooter123"
+        }
+    }
+`;
+
+          if (!gradle.includes("signingConfigs {")) {
+            gradle = gradle.replace(/buildTypes\s*\{/, signingConfigBlock + "\n    buildTypes {");
+          }
+
+          if (!gradle.includes("debug {\n            signingConfig signingConfigs.release")) {
+            gradle = gradle.replace(/buildTypes\s*\{/, "buildTypes {\n        debug {\n            signingConfig signingConfigs.release\n        }");
+          }
+          gradle = gradle.replace(/release\s*\{\s*minifyEnabled/, "release {\n            signingConfig signingConfigs.release\n            minifyEnabled");
+
+          fs.writeFileSync(gradlePath, gradle, "utf8");
+          console.log("android/app/build.gradle successfully updated with persistent keystore and versionCode!");
+          '
+        env:
+          GITHUB_RUN_NUMBER: ${{ github.run_number }}
+
+      - name: Build Signed APK
         run: |
           cd android
           chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon --stacktrace
+          ./gradlew assembleRelease assembleDebug --no-daemon --stacktrace
+
+      - name: Prepare APKs for Distribution
+        run: |
+          mkdir -p dist-apk
+          if [ -f "android/app/build/outputs/apk/release/app-release.apk" ]; then
+            cp android/app/build/outputs/apk/release/app-release.apk dist-apk/ZombieShooter2-v${{ github.run_number }}.apk
+          elif [ -f "android/app/build/outputs/apk/debug/app-debug.apk" ]; then
+            cp android/app/build/outputs/apk/debug/app-debug.apk dist-apk/ZombieShooter2-v${{ github.run_number }}.apk
+          fi
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: Zombie-Shooter-2-APK
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          path: dist-apk/*.apk
           if-no-files-found: error

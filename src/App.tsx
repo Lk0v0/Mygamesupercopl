@@ -445,6 +445,16 @@ export default function App() {
     reloadPressed: false,
     pausePressed: false,
   });
+  const lastAimAngleRef = useRef(0);
+  const hasAimedRef = useRef(false);
+  const primeGamepadEdges = () => {
+    gamepadEdgesRef.current = {
+      prevSwitch: false,
+      prevSkill: false,
+      prevReload: false,
+      prevPause: true,
+    };
+  };
   const gamepadState = useGamepadConnection();
 
   // Ship State shared by Destructor, Interceptor & Nave Rei (±30° gimbal blasters, smooth turning, Warp/Fury)
@@ -1367,6 +1377,7 @@ export default function App() {
         if (gameState === GameState.PLAYING) {
           setGameState(GameState.PAUSED);
         } else if (gameState === GameState.PAUSED) {
+          primeGamepadEdges();
           setGameState(GameState.PLAYING);
         }
       }
@@ -1460,6 +1471,7 @@ export default function App() {
     ) {
       setGameState(GameState.MENU);
     } else if (gameState === GameState.PAUSED) {
+      primeGamepadEdges();
       setGameState(GameState.PLAYING);
     }
   }, [gameState, showModeModal]);
@@ -1722,11 +1734,15 @@ export default function App() {
       ],
     };
 
+    lastAimAngleRef.current = 0;
+    hasAimedRef.current = false;
+    primeGamepadEdges();
     syncHudPlayer();
   };
 
   const handleStartGame = () => {
     initGame();
+    primeGamepadEdges();
     setGameState(GameState.PLAYING);
     sound.playPowerup();
     startNextWave(1);
@@ -1735,7 +1751,10 @@ export default function App() {
   const handlePauseToggle = () => {
     setGameState((prev) => {
       if (prev === GameState.PLAYING) return GameState.PAUSED;
-      if (prev === GameState.PAUSED) return GameState.PLAYING;
+      if (prev === GameState.PAUSED) {
+        primeGamepadEdges();
+        return GameState.PLAYING;
+      }
       return prev;
     });
   };
@@ -1750,6 +1769,7 @@ export default function App() {
       }
     }
     initGame();
+    primeGamepadEdges();
     setGameState(GameState.PLAYING);
     sound.playPowerup();
     startNextWave(1);
@@ -2189,6 +2209,7 @@ export default function App() {
     }
 
     // Unpause game back into combat
+    primeGamepadEdges();
     setGameState(GameState.PLAYING);
   };
 
@@ -3606,6 +3627,8 @@ export default function App() {
           moveY /= len;
         }
       }
+      if (!Number.isFinite(moveX)) moveX = 0;
+      if (!Number.isFinite(moveY)) moveY = 0;
 
       let shootingAngle = p.angle;
       let shouldFire = false;
@@ -3625,31 +3648,46 @@ export default function App() {
       let destructorTargetY = p.y + Math.sin(p.angle) * 300;
 
       if (isShip && !dyingRef.current?.active) {
-        // Ships: blasters ALWAYS aim toward cursor (or right joystick / gamepad stick) within ±30° gimbal cone;
-        // ship hull rotates with silky-smooth exponential angular damping (no snap, no pause).
+        // Ships: blasters aim toward right joystick / gamepad stick / mouse click.
+        // When releasing aim/fire, lock straight ahead along the ship facing angle (NO 360 spin, NO stale mouse fallback!)
         if (rightJoystick.current.active) {
           const rx = rightJoystick.current.x;
           const ry = rightJoystick.current.y;
           const dragDist = Math.hypot(rx, ry);
           if (dragDist > 0.15) {
             const joyAngle = Math.atan2(ry, rx);
+            lastAimAngleRef.current = joyAngle;
+            hasAimedRef.current = true;
             destructorTargetX = p.x + Math.cos(joyAngle) * 360;
             destructorTargetY = p.y + Math.sin(joyAngle) * 360;
             shouldFire = true;
           }
         } else if (gp.connected && (gp.aimActive || gp.fireHeld)) {
-          const gpAngle = gp.aimActive ? Math.atan2(gp.aimY, gp.aimX) : p.angle;
+          const gpAngle = gp.aimActive
+            ? Math.atan2(gp.aimY, gp.aimX)
+            : hasAimedRef.current
+              ? lastAimAngleRef.current
+              : p.angle;
+          if (gp.aimActive) {
+            lastAimAngleRef.current = gpAngle;
+            hasAimedRef.current = true;
+          }
           destructorTargetX = p.x + Math.cos(gpAngle) * 360;
           destructorTargetY = p.y + Math.sin(gpAngle) * 360;
-          shouldFire = gp.aimActive || gp.fireHeld;
-        } else if (canvasRef.current) {
-          if (hasMouseMovedRef.current) {
-            const camLeft = cameraRef.current.x - canvasRef.current.width / 2;
-            const camTop = cameraRef.current.y - canvasRef.current.height / 2;
-            destructorTargetX = mousePos.current.x + camLeft;
-            destructorTargetY = mousePos.current.y + camTop;
-          }
-          shouldFire = isMouseDown.current;
+          shouldFire = true;
+        } else if (isMouseDown.current && canvasRef.current) {
+          const camLeft = cameraRef.current.x - canvasRef.current.width / 2;
+          const camTop = cameraRef.current.y - canvasRef.current.height / 2;
+          destructorTargetX = mousePos.current.x + camLeft;
+          destructorTargetY = mousePos.current.y + camTop;
+          lastAimAngleRef.current = Math.atan2(destructorTargetY - p.y, destructorTargetX - p.x);
+          hasAimedRef.current = true;
+          shouldFire = true;
+        } else {
+          // RELEASED: Lock aim directly ahead along current ship angle. Zero gimbal turn, zero 360 spin!
+          destructorTargetX = p.x + Math.cos(p.angle) * 360;
+          destructorTargetY = p.y + Math.sin(p.angle) * 360;
+          shouldFire = false;
         }
 
         const desiredAimAngle = Math.atan2(destructorTargetY - p.y, destructorTargetX - p.x);
@@ -3924,6 +3962,8 @@ export default function App() {
             const dragDist = Math.hypot(rx, ry);
             if (dragDist > 0.15) {
               const targetAng = Math.atan2(ry, rx);
+              lastAimAngleRef.current = targetAng;
+              hasAimedRef.current = true;
               let diff = targetAng - p.angle;
               while (diff > Math.PI) diff -= Math.PI * 2;
               while (diff < -Math.PI) diff += Math.PI * 2;
@@ -3934,53 +3974,70 @@ export default function App() {
           } else if (gp.connected && (gp.aimActive || gp.fireHeld)) {
             const targetAng = gp.aimActive
               ? Math.atan2(gp.aimY, gp.aimX)
-              : moveX !== 0 || moveY !== 0
-                ? Math.atan2(moveY, moveX)
+              : hasAimedRef.current
+                ? lastAimAngleRef.current
                 : p.angle;
+            if (gp.aimActive) {
+              lastAimAngleRef.current = targetAng;
+              hasAimedRef.current = true;
+            }
             let diff = targetAng - p.angle;
             while (diff > Math.PI) diff -= Math.PI * 2;
             while (diff < -Math.PI) diff += Math.PI * 2;
             p.angle += diff * (1 - Math.exp(-10 * dt));
             shootingAngle = p.angle;
             shouldFire = gp.aimActive || gp.fireHeld;
-          } else if (canvasRef.current && (hasMouseMovedRef.current || isMouseDown.current)) {
+          } else if (isMouseDown.current && canvasRef.current) {
             const camLeft = cameraRef.current.x - canvasRef.current.width / 2;
             const camTop = cameraRef.current.y - canvasRef.current.height / 2;
             const screenPlayerX = p.x - camLeft;
             const screenPlayerY = p.y - camTop;
             const targetAng = Math.atan2(mousePos.current.y - screenPlayerY, mousePos.current.x - screenPlayerX);
+            lastAimAngleRef.current = targetAng;
+            hasAimedRef.current = true;
             let diff = targetAng - p.angle;
             while (diff > Math.PI) diff -= Math.PI * 2;
             while (diff < -Math.PI) diff += Math.PI * 2;
             p.angle += diff * (1 - Math.exp(-10 * dt));
             shootingAngle = p.angle;
-            shouldFire = isMouseDown.current;
-          } else if (moveX !== 0 || moveY !== 0) {
-            const targetAng = Math.atan2(moveY, moveX);
-            let diff = targetAng - p.angle;
-            while (diff > Math.PI) diff -= Math.PI * 2;
-            while (diff < -Math.PI) diff += Math.PI * 2;
-            p.angle += diff * (1 - Math.exp(-8 * dt));
+            shouldFire = true;
+          } else {
+            // RELEASED: Lock aim where it was, NEVER snap or spin!
+            if (!hasAimedRef.current && (moveX !== 0 || moveY !== 0)) {
+              const targetAng = Math.atan2(moveY, moveX);
+              let diff = targetAng - p.angle;
+              while (diff > Math.PI) diff -= Math.PI * 2;
+              while (diff < -Math.PI) diff += Math.PI * 2;
+              p.angle += diff * (1 - Math.exp(-8 * dt));
+            }
             shootingAngle = p.angle;
+            shouldFire = false;
           }
           while (p.angle > Math.PI) p.angle -= Math.PI * 2;
           while (p.angle < -Math.PI) p.angle += Math.PI * 2;
         } else {
+          // Standard weapons, Iron Man, Ice & Fire Dragon
           if (rightJoystick.current.active) {
             const rx = rightJoystick.current.x;
             const ry = rightJoystick.current.y;
             const dragDist = Math.hypot(rx, ry);
             if (dragDist > 0.15) {
               shootingAngle = Math.atan2(ry, rx);
+              lastAimAngleRef.current = shootingAngle;
+              hasAimedRef.current = true;
               p.angle = shootingAngle;
               shouldFire = true;
             }
           } else if (gp.connected && (gp.aimActive || gp.fireHeld)) {
             shootingAngle = gp.aimActive
               ? Math.atan2(gp.aimY, gp.aimX)
-              : moveX !== 0 || moveY !== 0
-                ? Math.atan2(moveY, moveX)
+              : hasAimedRef.current
+                ? lastAimAngleRef.current
                 : p.angle;
+            if (gp.aimActive) {
+              lastAimAngleRef.current = shootingAngle;
+              hasAimedRef.current = true;
+            }
             p.angle = shootingAngle;
             shouldFire = gp.aimActive || gp.fireHeld;
           } else if (isMouseDown.current && canvasRef.current) {
@@ -3991,10 +4048,17 @@ export default function App() {
             const dx = mousePos.current.x - screenPlayerX;
             const dy = mousePos.current.y - screenPlayerY;
             shootingAngle = Math.atan2(dy, dx);
+            lastAimAngleRef.current = shootingAngle;
+            hasAimedRef.current = true;
             p.angle = shootingAngle;
             shouldFire = true;
-          } else if (moveX !== 0 || moveY !== 0) {
-            p.angle = Math.atan2(moveY, moveX);
+          } else {
+            // RELEASED: Lock aim where it was, NEVER snap or spin!
+            if (!hasAimedRef.current && (moveX !== 0 || moveY !== 0)) {
+              p.angle = Math.atan2(moveY, moveX);
+            }
+            shootingAngle = p.angle;
+            shouldFire = false;
           }
         }
       }
@@ -4023,9 +4087,19 @@ export default function App() {
             : 1.0;
       p.vx = moveX * p.speed * warpSpeedMult;
       p.vy = moveY * p.speed * warpSpeedMult;
+      if (!Number.isFinite(p.vx)) p.vx = 0;
+      if (!Number.isFinite(p.vy)) p.vy = 0;
 
       p.x += p.vx * dt;
       p.y += p.vy * dt;
+
+      if (!Number.isFinite(p.x) || !Number.isFinite(p.y)) {
+        p.x = ARENA_SIZE / 2;
+        p.y = ARENA_SIZE / 2;
+      }
+      if (!Number.isFinite(p.angle)) {
+        p.angle = lastAimAngleRef.current || 0;
+      }
 
       // Constrain player in arena bounds
       p.x = Math.max(p.radius, Math.min(ARENA_SIZE - p.radius, p.x));
@@ -4266,12 +4340,12 @@ export default function App() {
           ifd.beamExtension = 0;
         }
 
-        let companionAimAngle = p.angle;
+        let companionAimAngle = hasAimedRef.current ? lastAimAngleRef.current : p.angle;
         if (rightJoystick.current.active && Math.hypot(rightJoystick.current.x, rightJoystick.current.y) > 0.15) {
           companionAimAngle = Math.atan2(rightJoystick.current.y, rightJoystick.current.x);
         } else if (gp.connected && gp.aimActive) {
           companionAimAngle = Math.atan2(gp.aimY, gp.aimX);
-        } else if (canvasRef.current && (hasMouseMovedRef.current || isMouseDown.current)) {
+        } else if (isMouseDown.current && canvasRef.current) {
           const camLeft = cameraRef.current.x - canvasRef.current.width / 2;
           const camTop = cameraRef.current.y - canvasRef.current.height / 2;
           companionAimAngle = Math.atan2(

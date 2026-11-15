@@ -43,10 +43,18 @@ function getPrimaryGamepad(): Gamepad | null {
   return null;
 }
 
-function isBtnPressed(pad: Gamepad, idx: number, threshold = 0.35): boolean {
+export function sanitizeAxis(val: number | undefined): number {
+  if (typeof val !== 'number' || !Number.isFinite(val)) return 0;
+  if (Math.abs(val) < 0.002) return 0;
+  return Math.max(-1, Math.min(1, val));
+}
+
+export function isBtnPressed(pad: Gamepad | null | undefined, idx: number, threshold = 0.35): boolean {
+  if (!pad || !pad.buttons || !pad.buttons[idx]) return false;
   const btn = pad.buttons[idx];
   if (!btn) return false;
-  return btn.pressed || btn.value >= threshold;
+  const val = typeof btn.value === 'number' && Number.isFinite(btn.value) ? btn.value : 0;
+  return Boolean(btn.pressed || val >= threshold);
 }
 
 /**
@@ -82,18 +90,20 @@ export function readActiveGamepadState(
   out.connected = true;
   out.id = pad.id || 'Gamepad';
 
-  // Left stick + D-Pad movement
-  let lx = pad.axes[0] ?? 0;
-  let ly = pad.axes[1] ?? 0;
+  // Left stick + D-Pad movement with sanitized axes
+  let lx = sanitizeAxis(pad.axes?.[0]);
+  let ly = sanitizeAxis(pad.axes?.[1]);
   const leftMag = Math.hypot(lx, ly);
-  const LEFT_DEADZONE = 0.16;
-  if (leftMag < LEFT_DEADZONE) {
+  const LEFT_DEADZONE = 0.18;
+  if (!Number.isFinite(leftMag) || leftMag < LEFT_DEADZONE) {
     lx = 0;
     ly = 0;
   } else {
     const scaled = Math.min(1, (leftMag - LEFT_DEADZONE) / (1 - LEFT_DEADZONE));
     lx = (lx / leftMag) * scaled;
     ly = (ly / leftMag) * scaled;
+    if (!Number.isFinite(lx)) lx = 0;
+    if (!Number.isFinite(ly)) ly = 0;
   }
 
   let dpadX = 0;
@@ -111,16 +121,20 @@ export function readActiveGamepadState(
     out.moveX = lx;
     out.moveY = ly;
   }
+  if (!Number.isFinite(out.moveX)) out.moveX = 0;
+  if (!Number.isFinite(out.moveY)) out.moveY = 0;
 
-  // Right stick aiming
-  const rx = pad.axes[2] ?? 0;
-  const ry = pad.axes[3] ?? 0;
+  // Right stick aiming with sanitized axes
+  const rx = sanitizeAxis(pad.axes?.[2]);
+  const ry = sanitizeAxis(pad.axes?.[3]);
   const rightMag = Math.hypot(rx, ry);
   const RIGHT_DEADZONE = 0.22;
-  if (rightMag >= RIGHT_DEADZONE) {
+  if (Number.isFinite(rightMag) && rightMag >= RIGHT_DEADZONE) {
     out.aimX = rx / rightMag;
     out.aimY = ry / rightMag;
     out.aimActive = true;
+    if (!Number.isFinite(out.aimX)) out.aimX = 0;
+    if (!Number.isFinite(out.aimY)) out.aimY = 0;
   } else {
     out.aimX = 0;
     out.aimY = 0;
@@ -294,12 +308,18 @@ export function useGamepadMenuNavigation(
 
     const setFocus = (el: HTMLElement | null) => {
       if (focusedEl && focusedEl !== el) {
-        focusedEl.removeAttribute('data-gamepad-focused');
+        try {
+          focusedEl.removeAttribute('data-gamepad-focused');
+        } catch {}
       }
       focusedEl = el;
       if (focusedEl) {
-        focusedEl.setAttribute('data-gamepad-focused', 'true');
-        focusedEl.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+        try {
+          focusedEl.setAttribute('data-gamepad-focused', 'true');
+          if (typeof focusedEl.scrollIntoView === 'function') {
+            focusedEl.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+          }
+        } catch {}
       }
     };
 
@@ -324,77 +344,103 @@ export function useGamepadMenuNavigation(
     }
 
     const tick = (now: number) => {
-      const pad = getPrimaryGamepad();
-      if (pad) {
-        let dir: Direction | null = null;
-        const ax = pad.axes[0] ?? 0;
-        const ay = pad.axes[1] ?? 0;
+      try {
+        const pad = getPrimaryGamepad();
+        if (pad) {
+          let dir: Direction | null = null;
+          const ax = sanitizeAxis(pad.axes?.[0]);
+          const ay = sanitizeAxis(pad.axes?.[1]);
 
-        if (isBtnPressed(pad, 12) || ay < -0.55) dir = 'up';
-        else if (isBtnPressed(pad, 13) || ay > 0.55) dir = 'down';
-        else if (isBtnPressed(pad, 14) || ax < -0.55) dir = 'left';
-        else if (isBtnPressed(pad, 15) || ax > 0.55) dir = 'right';
+          if (isBtnPressed(pad, 12) || ay < -0.55) dir = 'up';
+          else if (isBtnPressed(pad, 13) || ay > 0.55) dir = 'down';
+          else if (isBtnPressed(pad, 14) || ax < -0.55) dir = 'left';
+          else if (isBtnPressed(pad, 15) || ax > 0.55) dir = 'right';
 
-        if (dir) {
-          const isNewDir = dir !== prevDir;
-          if (isNewDir || now - lastDirTriggerTime >= repeatDelay) {
+          if (dir) {
+            const isNewDir = dir !== prevDir;
+            if (isNewDir || now - lastDirTriggerTime >= repeatDelay) {
+              const elements = getFocusableElements();
+              if (!focusedEl || !document.contains(focusedEl) || !elements.includes(focusedEl)) {
+                const preferred =
+                  elements.find((el) => el.id === 'btn-start-game') || elements[0] || null;
+                setFocus(preferred);
+              } else {
+                const next = findNextElement(focusedEl, elements, dir);
+                if (next) setFocus(next);
+              }
+              lastDirTriggerTime = now;
+              repeatDelay = isNewDir ? 260 : 140;
+            }
+            prevDir = dir;
+          } else {
+            prevDir = null;
+          }
+
+          // A / Cross: Click focused button
+          const aDown = isBtnPressed(pad, 0);
+          if (aDown && !prevA) {
             const elements = getFocusableElements();
             if (!focusedEl || !document.contains(focusedEl) || !elements.includes(focusedEl)) {
               const preferred =
                 elements.find((el) => el.id === 'btn-start-game') || elements[0] || null;
               setFocus(preferred);
+              if (preferred) {
+                try {
+                  preferred.click();
+                } catch (clickErr) {
+                  console.warn('Gamepad click error', clickErr);
+                }
+              }
             } else {
-              const next = findNextElement(focusedEl, elements, dir);
-              if (next) setFocus(next);
+              try {
+                focusedEl.click();
+              } catch (clickErr) {
+                console.warn('Gamepad click error', clickErr);
+              }
             }
-            lastDirTriggerTime = now;
-            repeatDelay = isNewDir ? 260 : 140;
           }
-          prevDir = dir;
-        } else {
-          prevDir = null;
-        }
+          prevA = aDown;
 
-        // A / Cross: Click focused button
-        const aDown = isBtnPressed(pad, 0);
-        if (aDown && !prevA) {
-          const elements = getFocusableElements();
-          if (!focusedEl || !document.contains(focusedEl) || !elements.includes(focusedEl)) {
-            const preferred =
-              elements.find((el) => el.id === 'btn-start-game') || elements[0] || null;
-            setFocus(preferred);
-            if (preferred) preferred.click();
-          } else {
-            focusedEl.click();
+          // B / Circle: Close / Back
+          const bDown = isBtnPressed(pad, 1);
+          if (bDown && !prevB) {
+            const elements = getFocusableElements();
+            const backBtn = elements.find((el) => el.getAttribute('data-gamepad-back') === 'true');
+            if (backBtn) {
+              try {
+                backBtn.click();
+              } catch (backErr) {
+                console.warn('Gamepad back error', backErr);
+              }
+            } else if (onBack) {
+              try {
+                onBack();
+              } catch (backErr) {
+                console.warn('Gamepad back callback error', backErr);
+              }
+            }
           }
-        }
-        prevA = aDown;
+          prevB = bDown;
 
-        // B / Circle: Close / Back
-        const bDown = isBtnPressed(pad, 1);
-        if (bDown && !prevB) {
-          const elements = getFocusableElements();
-          const backBtn = elements.find((el) => el.getAttribute('data-gamepad-back') === 'true');
-          if (backBtn) {
-            backBtn.click();
-          } else if (onBack) {
-            onBack();
+          // Start: Start Game or Resume Pause
+          const startDown = isBtnPressed(pad, 9);
+          if (startDown && !prevStart) {
+            const elements = getFocusableElements();
+            const resumeOrStart =
+              elements.find((el) => el.getAttribute('data-gamepad-resume') === 'true') ||
+              elements.find((el) => el.id === 'btn-start-game');
+            if (resumeOrStart) {
+              try {
+                resumeOrStart.click();
+              } catch (startErr) {
+                console.warn('Gamepad start error', startErr);
+              }
+            }
           }
+          prevStart = startDown;
         }
-        prevB = bDown;
-
-        // Start: Start Game or Resume Pause
-        const startDown = isBtnPressed(pad, 9);
-        if (startDown && !prevStart) {
-          const elements = getFocusableElements();
-          const resumeOrStart =
-            elements.find((el) => el.getAttribute('data-gamepad-resume') === 'true') ||
-            elements.find((el) => el.id === 'btn-start-game');
-          if (resumeOrStart) {
-            resumeOrStart.click();
-          }
-        }
-        prevStart = startDown;
+      } catch (tickErr) {
+        console.warn('Gamepad tick error', tickErr);
       }
 
       rafId = requestAnimationFrame(tick);
