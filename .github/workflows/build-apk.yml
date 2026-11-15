@@ -2,6 +2,7 @@ name: Build Android APK
 
 on:
   push:
+    branches: [ "main", "master" ]
   workflow_dispatch:
 
 jobs:
@@ -48,54 +49,17 @@ jobs:
           mkdir -p android/app
           cp keystore/release.keystore android/app/release.keystore
 
-      - name: Inject Signing Config & Version Code into Gradle
-        run: |
-          node -e '
-          const fs = require("fs");
-          const gradlePath = "android/app/build.gradle";
-          let gradle = fs.readFileSync(gradlePath, "utf8");
-
-          const runNumber = process.env.GITHUB_RUN_NUMBER || "1";
-          const autoVersionCode = 1000 + parseInt(runNumber, 10);
-          const autoVersionName = "1.0." + runNumber;
-
-          gradle = gradle.replace(/versionCode\s+\d+/, "versionCode " + autoVersionCode);
-          gradle = gradle.replace(/versionName\s+"[^"]+"/, "versionName \"" + autoVersionName + "\"");
-
-          const signingBlock = `
-    signingConfigs {
-        release {
-            storeFile file("release.keystore")
-            storePassword "zombieshooter123"
-            keyAlias "zombieshooter"
-            keyPassword "zombieshooter123"
-        }
-    }
-`;
-
-          if (!gradle.includes("signingConfigs")) {
-            gradle = gradle.replace(/buildTypes\s*\{/, signingBlock + "\n    buildTypes {");
-          }
-
-          gradle = gradle.replace(/release\s*\{/, "release {\n        signingConfig signingConfigs.release");
-
-          fs.writeFileSync(gradlePath, gradle, "utf8");
-          console.log("Gradle updated successfully with signing config!");
-          '
-        env:
-          GITHUB_RUN_NUMBER: ${{ github.run_number }}
-
-      - name: Build Release APK
+      - name: Build Debug APK
         run: |
           cd android
           chmod +x gradlew
-          ./gradlew assembleRelease --no-daemon --stacktrace
+          ./gradlew assembleDebug --no-daemon --stacktrace
 
       - name: Prepare APK for Distribution
         run: |
           mkdir -p dist-apk
-          if [ -f "android/app/build/outputs/apk/release/app-release.apk" ]; then
-            cp android/app/build/outputs/apk/release/app-release.apk dist-apk/ZombieShooter2-v${{ github.run_number }}.apk
+          if [ -f "android/app/build/outputs/apk/debug/app-debug.apk" ]; then
+            cp android/app/build/outputs/apk/debug/app-debug.apk dist-apk/ZombieShooter2-debug.apk
           fi
 
       - name: Upload APK Artifact
