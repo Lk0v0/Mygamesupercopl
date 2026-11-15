@@ -41,8 +41,8 @@ const SHIPS_ORDER: ShipTypeKey[] = ['DESTRUCTOR', 'INTERCEPTOR', 'NAVE_REI'];
 
 // Normalized coordinates (percentage) inside the SVG/node canvas
 function getNodePosition(tier: 1 | 2 | 3 | 4, branch: 'center' | 'left' | 'right') {
-  const yMap = { 1: 14, 2: 40, 3: 66, 4: 88 };
-  const xMap = { center: 50, left: 26, right: 74 };
+  const yMap = { 1: 12, 2: 37, 3: 63, 4: 87 };
+  const xMap = { center: 50, left: 22, right: 78 };
   return { x: xMap[branch], y: yMap[tier] };
 }
 
@@ -94,85 +94,86 @@ export const MasteryScreen: React.FC<MasteryScreenProps> = ({
   };
 
   return (
-    <div className="absolute inset-0 z-50 flex items-center justify-center bg-slate-950/95 p-2 sm:p-4 overflow-hidden select-none">
-      <div className="w-full max-w-6xl h-[94dvh] bg-slate-900 border border-white/10 rounded-2xl flex flex-col overflow-hidden shadow-2xl">
-        {/* Top Bar */}
-        <header className="px-4 sm:px-6 py-2.5 sm:py-3.5 border-b border-white/10 flex flex-wrap items-center justify-between gap-2 sm:gap-4 shrink-0">
-          <div className="flex items-center gap-2.5">
-            <button
-              onClick={() => {
-                sound.playClick();
-                onClose();
-              }}
-              className="p-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 hover:text-white transition-colors cursor-pointer"
-              title="Voltar ao Menu"
-            >
-              <ArrowLeft className="w-4 h-4" />
-            </button>
-            <div>
-              <h2 className="text-base sm:text-xl font-display font-bold text-white tracking-tight">
-                Maestria das Naves · Árvore de Habilidades
-              </h2>
-              <p className="hidden md:block text-xs text-slate-400">
-                Desbloqueie passivas de combate e habilidades ativas [Q] pilotando ou treinando cada nave
-              </p>
+    <div
+      data-gamepad-scope="modal"
+      className="absolute inset-0 z-50 flex items-center justify-center bg-slate-950/95 p-1.5 sm:p-4 overflow-hidden select-none"
+    >
+      <div className="w-full max-w-6xl h-[94dvh] bg-slate-900 border border-white/10 rounded-2xl flex flex-col landscape:flex-row md:flex-row overflow-hidden shadow-2xl">
+        {/* LEFT RAIL: Back, Title, Credits, Vertical Ship Tabs & XP Training */}
+        <aside className="w-full landscape:w-52 sm:landscape:w-56 md:w-64 shrink-0 bg-slate-950/80 border-b landscape:border-b-0 landscape:border-r md:border-b-0 md:border-r border-white/10 p-2.5 sm:p-4 flex flex-col justify-between gap-2.5 landscape:overflow-y-auto md:overflow-y-auto">
+          <div className="flex flex-col gap-2.5">
+            <div className="flex items-center gap-2">
+              <button
+                data-gamepad-back="true"
+                onClick={() => {
+                  sound.playClick();
+                  onClose();
+                }}
+                className="p-1.5 sm:p-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 hover:text-white transition-colors cursor-pointer shrink-0"
+                title="Voltar ao Menu"
+                aria-label="Voltar ao Menu"
+              >
+                <ArrowLeft className="w-4 h-4" />
+              </button>
+              <div className="min-w-0">
+                <h2 className="text-sm sm:text-lg font-display font-bold text-white tracking-tight truncate">
+                  Maestria Naves
+                </h2>
+                <div className="flex items-center gap-1.5 text-[11px] font-mono text-amber-300 font-bold tabular-nums">
+                  <Coins className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                  <span>{coins.toLocaleString()} CRED</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Ship Selector Tabs */}
+            <div className="flex landscape:flex-col md:flex-col gap-1 p-1 bg-slate-950 border border-white/10 rounded-xl overflow-x-auto landscape:overflow-x-visible">
+              {SHIPS_ORDER.map((shipKey) => {
+                const sMeta = SHIP_META[shipKey];
+                const sProg = shipMastery[shipKey] || { xp: 0, unlockedNodes: [] };
+                const sLvl = getShipMasteryLevelInfo(sProg.xp);
+                const pts = Math.max(0, sLvl.totalPoints - sProg.unlockedNodes.length);
+                const active = selectedShip === shipKey;
+
+                return (
+                  <button
+                    key={shipKey}
+                    onClick={() => handleSelectShip(shipKey)}
+                    className={`px-2.5 py-1.5 sm:py-2 rounded-lg text-xs font-semibold transition-colors whitespace-nowrap shrink-0 cursor-pointer flex items-center justify-between gap-2 ${
+                      active
+                        ? 'bg-slate-800 text-white border border-white/20'
+                        : 'text-slate-400 hover:text-white hover:bg-white/5'
+                    }`}
+                  >
+                    <span className="flex items-center gap-2 min-w-0">
+                      <span
+                        className="w-2 h-2 rounded-full shrink-0"
+                        style={{ backgroundColor: sMeta.accentColor }}
+                      />
+                      <span className="truncate">{sMeta.name}</span>
+                    </span>
+                    <span className="flex items-center gap-1.5 font-mono text-[10.5px] shrink-0">
+                      <span className="text-slate-400">Nv.{sLvl.level}</span>
+                      {pts > 0 && (
+                        <span className="text-emerald-400 font-bold">+{pts}</span>
+                      )}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
-          <div className="flex items-center gap-2 text-xs font-mono text-amber-300 font-bold tabular-nums">
-            <Coins className="w-4 h-4 text-amber-400" />
-            <span>{coins.toLocaleString()} CRED</span>
-          </div>
-        </header>
-
-        {/* Ship Selector Tabs & XP Strip */}
-        <div className="px-4 sm:px-6 py-2 sm:py-3 border-b border-white/10 bg-slate-950/50 flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-3 shrink-0">
-          <div className="flex items-center gap-1 p-1 bg-slate-950 border border-white/10 rounded-lg overflow-x-auto">
-            {SHIPS_ORDER.map((shipKey) => {
-              const sMeta = SHIP_META[shipKey];
-              const sProg = shipMastery[shipKey] || { xp: 0, unlockedNodes: [] };
-              const sLvl = getShipMasteryLevelInfo(sProg.xp);
-              const pts = Math.max(0, sLvl.totalPoints - sProg.unlockedNodes.length);
-              const active = selectedShip === shipKey;
-
-              return (
-                <button
-                  key={shipKey}
-                  onClick={() => handleSelectShip(shipKey)}
-                  className={`px-3.5 py-2 rounded-md text-xs font-semibold transition-colors whitespace-nowrap shrink-0 cursor-pointer flex items-center gap-2 ${
-                    active
-                      ? 'bg-slate-800 text-white border border-white/15'
-                      : 'text-slate-400 hover:text-white'
-                  }`}
-                >
-                  <span
-                    className="w-2 h-2 rounded-full shrink-0"
-                    style={{ backgroundColor: sMeta.accentColor }}
-                  />
-                  <span>{sMeta.name}</span>
-                  <span className="font-mono text-[11px] text-slate-400">
-                    Nv.{sLvl.level}
-                  </span>
-                  {pts > 0 && (
-                    <span className="font-mono text-[11px] text-emerald-400 font-bold">
-                      +{pts}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-
           {/* Ship Mastery XP & Train Action */}
-          <div className="flex flex-wrap items-center gap-4">
-            <div className="flex flex-col gap-1 min-w-[190px]">
-              <div className="flex items-center justify-between text-[11px] font-mono tabular-nums">
+          <div className="flex flex-row landscape:flex-col md:flex-col items-center landscape:items-stretch md:items-stretch justify-between gap-2 pt-1 landscape:pt-2.5 landscape:border-t md:border-t border-white/10">
+            <div className="flex flex-col gap-1 flex-1 min-w-[120px]">
+              <div className="flex items-center justify-between text-[10.5px] font-mono tabular-nums">
                 <span className="text-slate-300 font-semibold">
-                  Maestria Nível {levelInfo.level}/{levelInfo.maxLevel}
+                  Nv.{levelInfo.level}/{levelInfo.maxLevel}
                 </span>
                 <span className="text-slate-400">
                   {levelInfo.isMax
-                    ? 'MÁXIMO'
+                    ? 'MÁX'
                     : `${levelInfo.xpInLevel}/${levelInfo.xpNeededForNext} XP`}
                 </span>
               </div>
@@ -190,7 +191,7 @@ export const MasteryScreen: React.FC<MasteryScreenProps> = ({
             <button
               onClick={handleTrainClick}
               disabled={levelInfo.isMax || coins < TRAIN_MASTERY_CREDIT_COST}
-              className={`px-3.5 py-2 rounded-lg text-xs font-semibold transition-all whitespace-nowrap shrink-0 ${
+              className={`px-3 py-1.5 sm:py-2 rounded-lg text-[11px] font-semibold transition-all whitespace-nowrap shrink-0 text-center ${
                 levelInfo.isMax
                   ? 'bg-slate-800 text-slate-500 cursor-default'
                   : coins >= TRAIN_MASTERY_CREDIT_COST
@@ -200,33 +201,33 @@ export const MasteryScreen: React.FC<MasteryScreenProps> = ({
               title="Converter Créditos em XP de Maestria para a nave selecionada"
             >
               {levelInfo.isMax
-                ? 'Maestria Completa'
-                : `Treinar +${TRAIN_MASTERY_XP_GAIN} XP (${TRAIN_MASTERY_CREDIT_COST.toLocaleString()} CRED)`}
+                ? 'Maestria Máx'
+                : `Treinar +${TRAIN_MASTERY_XP_GAIN}XP (${TRAIN_MASTERY_CREDIT_COST.toLocaleString()})`}
             </button>
           </div>
-        </div>
+        </aside>
 
-        {/* Main Split Area: Left Interactive Tree + Right Node Inspector */}
-        <div className="flex-1 overflow-y-auto sm:overflow-hidden grid grid-cols-1 sm:grid-cols-12">
-          {/* Left 7 Cols: Interactive Skill Tree Canvas */}
-          <div className="sm:col-span-7 p-3 sm:p-5 flex flex-col justify-between bg-slate-950/60 border-b sm:border-b-0 sm:border-r border-white/10 relative min-h-[260px] sm:min-h-0">
-            <div className="flex items-center justify-between text-[11px] sm:text-xs font-mono mb-2">
-              <div className="flex items-center gap-2 text-slate-300">
+        {/* RIGHT SPLIT AREA: Interactive Skill Tree + Node Inspector */}
+        <div className="flex-1 min-w-0 min-h-0 overflow-y-auto sm:overflow-hidden grid grid-cols-1 sm:grid-cols-12">
+          {/* Tree Canvas (7 Cols) */}
+          <div className="sm:col-span-7 p-2.5 sm:p-4 flex flex-col justify-between bg-slate-950/60 border-b sm:border-b-0 sm:border-r border-white/10 relative overflow-y-auto min-h-[280px] sm:min-h-0">
+            <div className="flex items-center justify-between text-[11px] font-mono mb-1.5 shrink-0">
+              <div className="flex items-center gap-1.5 text-slate-300 truncate">
                 <span style={{ color: meta.accentColor }} className="font-bold">
                   {meta.name}
                 </span>
                 <span className="text-white/20">·</span>
-                <span className="text-slate-400">
-                  {isShipOwned ? 'Nave Desbloqueada' : 'Compre na Armaria'}
+                <span className="text-slate-400 truncate">
+                  {isShipOwned ? 'Desbloqueada' : 'Compre na Armaria'}
                 </span>
               </div>
-              <div className="text-emerald-300 font-bold tabular-nums">
+              <div className="text-emerald-300 font-bold tabular-nums shrink-0">
                 Pontos: {availablePoints}
               </div>
             </div>
 
             {/* Skill Tree Node Graph */}
-            <div className="relative flex-1 w-full max-w-xl mx-auto min-h-[230px] sm:min-h-[260px]">
+            <div className="relative flex-1 w-full max-w-lg mx-auto min-h-[265px]">
               {/* SVG Connector Branches */}
               <svg
                 className="absolute inset-0 w-full h-full pointer-events-none"
@@ -292,34 +293,34 @@ export const MasteryScreen: React.FC<MasteryScreenProps> = ({
                         ? 'rgba(52, 211, 153, 0.7)'
                         : 'rgba(255, 255, 255, 0.14)',
                     }}
-                    className={`absolute -translate-x-1/2 -translate-y-1/2 w-28 sm:w-36 md:w-44 p-1.5 sm:p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                    className={`absolute -translate-x-1/2 -translate-y-1/2 w-[35%] max-w-[160px] p-1.5 sm:p-2 rounded-xl border text-left transition-all cursor-pointer ${
                       unlocked
                         ? 'bg-slate-900 shadow-lg'
                         : unlockable
                         ? 'bg-slate-900 hover:bg-slate-800'
-                        : 'bg-slate-950 opacity-80 hover:opacity-100'
-                    } ${isSelected ? 'ring-2 ring-white/40 scale-[1.03] z-20' : 'z-10'}`}
+                        : 'bg-slate-950 opacity-85 hover:opacity-100'
+                    } ${isSelected ? 'ring-2 ring-white/50 scale-[1.03] z-20' : 'z-10'}`}
                   >
-                    <div className="flex items-center justify-between gap-1 mb-1">
+                    <div className="flex items-center justify-between gap-1 mb-0.5">
                       <span
-                        className={`text-[10px] font-mono font-bold uppercase tracking-wider ${
+                        className={`text-[8.5px] sm:text-[9.5px] font-mono font-bold uppercase tracking-wider truncate ${
                           isAbility ? 'text-amber-300' : 'text-cyan-300'
                         }`}
                       >
                         {node.kind}
                       </span>
                       {unlocked ? (
-                        <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                        <Check className="w-3 h-3 text-emerald-400 shrink-0" />
                       ) : unlockable ? (
-                        <Sparkles className="w-3.5 h-3.5 text-emerald-300 shrink-0" />
+                        <Sparkles className="w-3 h-3 text-emerald-300 shrink-0" />
                       ) : (
-                        <Lock className="w-3 h-3 text-slate-500 shrink-0" />
+                        <Lock className="w-2.5 h-2.5 text-slate-500 shrink-0" />
                       )}
                     </div>
-                    <div className="text-xs font-display font-bold text-white leading-tight truncate">
+                    <div className="text-[10.5px] sm:text-xs font-display font-bold text-white leading-tight truncate">
                       {node.title}
                     </div>
-                    <div className="text-[10px] text-slate-400 truncate mt-0.5">
+                    <div className="text-[9px] sm:text-[10px] text-slate-400 truncate mt-0.5">
                       {node.shortBonus}
                     </div>
                   </button>

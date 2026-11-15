@@ -76,6 +76,13 @@ import {
   hasMasteryNode,
   canUnlockMasteryNode,
 } from './components/MasterySystem';
+import {
+  GamepadInputSnapshot,
+  createGamepadEdgeState,
+  readActiveGamepadState,
+  useGamepadConnection,
+  useGamepadMenuNavigation,
+} from './gamepad';
 
 const ARENA_SIZE = 2400; // Total width and height of the arena bounds
 const SPAWN_MARGIN = 100; // How far outside the screen zombies should spawn
@@ -416,12 +423,29 @@ export default function App() {
   const leftJoystick = useRef<JoystickInput>({ x: 0, y: 0, active: false });
   const rightJoystick = useRef<JoystickInput>({ x: 0, y: 0, active: false });
 
-  // Desktop Fallback Inputs
+  // Desktop & Gamepad Inputs
   const keysPressed = useRef<Record<string, boolean>>({});
   const mousePos = useRef({ x: 0, y: 0 });
   const hasMouseMovedRef = useRef(false);
   const isMouseDown = useRef(false);
   const mobileWarpHoldingRef = useRef(false);
+  const gamepadEdgesRef = useRef(createGamepadEdgeState());
+  const gamepadSnapshotRef = useRef<GamepadInputSnapshot>({
+    connected: false,
+    id: '',
+    moveX: 0,
+    moveY: 0,
+    aimX: 0,
+    aimY: 0,
+    aimActive: false,
+    fireHeld: false,
+    warpHeld: false,
+    switchPressed: false,
+    skillPressed: false,
+    reloadPressed: false,
+    pausePressed: false,
+  });
+  const gamepadState = useGamepadConnection();
 
   // Ship State shared by Destructor, Interceptor & Nave Rei (±30° gimbal blasters, smooth turning, Warp/Fury)
   const destructorStateRef = useRef({
@@ -1425,6 +1449,25 @@ export default function App() {
       window.removeEventListener('blur', handleWindowBlur);
     };
   }, [gameState]);
+
+  const handleGamepadBack = useCallback(() => {
+    if (showModeModal) {
+      setShowModeModal(false);
+    } else if (
+      gameState === GameState.STORE ||
+      gameState === GameState.PRESTIGE ||
+      gameState === GameState.MASTERY
+    ) {
+      setGameState(GameState.MENU);
+    } else if (gameState === GameState.PAUSED) {
+      setGameState(GameState.PLAYING);
+    }
+  }, [gameState, showModeModal]);
+
+  useGamepadMenuNavigation(
+    gameState !== GameState.PLAYING || showModeModal,
+    handleGamepadBack
+  );
 
   // Handle mobile joystick changes
   const handleLeftJoystick = useCallback((input: JoystickInput) => {
@@ -3513,13 +3556,44 @@ export default function App() {
         }
       };
 
-      // 1. GATHER MOVEMENT & AIM INPUTS FIRST
+      // 1. GATHER MOVEMENT & AIM INPUTS FIRST (Touch + Gamepad + Keyboard/Mouse)
+      const gp = readActiveGamepadState(gamepadEdgesRef.current, gamepadSnapshotRef.current);
+
+      if (gp.pausePressed) {
+        setGameState(GameState.PAUSED);
+        return;
+      }
+      if (gp.reloadPressed) {
+        reloadActiveWeapon();
+      }
+      if (gp.switchPressed) {
+        if (p.currentWeapon === WeaponType.IRON_MAN) {
+          toggleIronManModeRef.current();
+        } else if (p.currentWeapon === WeaponType.ICE_AND_FIRE_DRAGON) {
+          switchIceFireDragonRef.current();
+        }
+      }
+      if (gp.skillPressed) {
+        if (p.currentWeapon === WeaponType.ICE_AND_FIRE_DRAGON) {
+          triggerIceFireMergeRef.current();
+        } else if (
+          p.currentWeapon === WeaponType.DESTRUCTOR ||
+          p.currentWeapon === WeaponType.INTERCEPTOR ||
+          p.currentWeapon === WeaponType.NAVE_REI
+        ) {
+          triggerShipMasterySkillRef.current();
+        }
+      }
+
       let moveX = 0;
       let moveY = 0;
 
       if (leftJoystick.current.active) {
         moveX = leftJoystick.current.x;
         moveY = leftJoystick.current.y;
+      } else if (gp.connected && (gp.moveX !== 0 || gp.moveY !== 0)) {
+        moveX = gp.moveX;
+        moveY = gp.moveY;
       } else {
         if (keysPressed.current['w'] || keysPressed.current['arrowup']) moveY = -1;
         if (keysPressed.current['s'] || keysPressed.current['arrowdown']) moveY = 1;
@@ -3551,7 +3625,7 @@ export default function App() {
       let destructorTargetY = p.y + Math.sin(p.angle) * 300;
 
       if (isShip && !dyingRef.current?.active) {
-        // Ships: blasters ALWAYS aim toward cursor (or right joystick) within ±30° gimbal cone;
+        // Ships: blasters ALWAYS aim toward cursor (or right joystick / gamepad stick) within ±30° gimbal cone;
         // ship hull rotates with silky-smooth exponential angular damping (no snap, no pause).
         if (rightJoystick.current.active) {
           const rx = rightJoystick.current.x;
@@ -3563,6 +3637,11 @@ export default function App() {
             destructorTargetY = p.y + Math.sin(joyAngle) * 360;
             shouldFire = true;
           }
+        } else if (gp.connected && (gp.aimActive || gp.fireHeld)) {
+          const gpAngle = gp.aimActive ? Math.atan2(gp.aimY, gp.aimX) : p.angle;
+          destructorTargetX = p.x + Math.cos(gpAngle) * 360;
+          destructorTargetY = p.y + Math.sin(gpAngle) * 360;
+          shouldFire = gp.aimActive || gp.fireHeld;
         } else if (canvasRef.current) {
           if (hasMouseMovedRef.current) {
             const camLeft = cameraRef.current.x - canvasRef.current.width / 2;
@@ -3615,7 +3694,7 @@ export default function App() {
         const hasReiCore = isRei && hasMasteryNode(smNow, 'NAVE_REI', 'rei_crimson_core');
         const WARP_CHARGE_DURATION = isRei ? (hasReiCore ? 4.5 : 6.0) : hasDestCapacitor ? 2.1 : 3.0;
         const WARP_MODE_DURATION = isRei ? 10.0 : hasDestCapacitor ? 10.0 : 8.0;
-        const holdingShift = !!keysPressed.current['shift'] || mobileWarpHoldingRef.current;
+        const holdingShift = !!keysPressed.current['shift'] || mobileWarpHoldingRef.current || gp.warpHeld;
 
         if (!ds.warpActive) {
           if (holdingShift) {
@@ -3838,7 +3917,7 @@ export default function App() {
         }
 
         if (isEastDragon) {
-          // East Dragon smoothly turns its horned head toward cursor / right joystick
+          // East Dragon smoothly turns its horned head toward cursor / right joystick / gamepad stick
           if (rightJoystick.current.active) {
             const rx = rightJoystick.current.x;
             const ry = rightJoystick.current.y;
@@ -3852,6 +3931,18 @@ export default function App() {
               shootingAngle = p.angle;
               shouldFire = true;
             }
+          } else if (gp.connected && (gp.aimActive || gp.fireHeld)) {
+            const targetAng = gp.aimActive
+              ? Math.atan2(gp.aimY, gp.aimX)
+              : moveX !== 0 || moveY !== 0
+                ? Math.atan2(moveY, moveX)
+                : p.angle;
+            let diff = targetAng - p.angle;
+            while (diff > Math.PI) diff -= Math.PI * 2;
+            while (diff < -Math.PI) diff += Math.PI * 2;
+            p.angle += diff * (1 - Math.exp(-10 * dt));
+            shootingAngle = p.angle;
+            shouldFire = gp.aimActive || gp.fireHeld;
           } else if (canvasRef.current && (hasMouseMovedRef.current || isMouseDown.current)) {
             const camLeft = cameraRef.current.x - canvasRef.current.width / 2;
             const camTop = cameraRef.current.y - canvasRef.current.height / 2;
@@ -3884,6 +3975,14 @@ export default function App() {
               p.angle = shootingAngle;
               shouldFire = true;
             }
+          } else if (gp.connected && (gp.aimActive || gp.fireHeld)) {
+            shootingAngle = gp.aimActive
+              ? Math.atan2(gp.aimY, gp.aimX)
+              : moveX !== 0 || moveY !== 0
+                ? Math.atan2(moveY, moveX)
+                : p.angle;
+            p.angle = shootingAngle;
+            shouldFire = gp.aimActive || gp.fireHeld;
           } else if (isMouseDown.current && canvasRef.current) {
             const camLeft = cameraRef.current.x - canvasRef.current.width / 2;
             const camTop = cameraRef.current.y - canvasRef.current.height / 2;
@@ -4170,6 +4269,8 @@ export default function App() {
         let companionAimAngle = p.angle;
         if (rightJoystick.current.active && Math.hypot(rightJoystick.current.x, rightJoystick.current.y) > 0.15) {
           companionAimAngle = Math.atan2(rightJoystick.current.y, rightJoystick.current.x);
+        } else if (gp.connected && gp.aimActive) {
+          companionAimAngle = Math.atan2(gp.aimY, gp.aimX);
         } else if (canvasRef.current && (hasMouseMovedRef.current || isMouseDown.current)) {
           const camLeft = cameraRef.current.x - canvasRef.current.width / 2;
           const camTop = cameraRef.current.y - canvasRef.current.height / 2;
@@ -7991,6 +8092,7 @@ export default function App() {
           iceFireDragonHud={iceFireDragonHud}
           onSwitchIceFireDragon={switchIceFireDragon}
           onTriggerIceFireMerge={triggerIceFireMerge}
+          gamepadConnected={gamepadState.connected}
         />
 
         {/* Mode Selector Modal */}

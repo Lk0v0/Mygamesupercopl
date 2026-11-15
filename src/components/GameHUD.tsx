@@ -33,6 +33,7 @@ import {
   GitBranch,
   Gem,
   Snowflake,
+  Gamepad2,
 } from 'lucide-react';
 import { sound } from '../sound';
 
@@ -87,6 +88,7 @@ interface GameHUDProps {
   };
   onSwitchIceFireDragon?: () => void;
   onTriggerIceFireMerge?: () => void;
+  gamepadConnected?: boolean;
 }
 
 const getWeaponIcon = (wt: WeaponType) => {
@@ -157,6 +159,7 @@ export const GameHUD: React.FC<GameHUDProps> = ({
   iceFireDragonHud,
   onSwitchIceFireDragon,
   onTriggerIceFireMerge,
+  gamepadConnected = false,
 }) => {
   const [showControlsModal, setShowControlsModal] = useState(false);
   const [showRebootModal, setShowRebootModal] = useState(false);
@@ -745,6 +748,12 @@ export const GameHUD: React.FC<GameHUDProps> = ({
                   </button>
                 </>
               )}
+              {gamepadConnected && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-cyan-500/15 border border-cyan-500/35 text-[10px] font-mono font-bold text-cyan-300 shrink-0">
+                  <Gamepad2 className="w-3 h-3" />
+                  <span className="hidden sm:inline">CONTROLE</span>
+                </span>
+              )}
             </div>
 
             {/* Zone 2: Unboxed Wallet (Credits · Tokens) */}
@@ -986,9 +995,13 @@ export const GameHUD: React.FC<GameHUDProps> = ({
 
           {/* CONTROLS GUIDE MODAL */}
           {showControlsModal && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/85 backdrop-blur-md">
-              <div className="bg-slate-900 border border-white/15 rounded-2xl max-w-2xl w-full max-h-[92dvh] overflow-y-auto p-4 sm:p-6 shadow-2xl relative">
+            <div
+              data-gamepad-scope="modal"
+              className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/85"
+            >
+              <div className="bg-slate-900 border border-white/15 rounded-2xl max-w-4xl w-full max-h-[92dvh] overflow-y-auto p-4 sm:p-6 shadow-2xl relative">
                 <button
+                  data-gamepad-back="true"
                   onClick={() => setShowControlsModal(false)}
                   className="sticky float-right top-0 text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 cursor-pointer"
                   aria-label="Fechar"
@@ -1003,7 +1016,7 @@ export const GameHUD: React.FC<GameHUDProps> = ({
                   </h2>
                 </div>
 
-                <div className="grid grid-cols-1 landscape:grid-cols-2 md:grid-cols-2 gap-3 text-left">
+                <div className="grid grid-cols-1 landscape:grid-cols-3 md:grid-cols-3 gap-3 text-left">
                   <div className="bg-slate-950/60 border border-white/10 rounded-xl p-3">
                     <span className="text-xs font-mono font-bold text-cyan-400 uppercase tracking-wider block mb-2">
                       COMPUTADOR / DESKTOP
@@ -1014,7 +1027,7 @@ export const GameHUD: React.FC<GameHUDProps> = ({
                         <span className="font-bold text-white">[W] [A] [S] [D]</span>
                       </li>
                       <li className="flex justify-between gap-2">
-                        <span className="text-slate-400">Mirar & Disparar:</span>
+                        <span className="text-slate-400">Mirar & Atirar:</span>
                         <span className="font-bold text-cyan-400">Mouse + Clique</span>
                       </li>
                       <li className="flex justify-between gap-2">
@@ -1022,20 +1035,16 @@ export const GameHUD: React.FC<GameHUDProps> = ({
                         <span className="font-bold text-fuchsia-300">Segurar [SHIFT]</span>
                       </li>
                       <li className="flex justify-between gap-2">
-                        <span className="text-slate-400">Habilidade Maestria:</span>
+                        <span className="text-slate-400">Maestria / Fusão:</span>
                         <span className="font-bold text-amber-300">Tecla [Q]</span>
                       </li>
                       <li className="flex justify-between gap-2">
-                        <span className="text-slate-400">Homem de Ferro:</span>
+                        <span className="text-slate-400">Trocar Modo/Dragão:</span>
                         <span className="font-bold text-red-300">[SHIFT] / [E]</span>
                       </li>
                       <li className="flex justify-between gap-2">
-                        <span className="text-slate-400">Dragões Fogo/Gelo:</span>
-                        <span className="font-bold text-purple-300">[SHIFT] / [Q]</span>
-                      </li>
-                      <li className="flex justify-between gap-2">
                         <span className="text-slate-400">Pausar:</span>
-                        <span className="font-bold text-white">[P] ou [Espaço]</span>
+                        <span className="font-bold text-white">[P] / [ESC]</span>
                       </li>
                     </ul>
                   </div>
@@ -1059,6 +1068,38 @@ export const GameHUD: React.FC<GameHUDProps> = ({
                       </li>
                     </ul>
                   </div>
+
+                  <div className="bg-slate-950/60 border border-emerald-500/20 rounded-xl p-3">
+                    <span className="text-xs font-mono font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-1.5 mb-2">
+                      <Gamepad2 className="w-3.5 h-3.5" /> CONTROLE / GAMEPAD
+                    </span>
+                    <ul className="text-[11px] sm:text-xs text-slate-300 flex flex-col gap-1.5 font-mono">
+                      <li className="flex justify-between gap-2">
+                        <span className="text-slate-400">Analógico Esq / D-Pad:</span>
+                        <span className="font-bold text-white">Mover / Menu</span>
+                      </li>
+                      <li className="flex justify-between gap-2">
+                        <span className="text-slate-400">Analógico Dir:</span>
+                        <span className="font-bold text-cyan-300">Mirar 360° & Atirar</span>
+                      </li>
+                      <li className="flex justify-between gap-2">
+                        <span className="text-slate-400">RT / RB / A:</span>
+                        <span className="font-bold text-rose-300">Atirar / Confirmar</span>
+                      </li>
+                      <li className="flex justify-between gap-2">
+                        <span className="text-slate-400">LT / LB / X:</span>
+                        <span className="font-bold text-amber-300">Warp / Trocar Modo</span>
+                      </li>
+                      <li className="flex justify-between gap-2">
+                        <span className="text-slate-400">Botão Y / △:</span>
+                        <span className="font-bold text-purple-300">Maestria / Fusão</span>
+                      </li>
+                      <li className="flex justify-between gap-2">
+                        <span className="text-slate-400">B / Start:</span>
+                        <span className="font-bold text-slate-200">Voltar / Pausar</span>
+                      </li>
+                    </ul>
+                  </div>
                 </div>
 
                 <button
@@ -1075,7 +1116,10 @@ export const GameHUD: React.FC<GameHUDProps> = ({
 
       {/* REBOOT CONFIRMATION MODAL */}
       {showRebootModal && onResetAll && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/85 backdrop-blur-md pointer-events-auto">
+        <div
+          data-gamepad-scope="modal"
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/85 pointer-events-auto"
+        >
           <div className="bg-slate-900 border border-rose-500/30 rounded-2xl max-w-sm w-full max-h-[92dvh] overflow-y-auto p-5 shadow-2xl text-center">
             <div className="w-10 h-10 rounded-xl bg-rose-500/15 border border-rose-500/30 flex items-center justify-center mx-auto mb-2.5 text-rose-400">
               <RefreshCw className="w-5 h-5" />
@@ -1088,6 +1132,7 @@ export const GameHUD: React.FC<GameHUDProps> = ({
             </p>
             <div className="grid grid-cols-2 gap-2.5">
               <button
+                data-gamepad-back="true"
                 onClick={() => setShowRebootModal(false)}
                 className="py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-display font-bold uppercase tracking-wider cursor-pointer"
               >
@@ -1168,6 +1213,8 @@ export const GameHUD: React.FC<GameHUDProps> = ({
             <div className="landscape:col-span-6 md:col-span-6 flex flex-col gap-2.5 w-full max-w-sm mx-auto">
               <button
                 id="btn-resume-game"
+                data-gamepad-resume="true"
+                data-gamepad-back="true"
                 onClick={() => handleButtonClick(onPauseToggle)}
                 className="py-3 px-5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 text-slate-950 font-display font-black tracking-wider uppercase text-sm shadow-[0_0_20px_rgba(6,182,212,0.3)] hover:opacity-95 active:scale-95 transition-all cursor-pointer flex items-center justify-center gap-2"
               >
@@ -1309,6 +1356,7 @@ export const GameHUD: React.FC<GameHUDProps> = ({
 
               <button
                 id="btn-back-to-menu"
+                data-gamepad-back="true"
                 onClick={() => handleButtonClick(onGoToMenu)}
                 className="py-2.5 px-6 rounded-xl bg-slate-900 border border-white/10 text-slate-300 hover:text-white hover:bg-slate-800 font-mono text-xs uppercase tracking-wider active:scale-95 transition-all cursor-pointer flex items-center justify-center gap-2"
               >

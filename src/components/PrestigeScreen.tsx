@@ -111,95 +111,105 @@ export const PrestigeScreen: React.FC<PrestigeScreenProps> = ({
   };
 
   return (
-    <div className="absolute inset-0 z-50 flex items-center justify-center bg-slate-950/95 p-2 sm:p-4 overflow-hidden select-none">
-      <div className="w-full max-w-5xl h-[94dvh] bg-slate-900 border border-white/10 rounded-2xl flex flex-col overflow-hidden shadow-2xl">
-        {/* Top Header */}
-        <header className="px-4 sm:px-6 py-2.5 sm:py-3.5 border-b border-white/10 flex flex-wrap items-center justify-between gap-2 sm:gap-4 shrink-0">
-          <div className="flex items-center gap-2.5">
-            <button
-              onClick={() => {
-                sound.playClick();
-                onClose();
-              }}
-              className="p-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 hover:text-white transition-colors cursor-pointer"
-              title="Voltar ao Menu"
-            >
-              <ArrowLeft className="w-4 h-4" />
-            </button>
-            <div>
-              <h2 className="text-base sm:text-xl font-display font-bold text-white tracking-tight">
-                Prestígio & Loja de Tokens
-              </h2>
-              <div className="flex items-center gap-2 text-[11px] sm:text-xs text-slate-400 font-mono">
-                <span>Grau P{prestigeLevel}/{MAX_PRESTIGE}</span>
-                <span aria-hidden="true">·</span>
-                <span>+{bonuses.damageBonusPct}% Dano</span>
-                <span aria-hidden="true">·</span>
-                <span>+{bonuses.coinsBonusPct}% Créditos</span>
+    <div
+      data-gamepad-scope="modal"
+      className="absolute inset-0 z-50 flex items-center justify-center bg-slate-950/95 p-1.5 sm:p-4 overflow-hidden select-none"
+    >
+      <div className="w-full max-w-5xl h-[94dvh] bg-slate-900 border border-white/10 rounded-2xl flex flex-col landscape:flex-row md:flex-row overflow-hidden shadow-2xl">
+        {/* LEFT RAIL: Back, Title, Rank Summary, Wallet & Vertical Tabs */}
+        <aside className="w-full landscape:w-52 sm:landscape:w-56 md:w-64 shrink-0 bg-slate-950/80 border-b landscape:border-b-0 landscape:border-r md:border-b-0 md:border-r border-white/10 p-2.5 sm:p-4 flex flex-col justify-between gap-2.5 landscape:overflow-y-auto md:overflow-y-auto">
+          <div className="flex flex-col gap-2.5">
+            <div className="flex items-center gap-2">
+              <button
+                data-gamepad-back="true"
+                onClick={() => {
+                  sound.playClick();
+                  onClose();
+                }}
+                className="p-1.5 sm:p-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 hover:text-white transition-colors cursor-pointer shrink-0"
+                title="Voltar ao Menu"
+                aria-label="Voltar ao Menu"
+              >
+                <ArrowLeft className="w-4 h-4" />
+              </button>
+              <div className="min-w-0">
+                <h2 className="text-sm sm:text-lg font-display font-bold text-white tracking-tight truncate">
+                  Prestígio & Tokens
+                </h2>
+                <div className="text-[10px] sm:text-xs text-slate-400 font-mono truncate">
+                  P{prestigeLevel}/{MAX_PRESTIGE} · +{bonuses.damageBonusPct}% Dano
+                </div>
               </div>
             </div>
-          </div>
 
-          <div className="flex items-center gap-3 text-xs font-mono">
-            <div className="flex items-center gap-1.5 text-amber-300 font-bold tabular-nums">
-              <Coins className="w-4 h-4 text-amber-400" />
-              <span>{coins.toLocaleString()} CRED</span>
+            {/* Wallet Summary */}
+            <div className="grid grid-cols-2 landscape:grid-cols-1 md:grid-cols-1 gap-1.5">
+              <div className="bg-slate-900/90 border border-white/10 rounded-lg px-2.5 py-1.5 flex items-center justify-between text-xs font-mono">
+                <span className="text-slate-400 flex items-center gap-1.5">
+                  <Coins className="w-3.5 h-3.5 text-amber-400" />
+                  <span className="hidden md:inline">Créditos</span>
+                </span>
+                <span className="text-amber-300 font-bold tabular-nums">{coins.toLocaleString()}</span>
+              </div>
+              <div className="bg-slate-900/90 border border-white/10 rounded-lg px-2.5 py-1.5 flex items-center justify-between text-xs font-mono">
+                <span className="text-slate-400 flex items-center gap-1.5">
+                  <Crown className="w-3.5 h-3.5 text-fuchsia-400" />
+                  <span>Tokens</span>
+                </span>
+                <span className="text-fuchsia-300 font-bold tabular-nums">{tokens}</span>
+              </div>
             </div>
-            <span className="text-white/15">|</span>
-            <div className="flex items-center gap-1.5 text-fuchsia-300 font-bold tabular-nums">
-              <Crown className="w-4 h-4 text-fuchsia-400" />
-              <span>{tokens} {tokens === 1 ? 'Token' : 'Tokens'}</span>
+
+            {/* Navigation Tabs */}
+            <div className="flex landscape:flex-col md:flex-col gap-1.5 p-1 bg-slate-950 border border-white/10 rounded-xl">
+              <button
+                onClick={() => {
+                  sound.playClick();
+                  setActiveTab('PRESTIGE');
+                }}
+                className={`flex-1 landscape:flex-none md:flex-none px-3 py-1.5 sm:py-2 text-xs font-semibold rounded-lg transition-colors whitespace-nowrap cursor-pointer text-left flex items-center justify-between ${
+                  activeTab === 'PRESTIGE'
+                    ? 'bg-amber-500 text-slate-950 font-bold'
+                    : 'text-slate-300 hover:text-white hover:bg-white/5'
+                }`}
+              >
+                <span>Ascensão</span>
+                <span className="font-mono text-[10px] opacity-80">{prestigeLevel}/{MAX_PRESTIGE}</span>
+              </button>
+              <button
+                onClick={() => {
+                  sound.playClick();
+                  setActiveTab('TOKEN_SHOP');
+                }}
+                className={`flex-1 landscape:flex-none md:flex-none px-3 py-1.5 sm:py-2 text-xs font-semibold rounded-lg transition-colors whitespace-nowrap cursor-pointer text-left flex items-center justify-between ${
+                  activeTab === 'TOKEN_SHOP'
+                    ? 'bg-fuchsia-500 text-slate-950 font-bold'
+                    : 'text-slate-300 hover:text-white hover:bg-white/5'
+                }`}
+              >
+                <span>Loja de Tokens</span>
+                <span className="font-mono text-[10px] opacity-80">{tokens > 0 ? `${tokens}★` : '5'}</span>
+              </button>
             </div>
           </div>
-        </header>
 
-        {/* Segmented Navigation Tabs */}
-        <div className="px-4 sm:px-6 py-2 border-b border-white/10 flex items-center justify-between gap-3 shrink-0 bg-slate-950/50 overflow-x-auto">
-          <div className="flex items-center gap-1 p-1 bg-slate-950 border border-white/10 rounded-lg">
-            <button
-              onClick={() => {
-                sound.playClick();
-                setActiveTab('PRESTIGE');
-              }}
-              className={`px-3 sm:px-4 py-1.5 text-xs font-semibold rounded-md transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
-                activeTab === 'PRESTIGE'
-                  ? 'bg-amber-500 text-slate-950'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              Ascensão ({prestigeLevel}/{MAX_PRESTIGE})
-            </button>
-            <button
-              onClick={() => {
-                sound.playClick();
-                setActiveTab('TOKEN_SHOP');
-              }}
-              className={`px-3 sm:px-4 py-1.5 text-xs font-semibold rounded-md transition-colors whitespace-nowrap shrink-0 cursor-pointer flex items-center gap-2 ${
-                activeTab === 'TOKEN_SHOP'
-                  ? 'bg-fuchsia-500 text-slate-950'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              <span>Loja de Tokens (5)</span>
-              {tokens > 0 && (
-                <span className="font-mono font-bold">· {tokens}</span>
-              )}
-            </button>
+          <div className="hidden landscape:block md:block pt-2 border-t border-white/10 text-[10px] font-mono text-slate-400">
+            <div>Bônus Atual:</div>
+            <div className="text-amber-300 font-bold">+{bonuses.damageBonusPct}% Dano · +{bonuses.coinsBonusPct}% CRED</div>
           </div>
+        </aside>
 
+        {/* RIGHT CONTENT BODY */}
+        <div className="flex-1 overflow-y-auto p-3 sm:p-5 min-w-0 min-h-0">
           {statusMessage && (
-            <div className="hidden sm:block text-xs font-medium text-emerald-300 truncate max-w-xs">
+            <div className="mb-3 px-3 py-2 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-xs font-medium text-emerald-300">
               {statusMessage}
             </div>
           )}
-        </div>
-
-        {/* Content Body */}
-        <div className="flex-1 overflow-y-auto p-3.5 sm:p-6">
           {activeTab === 'PRESTIGE' ? (
-            <div className="flex flex-col gap-4 sm:gap-6 max-w-4xl mx-auto">
+            <div className="flex flex-col gap-4 max-w-4xl mx-auto">
               {/* Primary Ascension Card */}
-              <div className="bg-slate-950/75 border border-white/10 rounded-xl p-4 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 sm:gap-6">
+              <div className="bg-slate-950/75 border border-white/10 rounded-xl p-3.5 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 sm:gap-5">
                 <div className="flex-1 space-y-3">
                   <div className="flex items-center gap-2.5">
                     <Crown className="w-5 h-5 text-amber-400" />

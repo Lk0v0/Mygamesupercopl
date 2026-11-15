@@ -260,7 +260,10 @@ export const UpgradeScreen: React.FC<UpgradeScreenProps> = ({
   }, [options, mythicStage, rerollsLeft, onReroll, triggerSelect, handleReroll]);
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-slate-950/92 p-2.5 sm:p-5 md:p-8 select-none overflow-y-auto animate-lvl-backdrop">
+    <div
+      data-gamepad-scope="modal"
+      className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-slate-950/92 p-2.5 sm:p-5 md:p-8 select-none overflow-y-auto animate-lvl-backdrop"
+    >
       {/* Ambient Tactical Grid */}
       <div
         className="fixed inset-0 z-0 opacity-15 pointer-events-none"
@@ -291,6 +294,8 @@ export const UpgradeScreen: React.FC<UpgradeScreenProps> = ({
       {/* ========================================================= */}
       {hasMythic && mythicStage !== 'REVEALED' && (
         <div
+          role="button"
+          data-gamepad-nav="true"
           onClick={() => setMythicStage('REVEALED')}
           className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-slate-950/95 cursor-pointer overflow-hidden"
         >

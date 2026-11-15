@@ -43,7 +43,10 @@ export const ModeSelectModal: React.FC<ModeSelectModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/92 animate-in fade-in duration-200 select-none">
+    <div
+      data-gamepad-scope="modal"
+      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/92 animate-in fade-in duration-200 select-none"
+    >
       <div className="relative w-full max-w-5xl bg-slate-900/95 border border-white/10 rounded-2xl md:rounded-3xl p-3.5 sm:p-6 shadow-2xl flex flex-col overflow-hidden max-h-[94dvh]">
         
         {/* Ambient atmospheric glows */}
@@ -74,6 +77,7 @@ export const ModeSelectModal: React.FC<ModeSelectModalProps> = ({
           </div>
 
           <button
+            data-gamepad-back="true"
             onClick={() => {
               sound.playClick();
               onClose();

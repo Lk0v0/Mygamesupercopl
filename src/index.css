@@ -41,6 +41,14 @@
   animation: pulse-subtle 2.5s infinite ease-in-out;
 }
 
+[data-gamepad-focused='true'] {
+  outline: 2.5px solid #22d3ee !important;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(34, 211, 238, 0.25), 0 0 18px rgba(34, 211, 238, 0.45) !important;
+  position: relative;
+  z-index: 30;
+}
+
 /* ============================================================
    LEVEL-UP SELECTOR ANIMATIONS
    ============================================================ */
