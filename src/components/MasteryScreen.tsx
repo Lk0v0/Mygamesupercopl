@@ -37,7 +37,7 @@ interface MasteryScreenProps {
   onClose: () => void;
 }
 
-const SHIPS_ORDER: ShipTypeKey[] = ['DESTRUCTOR', 'INTERCEPTOR', 'NAVE_REI'];
+const SHIPS_ORDER: ShipTypeKey[] = ['TROPER', 'DESTRUCTOR', 'INTERCEPTOR', 'NAVE_REI'];
 
 // Normalized coordinates (percentage) inside the SVG/node canvas
 function getNodePosition(tier: 1 | 2 | 3 | 4, branch: 'center' | 'left' | 'right') {

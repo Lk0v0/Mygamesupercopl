@@ -3687,7 +3687,7 @@ export const sound = {
     }
   },
 
-  playMasterySkill: (ship: 'DESTRUCTOR' | 'INTERCEPTOR' | 'NAVE_REI') => {
+  playTroperOrb: () => {
     if (!soundEnabled) return;
     try {
       const ctx = getAudioContext();
@@ -3695,9 +3695,31 @@ export const sound = {
       const now = ctx.currentTime;
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
-      osc.type = ship === 'NAVE_REI' ? 'sawtooth' : ship === 'DESTRUCTOR' ? 'square' : 'triangle';
-      const startFreq = ship === 'NAVE_REI' ? 220 : ship === 'DESTRUCTOR' ? 540 : 880;
-      const endFreq = ship === 'NAVE_REI' ? 90 : ship === 'DESTRUCTOR' ? 140 : 320;
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(520, now);
+      osc.frequency.exponentialRampToValueAtTime(240, now + 0.09);
+      gain.gain.setValueAtTime(0.11, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.105);
+    } catch (e) {
+      console.warn('Audio play failed', e);
+    }
+  },
+
+  playMasterySkill: (ship: 'TROPER' | 'DESTRUCTOR' | 'INTERCEPTOR' | 'NAVE_REI') => {
+    if (!soundEnabled) return;
+    try {
+      const ctx = getAudioContext();
+      if (!ctx) return;
+      const now = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = ship === 'NAVE_REI' ? 'sawtooth' : ship === 'DESTRUCTOR' ? 'square' : ship === 'TROPER' ? 'sine' : 'triangle';
+      const startFreq = ship === 'NAVE_REI' ? 220 : ship === 'DESTRUCTOR' ? 540 : ship === 'TROPER' ? 680 : 880;
+      const endFreq = ship === 'NAVE_REI' ? 90 : ship === 'DESTRUCTOR' ? 140 : ship === 'TROPER' ? 280 : 320;
       osc.frequency.setValueAtTime(startFreq, now);
       osc.frequency.exponentialRampToValueAtTime(endFreq, now + 0.28);
       gain.gain.setValueAtTime(0.22, now);

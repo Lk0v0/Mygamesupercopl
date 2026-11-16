@@ -44,6 +44,29 @@ jobs:
           fi
           npx cap sync android
 
+      - name: Apply Custom Android App Icons
+        run: |
+          RES_DIR="android/app/src/main/res"
+          if [ -f "assets/icon-only.png" ]; then
+            if ! command -v convert >/dev/null 2>&1; then
+              sudo apt-get update -qq && sudo apt-get install -y -qq imagemagick
+            fi
+            declare -A SIZES=( ["mdpi"]=48 ["hdpi"]=72 ["xhdpi"]=96 ["xxhdpi"]=144 ["xxxhdpi"]=192 )
+            declare -A FG_SIZES=( ["mdpi"]=108 ["hdpi"]=162 ["xhdpi"]=216 ["xxhdpi"]=324 ["xxxhdpi"]=432 )
+            for dpi in "${!SIZES[@]}"; do
+              sz="${SIZES[$dpi]}"
+              fgsz="${FG_SIZES[$dpi]}"
+              mkdir -p "$RES_DIR/mipmap-$dpi"
+              convert assets/icon-only.png -resize "${sz}x${sz}" "$RES_DIR/mipmap-$dpi/ic_launcher.png"
+              convert assets/icon-only.png -resize "${sz}x${sz}" \
+                \( -size "${sz}x${sz}" xc:none -fill white -draw "circle $((sz/2)),$((sz/2)) $((sz/2)),0" \) \
+                -compose CopyOpacity -composite "$RES_DIR/mipmap-$dpi/ic_launcher_round.png"
+              convert assets/icon-foreground.png -resize "${fgsz}x${fgsz}" "$RES_DIR/mipmap-$dpi/ic_launcher_foreground.png"
+            done
+            mkdir -p "$RES_DIR/values"
+            printf '<?xml version="1.0" encoding="utf-8"?>\n<resources>\n    <color name="ic_launcher_background">#020617</color>\n</resources>\n' > "$RES_DIR/values/ic_launcher_background.xml"
+          fi
+
       - name: Copy Release Keystore
         run: |
           mkdir -p android/app

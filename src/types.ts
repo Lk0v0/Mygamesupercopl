@@ -37,6 +37,7 @@ export enum WeaponType {
   EAST_DRAGON = 'EAST_DRAGON',
   IRON_MAN = 'IRON_MAN',
   ICE_AND_FIRE_DRAGON = 'ICE_AND_FIRE_DRAGON',
+  TROPER = 'TROPER',
 }
 
 export interface DragonSegment {
@@ -148,6 +149,8 @@ export interface DyingState {
 
 export type UpgradeRarity = 'COMMON' | 'RARE' | 'EPIC' | 'LEGENDARY' | 'MYTHIC';
 
+export type SkinEffectType = 'NONE' | 'SHADOW' | 'HAZMAT' | 'PYRO' | 'CRYO' | 'VOLT' | 'SOLAR';
+
 export interface OperatorSkin {
   id: string;
   name: string;
@@ -160,6 +163,7 @@ export interface OperatorSkin {
   accentColor: string;
   trailColor: string;
   glowColor?: string;
+  specialEffectType?: SkinEffectType;
   perkName?: string;
   perkDescription?: string;
   unlocked?: boolean;
@@ -219,6 +223,7 @@ export interface Zombie {
   bossTitle?: string;
   specialAttackTimer?: number;
   subPhase?: number;
+  isDead?: boolean;
 }
 
 export interface ActiveBossInfo {
@@ -260,6 +265,7 @@ export interface Bullet {
   flameMaxRadius?: number;
   smokeTimer?: number;
   weaponType?: WeaponType;
+  isIgnite?: boolean;
 }
 
 export interface Particle {
@@ -285,6 +291,8 @@ export interface BloodSplat {
   radius: number;
   alpha: number;
   color: string;
+  angle?: number;
+  stretch?: number;
 }
 
 export enum DropType {
@@ -344,7 +352,7 @@ export type TokenUpgradeId =
   | 'token_haste'
   | 'token_crit_xp';
 
-export type ShipTypeKey = 'DESTRUCTOR' | 'INTERCEPTOR' | 'NAVE_REI';
+export type ShipTypeKey = 'TROPER' | 'DESTRUCTOR' | 'INTERCEPTOR' | 'NAVE_REI';
 
 export type MasteryNodeKind = 'PASSIVA' | 'HABILIDADE';
 

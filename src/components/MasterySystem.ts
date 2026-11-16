@@ -10,6 +10,13 @@ export const SHIP_META: Record<
     activeSkillCooldown: number;
   }
 > = {
+  TROPER: {
+    name: 'Nave Troper',
+    role: 'Mini-Caça · Orbes Leves (Sem Warp)',
+    accentColor: '#38bdf8',
+    activeSkillName: 'Pulso de Orbes',
+    activeSkillCooldown: 6.5,
+  },
   DESTRUCTOR: {
     name: 'Nave Destructor',
     role: 'Lasers Gêmeos · Warp 3s',
@@ -68,6 +75,82 @@ export function getShipMasteryLevelInfo(xp: number) {
 }
 
 export const SHIP_MASTERY_NODES: Record<ShipTypeKey, MasteryNodeDefinition[]> = {
+  TROPER: [
+    {
+      id: 'trop_core',
+      ship: 'TROPER',
+      title: 'Célula de Íons Compacta',
+      kind: 'PASSIVA',
+      tier: 1,
+      branch: 'center',
+      requires: [],
+      cost: 1,
+      shortBonus: '+20% Dano dos Orbes · +15% Vel. Voo',
+      description: 'Ajusta o micro-reator da Troper para ampliar em +20% o dano das esferas pequenas e elevar a velocidade de voo do mini-caça em +15%.',
+    },
+    {
+      id: 'trop_barrel',
+      ship: 'TROPER',
+      title: 'Câmara de Disparo Ágil',
+      kind: 'PASSIVA',
+      tier: 2,
+      branch: 'left',
+      requires: ['trop_core'],
+      cost: 1,
+      shortBonus: '+25% Cadência · +1 Perfuração',
+      description: 'Acelera o ciclo lento de disparo em +25% e permite que cada esfera pequena atravesse +1 inimigo extra.',
+    },
+    {
+      id: 'trop_nova_skill',
+      ship: 'TROPER',
+      title: 'Pulso de Orbes',
+      kind: 'HABILIDADE',
+      tier: 2,
+      branch: 'right',
+      requires: ['trop_core'],
+      cost: 1,
+      cooldownSec: 6.5,
+      shortBonus: 'Ativa [Q]: Anel de 8 Orbes + Escudo',
+      description: 'Habilidade Ativa [Q] ou Botão Tático: dispara 8 pequenas esferas perfurantes em 360° ao redor da Troper e restaura +18 de escudo (ou +12 de vida).',
+    },
+    {
+      id: 'trop_homing',
+      ship: 'TROPER',
+      title: 'Guiamento Tático Leve',
+      kind: 'PASSIVA',
+      tier: 3,
+      branch: 'left',
+      requires: ['trop_barrel'],
+      cost: 1,
+      shortBonus: 'Micro-Teleguiado nos Orbes',
+      description: 'Os orbes lentos da Troper ganham sensores magnéticos que curvam sua trajetória em direção ao alvo próximo.',
+    },
+    {
+      id: 'trop_twin',
+      ship: 'TROPER',
+      title: 'Emissor Duplo Frontal',
+      kind: 'HABILIDADE',
+      tier: 3,
+      branch: 'right',
+      requires: ['trop_nova_skill'],
+      cost: 1,
+      shortBonus: 'Dispara 2 Orbes Paralelos',
+      description: 'Habilidade de Combate: adapta o bico da mini-nave para disparar duas esferas pequenas paralelas a cada ciclo de tiro.',
+    },
+    {
+      id: 'trop_heavy_core',
+      ship: 'TROPER',
+      title: 'Núcleo Estilhaçante',
+      kind: 'HABILIDADE',
+      tier: 4,
+      branch: 'center',
+      requires: ['trop_homing', 'trop_twin'],
+      cost: 1,
+      shortBonus: 'Suprema: +1 Orbe Central + Explosão',
+      description: 'Habilidade Suprema: dispara um 3º orbe central condensado de plasma azul que detona em uma pequena onda de choque no impacto.',
+    },
+  ],
+
   DESTRUCTOR: [
     {
       id: 'dest_core',
@@ -298,6 +381,7 @@ export const SHIP_MASTERY_NODES: Record<ShipTypeKey, MasteryNodeDefinition[]> = 
 };
 
 export const DEFAULT_SHIP_MASTERY: AllShipMasteryState = {
+  TROPER: { xp: 0, unlockedNodes: [] },
   DESTRUCTOR: { xp: 0, unlockedNodes: [] },
   INTERCEPTOR: { xp: 0, unlockedNodes: [] },
   NAVE_REI: { xp: 0, unlockedNodes: [] },

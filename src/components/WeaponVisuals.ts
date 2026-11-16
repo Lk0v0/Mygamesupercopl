@@ -1160,11 +1160,14 @@ export function renderBulletVisual(
     return;
   }
 
-  // 0c. INTERCEPTOR RAPID PLASMA ORBS (Fast, zero per-orb gradient allocation)
+  // 0c. INTERCEPTOR / TROPER PLASMA ORBS (Fast, zero per-orb gradient allocation)
   if (b.isOrb) {
     const moveAngle = (b.vx * b.vx + b.vy * b.vy) > 1 ? Math.atan2(b.vy, b.vx) : b.ownerAngle;
     const orbColor = b.color || '#00f5d4';
-    const orbR = Math.max(4.5, b.radius || 5.5);
+    const orbR =
+      b.weaponType === WeaponType.TROPER
+        ? Math.max(2.9, b.radius || 3.6)
+        : Math.max(4.5, b.radius || 5.5);
 
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
@@ -2582,6 +2585,161 @@ export function getReiBlastersWorld(
       muzzleY: pivotY + Math.sin(angle) * muzzleLen,
     };
   });
+}
+
+/**
+ * Render the compact mini-fighter Nave Troper:
+ * Smaller than Destructor/Interceptor, single center nose orb emitter, single rear thruster, NO Warp rings.
+ */
+export function renderTroperShip(
+  ctx: CanvasRenderingContext2D,
+  screenX: number,
+  screenY: number,
+  shipAngle: number,
+  isMoving: boolean,
+  isFiring: boolean,
+  time: number,
+  shield: number = 0,
+  angularVel: number = 0
+) {
+  const pulse = 0.85 + Math.sin(time * 0.014) * 0.15;
+
+  // 1. Compact Ground Shadow
+  ctx.save();
+  ctx.translate(screenX + 5, screenY + 7);
+  ctx.rotate(shipAngle);
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.36)';
+  ctx.beginPath();
+  ctx.moveTo(18, 0);
+  ctx.lineTo(3, -7);
+  ctx.lineTo(-9, -15);
+  ctx.lineTo(-14, -12);
+  ctx.lineTo(-10, -4);
+  ctx.lineTo(-13, 0);
+  ctx.lineTo(-10, 4);
+  ctx.lineTo(-14, 12);
+  ctx.lineTo(-9, 15);
+  ctx.lineTo(3, 7);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+
+  // 2. Mini Starfighter Chassis
+  ctx.save();
+  ctx.translate(screenX, screenY);
+  ctx.rotate(shipAngle);
+
+  const bankScale = 1 - Math.min(0.16, Math.abs(angularVel) * 0.025);
+  ctx.scale(1, bankScale);
+
+  // Single Compact Rear Thruster Flame
+  const flameLen = (isMoving ? 14 : 6.5) + Math.sin(time * 0.04) * 2.5;
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  ctx.fillStyle = 'rgba(56, 189, 248, 0.45)';
+  ctx.beginPath();
+  ctx.moveTo(-12, -3.5);
+  ctx.lineTo(-12 - flameLen * 1.25, 0);
+  ctx.lineTo(-12, 3.5);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = '#e0f2fe';
+  ctx.beginPath();
+  ctx.moveTo(-12, -1.8);
+  ctx.lineTo(-12 - flameLen * 0.65, 0);
+  ctx.lineTo(-12, 1.8);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+
+  // Sleek Mini Delta Hull (Gunmetal Navy + Sky-Blue Trim)
+  ctx.fillStyle = '#0f172a';
+  ctx.strokeStyle = '#38bdf8';
+  ctx.lineWidth = 1.6;
+  ctx.beginPath();
+  ctx.moveTo(17, 0);
+  ctx.lineTo(4, -6.5);
+  ctx.lineTo(-8, -14.5);
+  ctx.lineTo(-13, -11.5);
+  ctx.lineTo(-9, -4.5);
+  ctx.lineTo(-12, 0);
+  ctx.lineTo(-9, 4.5);
+  ctx.lineTo(-13, 11.5);
+  ctx.lineTo(-8, 14.5);
+  ctx.lineTo(4, 6.5);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  // Inner Armor Panel & Subtle Wing Stripes
+  ctx.fillStyle = '#1e293b';
+  ctx.beginPath();
+  ctx.moveTo(12, 0);
+  ctx.lineTo(0, -4.5);
+  ctx.lineTo(-8, -4.5);
+  ctx.lineTo(-8, 4.5);
+  ctx.lineTo(0, 4.5);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.strokeStyle = '#7dd3fc';
+  ctx.lineWidth = 1.1;
+  ctx.beginPath();
+  ctx.moveTo(-3, -6);
+  ctx.lineTo(-10, -11);
+  ctx.moveTo(-3, 6);
+  ctx.lineTo(-10, 11);
+  ctx.stroke();
+
+  // Cockpit Canopy
+  ctx.fillStyle = '#38bdf8';
+  ctx.beginPath();
+  ctx.moveTo(9, 0);
+  ctx.lineTo(2, -3);
+  ctx.lineTo(-3, -2.2);
+  ctx.lineTo(-3, 2.2);
+  ctx.lineTo(2, 3);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.fillStyle = '#e0f2fe';
+  ctx.beginPath();
+  ctx.ellipse(3, -0.7, 3.2, 1.0, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Single Nose Orb Emitter Tip
+  ctx.fillStyle = '#334155';
+  ctx.fillRect(14, -2.2, 5, 4.4);
+  ctx.fillStyle = isFiring ? '#ffffff' : '#38bdf8';
+  ctx.beginPath();
+  ctx.arc(19, 0, isFiring ? 2.6 * pulse : 1.9, 0, Math.PI * 2);
+  ctx.fill();
+
+  if (isFiring) {
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.fillStyle = 'rgba(56, 189, 248, 0.45)';
+    ctx.beginPath();
+    ctx.arc(20, 0, 6.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  ctx.restore();
+
+  // 3. Compact Shield Ring
+  if (shield > 0) {
+    ctx.save();
+    ctx.strokeStyle = 'rgba(56, 189, 248, 0.25)';
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.arc(screenX, screenY, 24, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.strokeStyle = 'rgba(125, 211, 252, 0.58)';
+    ctx.lineWidth = 2 + Math.sin(time / 150) * 0.7;
+    ctx.stroke();
+    ctx.restore();
+  }
 }
 
 /**

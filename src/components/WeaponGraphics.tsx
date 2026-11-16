@@ -1553,6 +1553,52 @@ export const WeaponIllustration: React.FC<WeaponIllustrationProps> = ({
         </svg>
       );
 
+    case WT.TROPER:
+      // === NAVE TROPER (MINI-CAÇA COMPACTO · SEM WARP · ORBES PEQUENOS LENTOS) ===
+      return (
+        <svg viewBox="0 0 340 140" className={className} fill="none" xmlns="http://www.w3.org/2000/svg">
+          <text x="326" y="18" textAnchor="end" fill="#38bdf8" opacity="0.95" fontSize="9.5" fontFamily="monospace" fontWeight="bold">
+            NAVE TROPER · MINI-CAÇA DE ENTRADA
+          </text>
+          <text x="326" y="30" textAnchor="end" fill="#94a3b8" opacity="0.88" fontSize="8" fontFamily="monospace">
+            SEM WARP · ORBES PEQUENOS EM DISPARO LENTO
+          </text>
+
+          {/* Small Spaced Slow Energy Orbs Streaming from Single Nose Cannon */}
+          {[190, 242, 296].map((ox, i) => (
+            <g key={`torb-${i}`}>
+              <line x1={ox - 10} y1="72" x2={ox} y2="72" stroke="#38bdf8" strokeWidth="2.4" strokeOpacity="0.45" strokeLinecap="round" />
+              <circle cx={ox} cy="72" r={4.8 - i * 0.35} fill="#0284c7" fillOpacity="0.4" />
+              <circle cx={ox} cy="72" r={3.0 - i * 0.2} fill="#38bdf8" />
+              <circle cx={ox} cy="72" r={1.3} fill="#ffffff" />
+            </g>
+          ))}
+
+          {/* Single Compact Rear Thruster Plume */}
+          <polygon points="94,67 66,72 94,77" fill="#38bdf8" opacity="0.85" />
+          <polygon points="94,69.5 76,72 94,74.5" fill="#e0f2fe" />
+
+          {/* Compact Mini Delta Starfighter Hull */}
+          <polygon
+            points="146,72 118,59 95,43 86,49 94,63 89,72 94,81 86,95 95,101 118,85"
+            fill="#0f172a"
+            stroke="#38bdf8"
+            strokeWidth="2"
+          />
+          <polygon points="134,72 110,63 96,63 96,81 110,81" fill="#1e293b" />
+          <line x1="106" y1="60" x2="92" y2="50" stroke="#7dd3fc" strokeWidth="1.5" strokeLinecap="round" />
+          <line x1="106" y1="84" x2="92" y2="94" stroke="#7dd3fc" strokeWidth="1.5" strokeLinecap="round" />
+
+          {/* Compact Cockpit */}
+          <polygon points="128,72 114,66 104,68 104,76 114,78" fill="#38bdf8" />
+          <ellipse cx="115" cy="70.5" rx="5" ry="1.8" fill="#e0f2fe" />
+
+          {/* Single Front Nose Emitter */}
+          <rect x="142" y="68" width="9" height="8" rx="1.5" fill="#334155" stroke="#7dd3fc" strokeWidth="1.2" />
+          <circle cx="152" cy="72" r="3.4" fill="#ffffff" stroke="#38bdf8" strokeWidth="1.4" />
+        </svg>
+      );
+
     case WT.DESTRUCTOR:
       // === NAVE DESTRUCTOR (TRANSFORMAÇÃO EM NAVE + 2 BLASTERS LASER ±30° + MODO WARP) ===
       return (

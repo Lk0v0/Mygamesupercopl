@@ -3,11 +3,39 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { Player, UpgradeOption, UpgradeRarity, WeaponType } from '../types';
+import { Player, UpgradeOption, UpgradeRarity, WeaponStats } from '../types';
+
+const MAX_DAMAGE = 999999;
+const MAX_FIRE_RATE = 75;
+const MAX_BULLET_SPEED = 2600;
+const MAX_PIERCING = 120;
+const MAX_PLAYER_SPEED = 620;
+
+const safeNum = (val: number, fallback: number): number =>
+  Number.isFinite(val) ? val : fallback;
+
+const clampWeapon = (w: WeaponStats) => {
+  w.damage = Math.min(MAX_DAMAGE, Math.max(1, Math.round(safeNum(w.damage, 10))));
+  w.fireRate = Math.min(MAX_FIRE_RATE, Math.max(0.5, Number(safeNum(w.fireRate, 2).toFixed(1))));
+  w.bulletSpeed = Math.min(MAX_BULLET_SPEED, Math.max(150, Math.round(safeNum(w.bulletSpeed, 500))));
+  w.piercing = Math.min(MAX_PIERCING, Math.max(1, Math.round(safeNum(w.piercing, 1))));
+  w.spread = Math.max(0.004, Math.min(1.0, safeNum(w.spread, 0.05)));
+};
+
+const scaleWeapons = (
+  p: Player,
+  fn: (w: WeaponStats) => void
+) => {
+  if (!p?.weapons) return;
+  Object.values(p.weapons).forEach((w) => {
+    if (!w) return;
+    fn(w);
+    clampWeapon(w);
+  });
+};
 
 export interface UpgradeContext {
   updateCoins?: (amount: number) => void;
-  unlockWeapon?: (weaponType: WeaponType) => void;
 }
 
 export interface UpgradeDefinition {
@@ -37,8 +65,8 @@ export const ALL_UPGRADES: UpgradeDefinition[] = [
     category: 'SURVIVAL',
     weight: 20,
     apply: (p) => {
-      p.maxHp += 35;
-      p.hp = Math.min(p.maxHp, p.hp + 40);
+      p.maxHp = Math.min(50000, safeNum(p.maxHp, 100) + 35);
+      p.hp = Math.min(p.maxHp, safeNum(p.hp, p.maxHp) + 40);
       return p;
     },
   },
@@ -52,7 +80,7 @@ export const ALL_UPGRADES: UpgradeDefinition[] = [
     category: 'TACTICAL',
     weight: 18,
     apply: (p) => {
-      p.speed = Math.round(p.speed * 1.12);
+      p.speed = Math.min(MAX_PLAYER_SPEED, Math.round(safeNum(p.speed, 220) * 1.12));
       return p;
     },
   },
@@ -66,8 +94,8 @@ export const ALL_UPGRADES: UpgradeDefinition[] = [
     category: 'OFFENSE',
     weight: 20,
     apply: (p) => {
-      Object.values(p.weapons).forEach((w) => {
-        w.damage = Math.max(1, Math.round(w.damage * 1.2));
+      scaleWeapons(p, (w) => {
+        w.damage = w.damage * 1.2;
       });
       return p;
     },
@@ -82,8 +110,8 @@ export const ALL_UPGRADES: UpgradeDefinition[] = [
     category: 'OFFENSE',
     weight: 18,
     apply: (p) => {
-      Object.values(p.weapons).forEach((w) => {
-        w.fireRate = Number((w.fireRate * 1.2).toFixed(1));
+      scaleWeapons(p, (w) => {
+        w.fireRate = w.fireRate * 1.2;
       });
       return p;
     },
@@ -98,9 +126,9 @@ export const ALL_UPGRADES: UpgradeDefinition[] = [
     category: 'TACTICAL',
     weight: 16,
     apply: (p) => {
-      Object.values(p.weapons).forEach((w) => {
-        w.bulletSpeed = Math.round(w.bulletSpeed * 1.25);
-        w.spread = Math.max(0.005, w.spread * 0.85);
+      scaleWeapons(p, (w) => {
+        w.bulletSpeed = w.bulletSpeed * 1.25;
+        w.spread = w.spread * 0.85;
       });
       return p;
     },
@@ -135,7 +163,7 @@ export const ALL_UPGRADES: UpgradeDefinition[] = [
     category: 'SURVIVAL',
     weight: 14,
     apply: (p) => {
-      p.maxShield += 50;
+      p.maxShield = Math.min(50000, safeNum(p.maxShield, 0) + 50);
       p.shield = p.maxShield;
       return p;
     },
@@ -150,9 +178,9 @@ export const ALL_UPGRADES: UpgradeDefinition[] = [
     category: 'OFFENSE',
     weight: 14,
     apply: (p) => {
-      Object.values(p.weapons).forEach((w) => {
+      scaleWeapons(p, (w) => {
         w.piercing += 2;
-        w.damage = Math.round(w.damage * 1.12);
+        w.damage = w.damage * 1.12;
       });
       return p;
     },
@@ -167,9 +195,9 @@ export const ALL_UPGRADES: UpgradeDefinition[] = [
     category: 'OFFENSE',
     weight: 13,
     apply: (p) => {
-      p.knockbackMult = Number(((p.knockbackMult || 1) * 1.4).toFixed(2));
-      Object.values(p.weapons).forEach((w) => {
-        w.damage = Math.round(w.damage * 1.32);
+      p.knockbackMult = Math.min(6, Number(((p.knockbackMult || 1) * 1.4).toFixed(2)));
+      scaleWeapons(p, (w) => {
+        w.damage = w.damage * 1.32;
       });
       return p;
     },
@@ -184,8 +212,8 @@ export const ALL_UPGRADES: UpgradeDefinition[] = [
     category: 'OFFENSE',
     weight: 13,
     apply: (p) => {
-      Object.values(p.weapons).forEach((w) => {
-        w.fireRate = Number((w.fireRate * 1.35).toFixed(1));
+      scaleWeapons(p, (w) => {
+        w.fireRate = w.fireRate * 1.35;
       });
       return p;
     },
@@ -201,7 +229,7 @@ export const ALL_UPGRADES: UpgradeDefinition[] = [
     weight: 12,
     apply: (p) => {
       p.hp = p.maxHp;
-      p.regenHpRate = (p.regenHpRate || 0) + 2.0;
+      p.regenHpRate = Math.min(120, (p.regenHpRate || 0) + 2.0);
       return p;
     },
   },
@@ -216,10 +244,10 @@ export const ALL_UPGRADES: UpgradeDefinition[] = [
     weight: 12,
     apply: (p) => {
       p.critChance = Math.min(0.95, (p.critChance || 0) + 0.15);
-      p.maxShield += 30;
-      p.shield = Math.min(p.maxShield, p.shield + 30);
-      Object.values(p.weapons).forEach((w) => {
-        w.bulletSpeed = Math.round(w.bulletSpeed * 1.25);
+      p.maxShield = Math.min(50000, safeNum(p.maxShield, 0) + 30);
+      p.shield = Math.min(p.maxShield, safeNum(p.shield, 0) + 30);
+      scaleWeapons(p, (w) => {
+        w.bulletSpeed = w.bulletSpeed * 1.25;
       });
       return p;
     },
@@ -238,10 +266,10 @@ export const ALL_UPGRADES: UpgradeDefinition[] = [
     category: 'OFFENSE',
     weight: 8,
     apply: (p) => {
-      p.shatterLevel = (p.shatterLevel || 0) + 1;
+      p.shatterLevel = Math.min(5, (p.shatterLevel || 0) + 1);
       p.critChance = Math.min(0.95, (p.critChance || 0) + 0.15);
-      Object.values(p.weapons).forEach((w) => {
-        w.damage = Math.round(w.damage * 1.35);
+      scaleWeapons(p, (w) => {
+        w.damage = w.damage * 1.35;
       });
       return p;
     },
@@ -256,7 +284,7 @@ export const ALL_UPGRADES: UpgradeDefinition[] = [
     category: 'SURVIVAL',
     weight: 8,
     apply: (p) => {
-      p.vampirism = (p.vampirism || 0) + 3;
+      p.vampirism = Math.min(60, (p.vampirism || 0) + 3);
       return p;
     },
   },
@@ -270,8 +298,8 @@ export const ALL_UPGRADES: UpgradeDefinition[] = [
     category: 'SURVIVAL',
     weight: 8,
     apply: (p) => {
-      p.shieldShockLevel = (p.shieldShockLevel || 0) + 1;
-      p.maxShield += 70;
+      p.shieldShockLevel = Math.min(5, (p.shieldShockLevel || 0) + 1);
+      p.maxShield = Math.min(50000, safeNum(p.maxShield, 0) + 70);
       p.shield = p.maxShield;
       return p;
     },
@@ -288,7 +316,7 @@ export const ALL_UPGRADES: UpgradeDefinition[] = [
     apply: (p, ctx) => {
       p.coinsEarned = (p.coinsEarned || 0) + 500;
       p.score = p.coinsEarned;
-      p.bonusCoinsMult = (p.bonusCoinsMult || 1) * 2;
+      p.bonusCoinsMult = Math.min(32, (p.bonusCoinsMult || 1) * 2);
       if (ctx?.updateCoins) ctx.updateCoins(500);
       return p;
     },
@@ -304,9 +332,9 @@ export const ALL_UPGRADES: UpgradeDefinition[] = [
     weight: 8,
     apply: (p) => {
       p.dodgeChance = Math.min(0.65, (p.dodgeChance || 0) + 0.12);
-      p.speed = Math.round(p.speed * 1.18);
-      Object.values(p.weapons).forEach((w) => {
-        w.fireRate = Number((w.fireRate * 1.28).toFixed(1));
+      p.speed = Math.min(MAX_PLAYER_SPEED, Math.round(safeNum(p.speed, 220) * 1.18));
+      scaleWeapons(p, (w) => {
+        w.fireRate = w.fireRate * 1.28;
       });
       return p;
     },
@@ -325,11 +353,11 @@ export const ALL_UPGRADES: UpgradeDefinition[] = [
     category: 'ULTIMATE',
     weight: 4,
     apply: (p) => {
-      p.maxHp += 60;
+      p.maxHp = Math.min(50000, safeNum(p.maxHp, 100) + 60);
       p.hp = p.maxHp;
-      p.maxShield += 100;
+      p.maxShield = Math.min(50000, safeNum(p.maxShield, 0) + 100);
       p.shield = p.maxShield;
-      p.regenHpRate = (p.regenHpRate || 0) + 4.5;
+      p.regenHpRate = Math.min(120, (p.regenHpRate || 0) + 4.5);
       return p;
     },
   },
@@ -343,10 +371,10 @@ export const ALL_UPGRADES: UpgradeDefinition[] = [
     category: 'ULTIMATE',
     weight: 4,
     apply: (p) => {
-      Object.values(p.weapons).forEach((w) => {
-        w.damage = Math.round(w.damage * 1.75);
+      scaleWeapons(p, (w) => {
+        w.damage = w.damage * 1.75;
         w.piercing += 3;
-        w.bulletSpeed = Math.round(w.bulletSpeed * 1.4);
+        w.bulletSpeed = w.bulletSpeed * 1.4;
       });
       return p;
     },
@@ -361,35 +389,28 @@ export const ALL_UPGRADES: UpgradeDefinition[] = [
     category: 'ULTIMATE',
     weight: 4,
     apply: (p) => {
-      Object.values(p.weapons).forEach((w) => {
-        w.fireRate = Number((w.fireRate * 1.8).toFixed(1));
-        w.spread = Math.max(0.005, w.spread * 0.35);
+      scaleWeapons(p, (w) => {
+        w.fireRate = w.fireRate * 1.8;
+        w.spread = w.spread * 0.35;
       });
       return p;
     },
   },
   {
     id: 'ultimate_armory_legendary',
-    title: 'Suprimento Bélico Classificado',
-    description: 'Desbloqueia e equipa a próxima arma pesada/avançada da armaria (ou +40% Dano se tudo liberado) e +1.000 Créditos.',
+    title: 'Arsenal Tático Classificado',
+    description: 'Receba carregamento especial de guerra: +55% Dano Global, +25% Cadência, +2 Perfuração e +1.000 Créditos (sem trocar sua arma).',
     icon: 'trophy_legendary',
     rarity: 'LEGENDARY',
-    statBonus: 'NOVA ARMA + 1.000 CRED',
+    statBonus: '+55% DANO · +25% CAD · +1.000 CRED',
     category: 'ULTIMATE',
     weight: 3,
     apply: (p, ctx) => {
-      const locked = Object.values(p.weapons).find((w) => !w.unlocked);
-      if (locked) {
-        locked.unlocked = true;
-        if (ctx?.unlockWeapon) {
-          ctx.unlockWeapon(locked.type);
-        }
-        p.currentWeapon = locked.type;
-      } else {
-        Object.values(p.weapons).forEach((w) => {
-          w.damage = Math.round(w.damage * 1.4);
-        });
-      }
+      scaleWeapons(p, (w) => {
+        w.damage = w.damage * 1.55;
+        w.fireRate = w.fireRate * 1.25;
+        w.piercing += 2;
+      });
       p.coinsEarned = (p.coinsEarned || 0) + 1000;
       p.score = p.coinsEarned;
       if (ctx?.updateCoins) ctx.updateCoins(1000);
@@ -406,9 +427,9 @@ export const ALL_UPGRADES: UpgradeDefinition[] = [
     category: 'OFFENSE',
     weight: 5,
     apply: (p) => {
-      p.chainLightningLevel = (p.chainLightningLevel || 0) + 1;
-      Object.values(p.weapons).forEach((w) => {
-        w.damage = Math.round(w.damage * 1.35);
+      p.chainLightningLevel = Math.min(5, (p.chainLightningLevel || 0) + 1);
+      scaleWeapons(p, (w) => {
+        w.damage = w.damage * 1.35;
       });
       return p;
     },
@@ -424,9 +445,9 @@ export const ALL_UPGRADES: UpgradeDefinition[] = [
     weight: 4,
     apply: (p) => {
       p.critChance = Math.min(0.95, (p.critChance || 0) + 0.30);
-      p.critMultiplier = (p.critMultiplier || 2.0) + 0.75;
-      Object.values(p.weapons).forEach((w) => {
-        w.damage = Math.round(w.damage * 1.35);
+      p.critMultiplier = Math.min(10, (p.critMultiplier || 2.0) + 0.75);
+      scaleWeapons(p, (w) => {
+        w.damage = w.damage * 1.35;
       });
       return p;
     },
@@ -441,11 +462,11 @@ export const ALL_UPGRADES: UpgradeDefinition[] = [
     category: 'SURVIVAL',
     weight: 5,
     apply: (p) => {
-      p.gravityPulseLevel = (p.gravityPulseLevel || 0) + 1;
-      p.maxShield += 50;
+      p.gravityPulseLevel = Math.min(5, (p.gravityPulseLevel || 0) + 1);
+      p.maxShield = Math.min(50000, safeNum(p.maxShield, 0) + 50);
       p.shield = p.maxShield;
-      Object.values(p.weapons).forEach((w) => {
-        w.damage = Math.round(w.damage * 1.2);
+      scaleWeapons(p, (w) => {
+        w.damage = w.damage * 1.2;
       });
       return p;
     },
@@ -460,11 +481,11 @@ export const ALL_UPGRADES: UpgradeDefinition[] = [
     category: 'ULTIMATE',
     weight: 4,
     apply: (p) => {
-      p.speed = Math.round(p.speed * 1.3);
-      p.vampirism = (p.vampirism || 0) + 5;
-      Object.values(p.weapons).forEach((w) => {
-        w.fireRate = Number((w.fireRate * 1.45).toFixed(1));
-        w.damage = Math.round(w.damage * 1.25);
+      p.speed = Math.min(MAX_PLAYER_SPEED, Math.round(safeNum(p.speed, 220) * 1.3));
+      p.vampirism = Math.min(60, (p.vampirism || 0) + 5);
+      scaleWeapons(p, (w) => {
+        w.fireRate = w.fireRate * 1.45;
+        w.damage = w.damage * 1.25;
       });
       return p;
     },
@@ -484,19 +505,19 @@ export const ALL_UPGRADES: UpgradeDefinition[] = [
     category: 'ULTIMATE',
     weight: 10,
     apply: (p) => {
-      p.mythicSingularity = (p.mythicSingularity || 0) + 1;
-      p.maxHp += 150;
+      p.mythicSingularity = Math.min(4, (p.mythicSingularity || 0) + 1);
+      p.maxHp = Math.min(50000, safeNum(p.maxHp, 100) + 150);
       p.hp = p.maxHp;
-      p.maxShield += 200;
+      p.maxShield = Math.min(50000, safeNum(p.maxShield, 0) + 200);
       p.shield = p.maxShield;
-      p.regenHpRate = (p.regenHpRate || 0) + 6.0;
-      p.vampirism = (p.vampirism || 0) + 4;
+      p.regenHpRate = Math.min(120, (p.regenHpRate || 0) + 6.0);
+      p.vampirism = Math.min(60, (p.vampirism || 0) + 4);
       p.critChance = Math.min(0.95, (p.critChance || 0) + 0.25);
-      p.speed = Math.round(p.speed * 1.25);
-      Object.values(p.weapons).forEach((w) => {
-        w.damage = Math.round(w.damage * 2.4);
-        w.fireRate = Number((w.fireRate * 1.65).toFixed(1));
-        w.bulletSpeed = Math.round(w.bulletSpeed * 1.35);
+      p.speed = Math.min(MAX_PLAYER_SPEED, Math.round(safeNum(p.speed, 220) * 1.25));
+      scaleWeapons(p, (w) => {
+        w.damage = w.damage * 2.4;
+        w.fireRate = w.fireRate * 1.65;
+        w.bulletSpeed = w.bulletSpeed * 1.35;
         w.piercing += 4;
       });
       return p;
@@ -513,15 +534,15 @@ export const ALL_UPGRADES: UpgradeDefinition[] = [
     category: 'ULTIMATE',
     weight: 10,
     apply: (p) => {
-      p.mythicSolarAura = (p.mythicSolarAura || 0) + 1;
-      p.maxHp += 180;
+      p.mythicSolarAura = Math.min(4, (p.mythicSolarAura || 0) + 1);
+      p.maxHp = Math.min(50000, safeNum(p.maxHp, 100) + 180);
       p.hp = p.maxHp;
-      p.maxShield += 160;
+      p.maxShield = Math.min(50000, safeNum(p.maxShield, 0) + 160);
       p.shield = p.maxShield;
-      p.regenHpRate = (p.regenHpRate || 0) + 5.0;
-      Object.values(p.weapons).forEach((w) => {
-        w.damage = Math.round(w.damage * 1.9);
-        w.fireRate = Number((w.fireRate * 1.35).toFixed(1));
+      p.regenHpRate = Math.min(120, (p.regenHpRate || 0) + 5.0);
+      scaleWeapons(p, (w) => {
+        w.damage = w.damage * 1.9;
+        w.fireRate = w.fireRate * 1.35;
       });
       return p;
     },
@@ -537,12 +558,12 @@ export const ALL_UPGRADES: UpgradeDefinition[] = [
     category: 'ULTIMATE',
     weight: 10,
     apply: (p) => {
-      p.mythicSplitShot = (p.mythicSplitShot || 0) + 1;
+      p.mythicSplitShot = Math.min(4, (p.mythicSplitShot || 0) + 1);
       p.dodgeChance = Math.min(0.65, (p.dodgeChance || 0) + 0.35);
-      p.speed = Math.round(p.speed * 1.25);
-      Object.values(p.weapons).forEach((w) => {
-        w.damage = Math.round(w.damage * 2.1);
-        w.fireRate = Number((w.fireRate * 1.5).toFixed(1));
+      p.speed = Math.min(MAX_PLAYER_SPEED, Math.round(safeNum(p.speed, 220) * 1.25));
+      scaleWeapons(p, (w) => {
+        w.damage = w.damage * 2.1;
+        w.fireRate = w.fireRate * 1.5;
         w.piercing += 6;
       });
       return p;
@@ -559,15 +580,15 @@ export const ALL_UPGRADES: UpgradeDefinition[] = [
     category: 'ULTIMATE',
     weight: 10,
     apply: (p) => {
-      p.mythicVoidDrones = (p.mythicVoidDrones || 0) + 1;
-      p.maxHp += 120;
+      p.mythicVoidDrones = Math.min(4, (p.mythicVoidDrones || 0) + 1);
+      p.maxHp = Math.min(50000, safeNum(p.maxHp, 100) + 120);
       p.hp = p.maxHp;
-      p.maxShield += 220;
+      p.maxShield = Math.min(50000, safeNum(p.maxShield, 0) + 220);
       p.shield = p.maxShield;
-      p.vampirism = (p.vampirism || 0) + 3;
-      p.bonusCoinsMult = (p.bonusCoinsMult || 1) * 1.5;
-      Object.values(p.weapons).forEach((w) => {
-        w.damage = Math.round(w.damage * 2.25);
+      p.vampirism = Math.min(60, (p.vampirism || 0) + 3);
+      p.bonusCoinsMult = Math.min(32, (p.bonusCoinsMult || 1) * 1.5);
+      scaleWeapons(p, (w) => {
+        w.damage = w.damage * 2.25;
       });
       return p;
     },
@@ -587,20 +608,21 @@ export function rollLevelUpOptions(
   const upgradeCtx: UpgradeContext =
     typeof ctx === 'function' ? { updateCoins: ctx } : ctx || {};
 
-  const clampedLuck = Math.max(0, Math.min(5, luckLevel));
-  const isMilestone = playerLevel > 1 && playerLevel % 5 === 0;
+  const safeLevel = Math.max(1, safeNum(playerLevel, 1));
+  const clampedLuck = Math.max(0, Math.min(5, safeNum(luckLevel, 0)));
+  const isMilestone = safeLevel > 1 && safeLevel % 5 === 0;
 
   // Dynamic rarity curve
   const mythicChance = Math.min(
     0.26,
-    (isMilestone ? 0.08 : 0.015) + playerLevel * 0.002 + clampedLuck * 0.024
+    (isMilestone ? 0.08 : 0.015) + safeLevel * 0.002 + clampedLuck * 0.024
   );
   const legendaryChance = Math.min(
     0.44,
-    (isMilestone ? 0.18 : 0.06) + playerLevel * 0.011 + clampedLuck * 0.05
+    (isMilestone ? 0.18 : 0.06) + safeLevel * 0.011 + clampedLuck * 0.05
   );
-  const epicChance = Math.min(0.35, 0.14 + playerLevel * 0.015 + clampedLuck * 0.035);
-  const rawRareChance = Math.min(0.36, 0.26 + playerLevel * 0.012 + clampedLuck * 0.025);
+  const epicChance = Math.min(0.35, 0.14 + safeLevel * 0.015 + clampedLuck * 0.035);
+  const rawRareChance = Math.min(0.36, 0.26 + safeLevel * 0.012 + clampedLuck * 0.025);
   const rareChance = Math.max(
     0,
     Math.min(rawRareChance, 0.96 - (mythicChance + legendaryChance + epicChance))

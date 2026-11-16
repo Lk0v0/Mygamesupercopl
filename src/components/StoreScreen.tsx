@@ -19,9 +19,12 @@ import {
   AlertTriangle,
   Target,
   Star,
+  Shirt,
 } from 'lucide-react';
 import { sound } from '../sound';
 import { WeaponIllustration } from './WeaponGraphics';
+import { OPERATOR_SKINS } from './OperatorSkins';
+import { OperatorAvatarPreview } from './OperatorVisuals';
 
 export interface WeaponStoreItem {
   type: WeaponType;
@@ -47,7 +50,7 @@ export const WEAPON_CATALOG: WeaponStoreItem[] = [
     categoryLabel: 'Balística • Inicial',
     description: 'Pistola tática com compensador de recuo e mira laser de precisão. Confiável e cirúrgica.',
     specialTrait: 'Precisão cirúrgica e recuo ultra-baixo.',
-    damage: 22,
+    damage: 9,
     fireRate: 4.5,
     speed: 600,
     piercing: 1,
@@ -56,14 +59,29 @@ export const WEAPON_CATALOG: WeaponStoreItem[] = [
     icon: Crosshair,
   },
   {
+    type: WeaponType.TROPER,
+    name: 'Nave Troper',
+    category: 'ALTA_ENERGIA',
+    categoryLabel: 'Mini-Nave • Orbes Leves · Sem Warp',
+    description: 'Mini-caça leve de entrada. Não possui Modo Warp nem lasers pesados — dispara pequenas bolas de energia lentamente pelo bico frontal.',
+    specialTrait: 'Compacta & Barata · Sem Warp · Orbes Pequenos Lentos',
+    damage: 8,
+    fireRate: 2.2,
+    speed: 440,
+    piercing: 1,
+    price: 2500,
+    color: '#38bdf8',
+    icon: Sparkles,
+  },
+  {
     type: WeaponType.SHOTGUN,
     name: 'Espingarda Calibre 12 Dupla',
     category: 'BALÍSTICA',
     categoryLabel: 'Balística • Dispersão',
-    description: 'Dispara uma cortina devastadora de 5 chumbos simultâneos em leque. Oblitera qualquer horda próxima.',
-    specialTrait: 'Dispersão quíntupla de chumbo à queima-roupa com alto impacto.',
-    damage: 24,
-    fireRate: 1.6,
+    description: 'Dispara uma nuvem de 7 chumbos simultâneos em cone. Excelente controle de hordas de curto alcance.',
+    specialTrait: 'Dispersão sêptupla de chumbo à queima-roupa com alto empurrão.',
+    damage: 6,
+    fireRate: 1.4,
     speed: 520,
     piercing: 1,
     price: 3500,
@@ -75,10 +93,10 @@ export const WEAPON_CATALOG: WeaponStoreItem[] = [
     name: 'Revólver .44 Magnum Hunter',
     category: 'BALÍSTICA',
     categoryLabel: 'Balística • Alto Calibre',
-    description: 'Revólver pesado de cano longo com tambor de 6 tiros e alto poder de parada. Perfura blindagens leves.',
-    specialTrait: 'Alto impacto por disparo com dupla perfuração e precisão.',
-    damage: 68,
-    fireRate: 2.2,
+    description: 'Revólver pesado de cano longo com tambor de 6 tiros e bom poder de parada. Perfura até 2 alvos.',
+    specialTrait: 'Disparo preciso de alto calibre com perfuração dupla.',
+    damage: 24,
+    fireRate: 2.1,
     speed: 780,
     piercing: 2,
     price: 4500,
@@ -91,9 +109,9 @@ export const WEAPON_CATALOG: WeaponStoreItem[] = [
     category: 'BALÍSTICA',
     categoryLabel: 'Balística • Cadência Rápida',
     description: 'Disparos contínuos e velozes com silenciador tático. Excelente para manter pressão sobre zumbis velozes.',
-    specialTrait: 'Cadência veloz de 13 disparos/segundo com projéteis infinitos.',
-    damage: 14,
-    fireRate: 13,
+    specialTrait: 'Cadência veloz de 12 disparos/segundo com projéteis infinitos.',
+    damage: 6,
+    fireRate: 12,
     speed: 650,
     piercing: 1,
     price: 5500,
@@ -105,10 +123,10 @@ export const WEAPON_CATALOG: WeaponStoreItem[] = [
     name: 'Fuzil de Assalto AK-47',
     category: 'BALÍSTICA',
     categoryLabel: 'Balística • Fuzil de Assalto',
-    description: 'Fuzil clássico 7.62x39mm confiável em qualquer alcance. Combina boa cadência com dano sólido e perfuração.',
-    specialTrait: 'Equilíbrio letal de alcance, cadência e perfuração dupla.',
-    damage: 34,
-    fireRate: 9.0,
+    description: 'Fuzil clássico 7.62x39mm confiável em qualquer alcance. Combina boa cadência com dano consistente e perfuração.',
+    specialTrait: 'Equilíbrio sólido de alcance, cadência e perfuração dupla.',
+    damage: 13,
+    fireRate: 8.5,
     speed: 760,
     piercing: 2,
     price: 7500,
@@ -122,8 +140,8 @@ export const WEAPON_CATALOG: WeaponStoreItem[] = [
     categoryLabel: 'Energia • Perfurante',
     description: 'Esferas condensadas de plasma elétrico que cortam fileiras inteiras e emitem arcos de choque.',
     specialTrait: 'Perfurador elétrico que atravessa 4 alvos em linha reta.',
-    damage: 54,
-    fireRate: 2.6,
+    damage: 26,
+    fireRate: 2.4,
     speed: 480,
     piercing: 4,
     price: 10000,
@@ -136,9 +154,9 @@ export const WEAPON_CATALOG: WeaponStoreItem[] = [
     category: 'PESADA',
     categoryLabel: 'Pesada • Supressão Contínua',
     description: 'Metralhadora alimentada por fita 5.56mm NATO com bipé tático. Mantém fogo pesado contínuo contra hordas.',
-    specialTrait: 'Rajada sustentada de 14.5 tiros/s com perfuração dupla.',
-    damage: 21,
-    fireRate: 14.5,
+    specialTrait: 'Rajada sustentada de 13.5 tiros/s com perfuração dupla.',
+    damage: 9,
+    fireRate: 13.5,
     speed: 740,
     piercing: 2,
     price: 14000,
@@ -150,9 +168,9 @@ export const WEAPON_CATALOG: WeaponStoreItem[] = [
     name: 'Metralhadora Titan M134',
     category: 'PESADA',
     categoryLabel: 'Pesada • Cadência Insana',
-    description: 'Seis canos rotativos táticos com supressão contínua calibrada para consumo sustentável.',
+    description: 'Seis canos rotativos táticos com supressão contínua calibrada para controle de multidões.',
     specialTrait: 'Parede contínua de supressão tática contra grupos compactos.',
-    damage: 8,
+    damage: 4,
     fireRate: 16,
     speed: 700,
     piercing: 1,
@@ -165,10 +183,10 @@ export const WEAPON_CATALOG: WeaponStoreItem[] = [
     name: 'Fuzil Sniper .50 BMG',
     category: 'BALÍSTICA',
     categoryLabel: 'Balística • Anti-Blindagem',
-    description: 'Rifle anti-material calibre .50 com luneta de longo alcance. Dispara projéteis supersônicos devastadores.',
-    specialTrait: '165 de dano massivo e perfuração de até 5 alvos em linha.',
-    damage: 165,
-    fireRate: 1.1,
+    description: 'Rifle anti-material calibre .50 com luneta de longo alcance. Dispara projéteis supersônicos de alta penetração.',
+    specialTrait: '65 de dano concentrado e perfuração de até 5 alvos em linha.',
+    damage: 65,
+    fireRate: 1.05,
     speed: 1350,
     piercing: 5,
     price: 20000,
@@ -180,10 +198,10 @@ export const WEAPON_CATALOG: WeaponStoreItem[] = [
     name: 'Lança-Chamas Vulcão Napalm-X',
     category: 'PESADA',
     categoryLabel: 'Pesada • Incendiário',
-    description: 'Torrente de napalm fervente com penetração infinita e piloto aceso. Incinera dezenas de zumbis.',
+    description: 'Torrente de napalm fervente com penetração infinita e queimadura contínua. Incinera hordas de zumbis.',
     specialTrait: 'Penetração total e ignição em chamas contínua.',
-    damage: 18,
-    fireRate: 36,
+    damage: 6,
+    fireRate: 32,
     speed: 460,
     piercing: 99,
     price: 23500,
@@ -195,10 +213,10 @@ export const WEAPON_CATALOG: WeaponStoreItem[] = [
     name: 'Lança-Mísseis M-99 Hellfire',
     category: 'PESADA',
     categoryLabel: 'Pesada • Explosão em Área',
-    description: 'Mísseis pesados de detonação explosiva maciça com mira computadorizada. Destrói grupos inteiros.',
-    specialTrait: 'Dano em área massivo de 260 com dispersão explosiva.',
-    damage: 260,
-    fireRate: 1.4,
+    description: 'Mísseis pesados de detonação explosiva em área com mira computadorizada. Destrói grupos compactos.',
+    specialTrait: 'Dano em área de 95 com onda de choque explosiva.',
+    damage: 95,
+    fireRate: 1.25,
     speed: 580,
     piercing: 1,
     price: 28000,
@@ -212,8 +230,8 @@ export const WEAPON_CATALOG: WeaponStoreItem[] = [
     categoryLabel: 'Alien • Pulsos de Íons',
     description: 'Arma extraterrestre recuperada de invasores. Emite anéis concêntricos de plasma com perfuração iônica.',
     specialTrait: 'Anéis iônicos de alta energia com perfuração dupla.',
-    damage: 48,
-    fireRate: 5.5,
+    damage: 22,
+    fireRate: 5.2,
     speed: 740,
     piercing: 2,
     price: 33500,
@@ -226,9 +244,9 @@ export const WEAPON_CATALOG: WeaponStoreItem[] = [
     category: 'ALTA_ENERGIA',
     categoryLabel: 'Alien • Feixe Ionizado',
     description: 'Fuzil de guerra alienígena com espinhos de criptonita que disparam feixes verdes de alta densidade.',
-    specialTrait: 'Perfura 3 monstros causando 72 de dano massivo.',
-    damage: 72,
-    fireRate: 8.5,
+    specialTrait: 'Perfura 3 monstros causando 30 de dano ionizado por acerto.',
+    damage: 30,
+    fireRate: 7.5,
     speed: 880,
     piercing: 3,
     price: 45500,
@@ -240,10 +258,10 @@ export const WEAPON_CATALOG: WeaponStoreItem[] = [
     name: 'Laser Minigun Hiper-Feixe Omega',
     category: 'ALTA_ENERGIA',
     categoryLabel: 'Suprema • Laser Contínuo',
-    description: 'A arma definitiva: 4 prismas laser rotativos disparando 28 feixes contínuos à velocidade da luz.',
-    specialTrait: '28 feixes laser por segundo com penetração tripla e alcance extremo.',
-    damage: 32,
-    fireRate: 28,
+    description: 'Metralhadora de 4 prismas laser rotativos disparando 26 feixes contínuos à velocidade da luz.',
+    specialTrait: '26 feixes laser por segundo com penetração tripla e alcance extremo.',
+    damage: 13,
+    fireRate: 26,
     speed: 1050,
     piercing: 3,
     price: 60000,
@@ -257,8 +275,8 @@ export const WEAPON_CATALOG: WeaponStoreItem[] = [
     categoryLabel: 'Transformação • Nave + Blasters ±30° + Warp',
     description: 'Transforma você na nave Destructor equipada com dois blasters que sempre miram no cursor (±30° antes de girar a nave), disparam feixe laser contínuo e ativam o Modo Warp ao segurar Shift por 3s.',
     specialTrait: '2 Blasters no Mouse (±30°) • Laser Contínuo • Shift 3s = Modo Warp Ultra-Rápido',
-    damage: 44,
-    fireRate: 16,
+    damage: 18,
+    fireRate: 14,
     speed: 1800,
     piercing: 99,
     price: 41500,
@@ -272,8 +290,8 @@ export const WEAPON_CATALOG: WeaponStoreItem[] = [
     categoryLabel: 'Transformação • Asas Longas + Orbes + Warp',
     description: 'Transforma você na nave Interceptor de asas longas com dois blasters nas pontas que disparam orbes em cadência extrema, além de Modo Warp ao segurar Shift por 3s.',
     specialTrait: '2 Blasters nas Asas Longas • Rajada Extrema de Orbes • Shift 3s = Modo Warp',
-    damage: 20,
-    fireRate: 24,
+    damage: 9,
+    fireRate: 20,
     speed: 1250,
     piercing: 2,
     price: 50500,
@@ -285,10 +303,10 @@ export const WEAPON_CATALOG: WeaponStoreItem[] = [
     name: 'Nave Rei',
     category: 'ALTA_ENERGIA',
     categoryLabel: 'Soberana • Nave Gigante + 4 Lasers + Fúria',
-    description: 'Transforma você na colossal Nave Rei com 4 blasters laser. Segurar Shift por 6s gera esferas super-rápidas com eletricidade vermelha e ativa o Modo Fúria com 4 lasers vermelhos gigantes e super potentes.',
+    description: 'Transforma você na colossal Nave Rei com 4 blasters laser. Segurar Shift por 6s gera esferas super-rápidas com eletricidade vermelha e ativa o Modo Fúria com 4 lasers vermelhos gigantes.',
     specialTrait: '4 Blasters Laser • Shift 6s = Modo Fúria (Eletricidade Vermelha + Lasers Gigantes)',
-    damage: 52,
-    fireRate: 18,
+    damage: 22,
+    fireRate: 16,
     speed: 2000,
     piercing: 99,
     price: 76500,
@@ -300,10 +318,10 @@ export const WEAPON_CATALOG: WeaponStoreItem[] = [
     name: 'East Dragon',
     category: 'ALTA_ENERGIA',
     categoryLabel: 'Transformação • Dragão Oriental + Laser de Fogo',
-    description: 'Transforma você no lendário Dragão East de corpo serpenteante articulado que desliza pelo campo e dispara um feixe de laser contínuo ardente feito de fogo vivo com efeitos de combustão e chamas.',
+    description: 'Transforma você no lendário Dragão East de corpo serpenteante articulado que desliza pelo campo e dispara um feixe de laser contínuo ardente feito de fogo vivo.',
     specialTrait: 'Dragão Serpenteante • Laser Contínuo de Fogo Vivo • Chamas & Queimadura',
-    damage: 50,
-    fireRate: 20,
+    damage: 24,
+    fireRate: 18,
     speed: 2000,
     piercing: 99,
     price: 85000,
@@ -315,10 +333,10 @@ export const WEAPON_CATALOG: WeaponStoreItem[] = [
     name: 'Homem de Ferro',
     category: 'ALTA_ENERGIA',
     categoryLabel: 'Armadura Stark • Repulsor + Laser',
-    description: 'Transforma você no Homem de Ferro com propulsores a jato e Reator Arc. Alterne com [Shift] ou [E] entre o Modo Repulsor (disparos de plasma perfurantes de alta cadência) e o Modo Laser (feixe térmico contínuo de alta potência).',
+    description: 'Transforma você no Homem de Ferro com propulsores a jato e Reator Arc. Alterne com [Shift] ou [E] entre o Modo Repulsor (disparos de plasma perfurantes) e o Modo Laser (feixe térmico contínuo).',
     specialTrait: '[Shift / E] Modo Repulsor (Rajadas de Plasma) ↔ Modo Laser (Feixe Contínuo)',
-    damage: 48,
-    fireRate: 10,
+    damage: 22,
+    fireRate: 9,
     speed: 1350,
     piercing: 3,
     price: 95000,
@@ -330,10 +348,10 @@ export const WEAPON_CATALOG: WeaponStoreItem[] = [
     name: 'Ice and Fire Dragon',
     category: 'ALTA_ENERGIA',
     categoryLabel: 'Dragões Gêmeos • Fogo + Gelo + Fusão Roxo',
-    description: 'Invoca dois dragões serpenteantes (Fogo e Gelo) que seguem você em combate. Aperte [Shift] para alternar qual dragão ataca com feixe contínuo de chamas ou gelo congelante, e aperte [Q] para fundir ambos em um Mega Dragão Roxo devastador!',
+    description: 'Invoca dois dragões serpenteantes (Fogo e Gelo) que seguem você em combate. Aperte [Shift] para alternar qual dragão ataca com feixe contínuo de chamas ou gelo congelante, e aperte [Q] para fundir ambos no Mega Dragão Roxo!',
     specialTrait: '[Shift] Fogo ↔ Gelo • [Q] Fusão Mega Dragão Roxo (10s)',
-    damage: 62,
-    fireRate: 20,
+    damage: 26,
+    fireRate: 18,
     speed: 2000,
     piercing: 99,
     price: 115000,
@@ -348,6 +366,10 @@ interface StoreScreenProps {
   equippedWeapon: WeaponType;
   onBuyWeapon: (weaponType: WeaponType, price: number) => boolean;
   onEquipWeapon: (weaponType: WeaponType) => void;
+  unlockedSkins: string[];
+  equippedSkin: string;
+  onBuySkin: (skinId: string, price: number) => boolean;
+  onEquipSkin: (skinId: string) => void;
   onBuyShieldUpgrade: () => void;
   onBuyHealthUpgrade: () => void;
   onBuySpeedUpgrade: () => void;
@@ -362,7 +384,7 @@ interface StoreScreenProps {
   onClose: () => void;
 }
 
-type TabType = 'ALL' | 'BALLISTIC' | 'HEAVY' | 'ENERGY' | 'UPGRADES';
+type TabType = 'ALL' | 'BALLISTIC' | 'HEAVY' | 'ENERGY' | 'SKINS' | 'UPGRADES';
 
 export const StoreScreen: React.FC<StoreScreenProps> = ({
   coins,
@@ -370,6 +392,10 @@ export const StoreScreen: React.FC<StoreScreenProps> = ({
   equippedWeapon,
   onBuyWeapon,
   onEquipWeapon,
+  unlockedSkins,
+  equippedSkin,
+  onBuySkin,
+  onEquipSkin,
   onBuyShieldUpgrade,
   onBuyHealthUpgrade,
   onBuySpeedUpgrade,
@@ -418,6 +444,24 @@ export const StoreScreen: React.FC<StoreScreenProps> = ({
   const handleEquip = (item: WeaponStoreItem) => {
     onEquipWeapon(item.type);
     showSuccess(`${item.name} equipada como sua arma ativa!`);
+  };
+
+  const handleBuySkin = (skinId: string, name: string, price: number) => {
+    if (coins < price) {
+      showError(`Créditos insuficientes! Requer ${price.toLocaleString()} CRED.`);
+      return;
+    }
+    const ok = onBuySkin(skinId, price);
+    if (ok) {
+      showSuccess(`Skin "${name}" desbloqueada e EQUIPADA!`);
+    } else {
+      showError('Não foi possível concluir a compra da skin.');
+    }
+  };
+
+  const handleEquipSkin = (skinId: string, name: string) => {
+    onEquipSkin(skinId);
+    showSuccess(`Skin "${name}" equipada no seu operador!`);
   };
 
   const handleHealthUpgrade = () => {
@@ -493,6 +537,8 @@ export const StoreScreen: React.FC<StoreScreenProps> = ({
 
   const equippedWeaponName =
     WEAPON_CATALOG.find((w) => w.type === equippedWeapon)?.name || 'Pistola Tática';
+  const equippedSkinName =
+    OPERATOR_SKINS.find((s) => s.id === equippedSkin)?.name || 'Recruta de Choque';
 
   return (
     <div
@@ -604,6 +650,20 @@ export const StoreScreen: React.FC<StoreScreenProps> = ({
                 Energia & Alien
               </button>
               <button
+                onClick={() => { sound.playPowerup(); setActiveTab('SKINS'); }}
+                className={`px-3 py-1.5 sm:py-2 rounded-xl text-[11px] sm:text-xs font-black tracking-wider uppercase transition-colors whitespace-nowrap cursor-pointer text-left flex items-center justify-between gap-2 ${
+                  activeTab === 'SKINS'
+                    ? 'bg-fuchsia-500 text-slate-950 shadow-[0_0_12px_rgba(217,70,239,0.3)]'
+                    : 'bg-slate-900/70 border border-white/10 text-fuchsia-300 hover:text-white hover:bg-slate-800'
+                }`}
+              >
+                <span className="flex items-center gap-1.5">
+                  <Shirt className="w-3.5 h-3.5 shrink-0" />
+                  Skins
+                </span>
+                <span className="text-[10px] font-mono opacity-80">({OPERATOR_SKINS.length})</span>
+              </button>
+              <button
                 onClick={() => { sound.playPowerup(); setActiveTab('UPGRADES'); }}
                 className={`px-3 py-1.5 sm:py-2 rounded-xl text-[11px] sm:text-xs font-black tracking-wider uppercase transition-colors whitespace-nowrap cursor-pointer text-left ${
                   activeTab === 'UPGRADES'
@@ -616,15 +676,25 @@ export const StoreScreen: React.FC<StoreScreenProps> = ({
             </div>
           </div>
 
-          {/* Equipped Weapon + Confirm Footer (visible in left rail on landscape/desktop) */}
+          {/* Equipped Weapon + Skin + Confirm Footer */}
           <div className="hidden landscape:flex md:flex flex-col gap-2 pt-2 border-t border-white/10">
-            <div className="bg-slate-900/80 border border-white/10 rounded-xl px-2.5 py-2">
-              <span className="text-[9px] font-mono text-cyan-400 uppercase tracking-wider block">
-                Arma Equipada
-              </span>
-              <span className="text-xs font-bold text-white truncate block">
-                {equippedWeaponName}
-              </span>
+            <div className="bg-slate-900/80 border border-white/10 rounded-xl px-2.5 py-2 space-y-1">
+              <div>
+                <span className="text-[8.5px] font-mono text-cyan-400 uppercase tracking-wider block">
+                  Arma Equipada
+                </span>
+                <span className="text-[11px] font-bold text-white truncate block">
+                  {equippedWeaponName}
+                </span>
+              </div>
+              <div className="pt-1 border-t border-white/5">
+                <span className="text-[8.5px] font-mono text-fuchsia-400 uppercase tracking-wider block">
+                  Operador / Skin
+                </span>
+                <span className="text-[11px] font-bold text-slate-200 truncate block">
+                  {equippedSkinName}
+                </span>
+              </div>
             </div>
             <button
               onClick={() => {
@@ -656,7 +726,7 @@ export const StoreScreen: React.FC<StoreScreenProps> = ({
           {/* Scrollable Main Catalog Area */}
           <div className="flex-1 overflow-y-auto pr-1 pb-2 space-y-3">
             {/* WEAPONS GRID */}
-            {activeTab !== 'UPGRADES' && (
+            {activeTab !== 'UPGRADES' && activeTab !== 'SKINS' && (
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2.5 sm:gap-3">
               {filteredWeapons.map((item) => {
                 const Icon = item.icon;
@@ -818,6 +888,138 @@ export const StoreScreen: React.FC<StoreScreenProps> = ({
                         >
                           <Coins className="w-4 h-4" />
                           {canAfford ? `COMPRAR • ${item.price.toLocaleString()} CRED` : `REQUER ${item.price.toLocaleString()} CRED`}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* OPERATOR SKINS TAB */}
+          {activeTab === 'SKINS' && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2.5 sm:gap-3">
+              {OPERATOR_SKINS.map((skin) => {
+                const isUnlocked = unlockedSkins.includes(skin.id) || skin.price === 0;
+                const isEquipped = equippedSkin === skin.id;
+                const canAfford = coins >= skin.price;
+                const hasSpecialEffect = skin.specialEffectType && skin.specialEffectType !== 'NONE';
+                const rarityBadge =
+                  skin.rarity === 'MYTHIC'
+                    ? 'bg-fuchsia-500/20 border-cyan-300/60 text-cyan-200'
+                    : skin.rarity === 'LEGENDARY'
+                      ? 'bg-amber-500/20 border-amber-400/50 text-amber-300'
+                      : skin.rarity === 'EPIC'
+                        ? 'bg-purple-500/20 border-purple-400/50 text-purple-300'
+                        : skin.rarity === 'RARE'
+                          ? 'bg-cyan-500/20 border-cyan-400/40 text-cyan-300'
+                          : 'bg-slate-700/40 border-slate-500/40 text-slate-300';
+
+                return (
+                  <div
+                    key={skin.id}
+                    className={`rounded-2xl p-3.5 sm:p-4 flex flex-col justify-between transition-colors relative overflow-hidden ${
+                      isEquipped
+                        ? 'bg-fuchsia-950/35 border-2 border-fuchsia-400 shadow-[0_0_20px_rgba(217,70,239,0.22)]'
+                        : isUnlocked
+                          ? 'bg-slate-950/75 border border-white/15 hover:border-fuchsia-400/45'
+                          : 'bg-slate-950/55 border border-white/10 hover:border-white/20'
+                    }`}
+                  >
+                    <div>
+                      {/* Header Status & Rarity */}
+                      <div className="flex items-center justify-between gap-2 mb-3">
+                        <span className={`px-2 py-0.5 rounded-full border text-[9px] font-mono font-black uppercase tracking-wider ${rarityBadge}`}>
+                          {skin.rarity === 'MYTHIC' ? 'MÍTICA' : skin.rarity === 'LEGENDARY' ? 'LENDÁRIA' : skin.rarity === 'EPIC' ? 'ÉPICA' : skin.rarity === 'RARE' ? 'RARA' : 'PADRÃO'}
+                        </span>
+                        {isEquipped ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-fuchsia-500/20 border border-fuchsia-400 text-fuchsia-200 text-[10px] font-black uppercase tracking-wider">
+                            <Check className="w-3 h-3 stroke-[3]" /> EQUIPADA
+                          </span>
+                        ) : isUnlocked ? (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-[10px] font-bold uppercase tracking-wider">
+                            DESBLOQUEADA
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-400 text-[10px] font-bold font-mono">
+                            {skin.price.toLocaleString()} CRED
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Avatar Preview + Name/Callsign */}
+                      <div className="flex items-center gap-3 mb-2.5">
+                        <div
+                          className="w-16 h-16 rounded-xl bg-slate-900/90 border flex items-center justify-center shrink-0 overflow-hidden"
+                          style={{ borderColor: `${skin.accentColor}55` }}
+                        >
+                          <OperatorAvatarPreview skinId={skin.id} size={64} />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <span className="text-[9.5px] font-mono font-bold uppercase tracking-widest block" style={{ color: skin.accentColor }}>
+                            {skin.callsign}
+                          </span>
+                          <h3 className="font-black text-white text-sm sm:text-base leading-tight truncate">
+                            {skin.name}
+                          </h3>
+                          {skin.title && (
+                            <span className="text-[10px] font-mono text-slate-400 block truncate">
+                              {skin.title}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      <p className="text-slate-400 text-[11px] sm:text-xs leading-snug mb-2.5">
+                        {skin.description}
+                      </p>
+
+                      {/* Special Effect Box */}
+                      <div
+                        className={`rounded-xl p-2 border mb-3 ${
+                          hasSpecialEffect
+                            ? 'bg-slate-900/90 border-fuchsia-500/30'
+                            : 'bg-slate-900/60 border-white/5'
+                        }`}
+                      >
+                        <div className="flex items-center gap-1.5 text-[10px] font-mono font-black uppercase tracking-wider mb-0.5">
+                          <Sparkles className="w-3 h-3 shrink-0" style={{ color: skin.accentColor }} />
+                          <span style={{ color: skin.accentColor }}>
+                            {hasSpecialEffect ? `Efeito Especial: ${skin.perkName}` : skin.perkName}
+                          </span>
+                        </div>
+                        <p className="text-[10.5px] text-slate-300 leading-snug">
+                          {skin.perkDescription}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Action Footer */}
+                    <div className="pt-2 border-t border-white/5">
+                      {isEquipped ? (
+                        <div className="w-full py-2.5 rounded-xl bg-fuchsia-500/20 border border-fuchsia-400/50 text-fuchsia-200 text-xs font-black tracking-widest uppercase flex items-center justify-center gap-1.5">
+                          <Check className="w-4 h-4 stroke-[3]" /> SKIN ATIVA EM COMBATE
+                        </div>
+                      ) : isUnlocked ? (
+                        <button
+                          onClick={() => handleEquipSkin(skin.id, skin.name)}
+                          className="w-full py-2.5 rounded-xl bg-fuchsia-500 hover:bg-fuchsia-400 text-slate-950 font-black text-xs tracking-widest uppercase transition-all active:scale-[0.98] cursor-pointer"
+                        >
+                          EQUIPAR SKIN
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => handleBuySkin(skin.id, skin.name, skin.price)}
+                          disabled={!canAfford}
+                          className={`w-full py-2.5 rounded-xl font-black text-xs tracking-widest uppercase transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                            canAfford
+                              ? 'bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 active:scale-[0.98]'
+                              : 'bg-slate-800/60 border border-white/5 text-slate-500 cursor-not-allowed'
+                          }`}
+                        >
+                          <Coins className="w-4 h-4" />
+                          {canAfford ? `COMPRAR • ${skin.price.toLocaleString()} CRED` : `REQUER ${skin.price.toLocaleString()} CRED`}
                         </button>
                       )}
                     </div>

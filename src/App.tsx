@@ -40,6 +40,7 @@ import {
   renderDestructorShip,
   renderInterceptorShip,
   renderReiShip,
+  renderTroperShip,
   renderDestructorTwinBeams,
   renderReiQuadBeams,
   renderSingleExtraLaserBeam,
@@ -57,6 +58,7 @@ import {
 } from './components/WeaponVisuals';
 import { rollLevelUpOptions } from './components/UpgradeSystem';
 import { renderOperatorBody } from './components/OperatorVisuals';
+import { OPERATOR_SKINS, getOperatorSkinById } from './components/OperatorSkins';
 import { ModeSelectModal } from './components/ModeSelectModal';
 import { PrestigeScreen } from './components/PrestigeScreen';
 import { MasteryScreen } from './components/MasteryScreen';
@@ -83,6 +85,16 @@ import {
   useGamepadConnection,
   useGamepadMenuNavigation,
 } from './gamepad';
+import {
+  SceneFlashLight,
+  renderArenaGround,
+  renderAtmosphericDust,
+  renderGamepadAimReticle,
+  renderGroundCastShadows,
+  renderRealisticSmokeParticle,
+  renderRealisticSplats,
+  renderSceneLighting,
+} from './components/EnvironmentLighting';
 
 const ARENA_SIZE = 2400; // Total width and height of the arena bounds
 const SPAWN_MARGIN = 100; // How far outside the screen zombies should spawn
@@ -92,7 +104,7 @@ const INITIAL_WEAPONS: Record<WeaponType, WeaponStats> = {
   [WeaponType.PISTOL]: {
     type: WeaponType.PISTOL,
     name: 'Pistola Tática 9mm Mk.II',
-    damage: 22,
+    damage: 9,
     fireRate: 4.5, // bullets per second
     ammoCapacity: Infinity,
     currentAmmo: Infinity,
@@ -102,11 +114,24 @@ const INITIAL_WEAPONS: Record<WeaponType, WeaponStats> = {
     color: '#fbbf24', // Golden Amber
     unlocked: true,
   },
+  [WeaponType.TROPER]: {
+    type: WeaponType.TROPER,
+    name: 'Nave Troper',
+    damage: 8,
+    fireRate: 2.2, // slow small energy orbs
+    ammoCapacity: Infinity,
+    currentAmmo: Infinity,
+    bulletSpeed: 440,
+    spread: 0.02,
+    piercing: 1,
+    color: '#38bdf8',
+    unlocked: false,
+  },
   [WeaponType.SHOTGUN]: {
     type: WeaponType.SHOTGUN,
     name: 'Espingarda Calibre 12 Dupla',
-    damage: 24, // x 5 pellets = 120 damage up close!
-    fireRate: 1.6,
+    damage: 6, // x 7 pellets = 42 damage up close
+    fireRate: 1.4,
     ammoCapacity: Infinity,
     currentAmmo: Infinity,
     bulletSpeed: 520,
@@ -118,8 +143,8 @@ const INITIAL_WEAPONS: Record<WeaponType, WeaponStats> = {
   [WeaponType.MACHINE_GUN]: {
     type: WeaponType.MACHINE_GUN,
     name: 'SMG Tática Vector MP-7',
-    damage: 14,
-    fireRate: 13, // ultra-fast burst
+    damage: 6,
+    fireRate: 12,
     ammoCapacity: Infinity,
     currentAmmo: Infinity,
     bulletSpeed: 650,
@@ -131,8 +156,8 @@ const INITIAL_WEAPONS: Record<WeaponType, WeaponStats> = {
   [WeaponType.PLASMA_RIFLE]: {
     type: WeaponType.PLASMA_RIFLE,
     name: 'Rifle de Plasma Arc-1',
-    damage: 54,
-    fireRate: 2.6,
+    damage: 26,
+    fireRate: 2.4,
     ammoCapacity: Infinity,
     currentAmmo: Infinity,
     bulletSpeed: 480,
@@ -144,12 +169,12 @@ const INITIAL_WEAPONS: Record<WeaponType, WeaponStats> = {
   [WeaponType.MINIGUN]: {
     type: WeaponType.MINIGUN,
     name: 'Metralhadora Titan M134',
-    damage: 8, // Nerfed from 12
-    fireRate: 16, // Nerfed from 22 for better balance
+    damage: 4,
+    fireRate: 16,
     ammoCapacity: Infinity,
     currentAmmo: Infinity,
-    bulletSpeed: 720,
-    spread: 0.20, // Slightly wider spread
+    bulletSpeed: 700,
+    spread: 0.20,
     piercing: 1,
     color: '#10b981', // Emerald Depleted Uranium
     unlocked: false,
@@ -157,8 +182,8 @@ const INITIAL_WEAPONS: Record<WeaponType, WeaponStats> = {
   [WeaponType.ROCKET_LAUNCHER]: {
     type: WeaponType.ROCKET_LAUNCHER,
     name: 'Lança-Mísseis M-99 Hellfire',
-    damage: 260,
-    fireRate: 1.4,
+    damage: 95,
+    fireRate: 1.25,
     ammoCapacity: Infinity,
     currentAmmo: Infinity,
     bulletSpeed: 580,
@@ -170,8 +195,8 @@ const INITIAL_WEAPONS: Record<WeaponType, WeaponStats> = {
   [WeaponType.FLAMETHROWER]: {
     type: WeaponType.FLAMETHROWER,
     name: 'Lança-Chamas Vulcão Napalm-X',
-    damage: 18,
-    fireRate: 36,
+    damage: 6,
+    fireRate: 32,
     ammoCapacity: Infinity,
     currentAmmo: Infinity,
     bulletSpeed: 460,
@@ -183,8 +208,8 @@ const INITIAL_WEAPONS: Record<WeaponType, WeaponStats> = {
   [WeaponType.RAYGUN]: {
     type: WeaponType.RAYGUN,
     name: 'Pulsar Alienígena Zeta-9',
-    damage: 48,
-    fireRate: 5.5,
+    damage: 22,
+    fireRate: 5.2,
     ammoCapacity: Infinity,
     currentAmmo: Infinity,
     bulletSpeed: 740,
@@ -196,8 +221,8 @@ const INITIAL_WEAPONS: Record<WeaponType, WeaponStats> = {
   [WeaponType.RAY_RIFLE]: {
     type: WeaponType.RAY_RIFLE,
     name: 'Fuzil Cristalino Zarkon',
-    damage: 72,
-    fireRate: 8.5,
+    damage: 30,
+    fireRate: 7.5,
     ammoCapacity: Infinity,
     currentAmmo: Infinity,
     bulletSpeed: 880,
@@ -209,8 +234,8 @@ const INITIAL_WEAPONS: Record<WeaponType, WeaponStats> = {
   [WeaponType.LASER_MINIGUN]: {
     type: WeaponType.LASER_MINIGUN,
     name: 'Laser Minigun Hiper-Feixe Omega',
-    damage: 32,
-    fireRate: 28.0,
+    damage: 13,
+    fireRate: 26.0,
     ammoCapacity: Infinity,
     currentAmmo: Infinity,
     bulletSpeed: 1050,
@@ -222,8 +247,8 @@ const INITIAL_WEAPONS: Record<WeaponType, WeaponStats> = {
   [WeaponType.MAGNUM]: {
     type: WeaponType.MAGNUM,
     name: 'Revólver .44 Magnum Hunter',
-    damage: 68,
-    fireRate: 2.2,
+    damage: 24,
+    fireRate: 2.1,
     ammoCapacity: Infinity,
     currentAmmo: Infinity,
     bulletSpeed: 780,
@@ -235,8 +260,8 @@ const INITIAL_WEAPONS: Record<WeaponType, WeaponStats> = {
   [WeaponType.ASSAULT_RIFLE]: {
     type: WeaponType.ASSAULT_RIFLE,
     name: 'Fuzil de Assalto AK-47',
-    damage: 34,
-    fireRate: 9.0,
+    damage: 13,
+    fireRate: 8.5,
     ammoCapacity: Infinity,
     currentAmmo: Infinity,
     bulletSpeed: 760,
@@ -248,8 +273,8 @@ const INITIAL_WEAPONS: Record<WeaponType, WeaponStats> = {
   [WeaponType.LMG]: {
     type: WeaponType.LMG,
     name: 'Metralhadora Leve M249 SAW',
-    damage: 21,
-    fireRate: 14.5,
+    damage: 9,
+    fireRate: 13.5,
     ammoCapacity: Infinity,
     currentAmmo: Infinity,
     bulletSpeed: 740,
@@ -261,8 +286,8 @@ const INITIAL_WEAPONS: Record<WeaponType, WeaponStats> = {
   [WeaponType.SNIPER]: {
     type: WeaponType.SNIPER,
     name: 'Fuzil Sniper .50 BMG',
-    damage: 165,
-    fireRate: 1.1,
+    damage: 65,
+    fireRate: 1.05,
     ammoCapacity: Infinity,
     currentAmmo: Infinity,
     bulletSpeed: 1350,
@@ -274,8 +299,8 @@ const INITIAL_WEAPONS: Record<WeaponType, WeaponStats> = {
   [WeaponType.DESTRUCTOR]: {
     type: WeaponType.DESTRUCTOR,
     name: 'Nave Destructor',
-    damage: 44,
-    fireRate: 16,
+    damage: 18,
+    fireRate: 14,
     ammoCapacity: Infinity,
     currentAmmo: Infinity,
     bulletSpeed: 1800,
@@ -287,8 +312,8 @@ const INITIAL_WEAPONS: Record<WeaponType, WeaponStats> = {
   [WeaponType.INTERCEPTOR]: {
     type: WeaponType.INTERCEPTOR,
     name: 'Nave Interceptor',
-    damage: 20,
-    fireRate: 24,
+    damage: 9,
+    fireRate: 20,
     ammoCapacity: Infinity,
     currentAmmo: Infinity,
     bulletSpeed: 1250,
@@ -300,8 +325,8 @@ const INITIAL_WEAPONS: Record<WeaponType, WeaponStats> = {
   [WeaponType.NAVE_REI]: {
     type: WeaponType.NAVE_REI,
     name: 'Nave Rei',
-    damage: 52,
-    fireRate: 18,
+    damage: 22,
+    fireRate: 16,
     ammoCapacity: Infinity,
     currentAmmo: Infinity,
     bulletSpeed: 2000,
@@ -313,8 +338,8 @@ const INITIAL_WEAPONS: Record<WeaponType, WeaponStats> = {
   [WeaponType.EAST_DRAGON]: {
     type: WeaponType.EAST_DRAGON,
     name: 'East Dragon',
-    damage: 50,
-    fireRate: 20,
+    damage: 24,
+    fireRate: 18,
     ammoCapacity: Infinity,
     currentAmmo: Infinity,
     bulletSpeed: 2000,
@@ -326,8 +351,8 @@ const INITIAL_WEAPONS: Record<WeaponType, WeaponStats> = {
   [WeaponType.IRON_MAN]: {
     type: WeaponType.IRON_MAN,
     name: 'Homem de Ferro',
-    damage: 48,
-    fireRate: 10,
+    damage: 22,
+    fireRate: 9,
     ammoCapacity: Infinity,
     currentAmmo: Infinity,
     bulletSpeed: 1350,
@@ -339,8 +364,8 @@ const INITIAL_WEAPONS: Record<WeaponType, WeaponStats> = {
   [WeaponType.ICE_AND_FIRE_DRAGON]: {
     type: WeaponType.ICE_AND_FIRE_DRAGON,
     name: 'Ice and Fire Dragon',
-    damage: 62,
-    fireRate: 20,
+    damage: 26,
+    fireRate: 18,
     ammoCapacity: Infinity,
     currentAmmo: Infinity,
     bulletSpeed: 2000,
@@ -353,12 +378,16 @@ const INITIAL_WEAPONS: Record<WeaponType, WeaponStats> = {
 
 export default function App() {
   const [gameState, setGameState] = useState<GameState>(GameState.MENU);
+  const gameStateRef = useRef<GameState>(gameState);
+  gameStateRef.current = gameState;
   const [currentMode, setCurrentMode] = useState<GameMode>(GameMode.ZOMBIE);
   const modeRef = useRef<GameMode>(GameMode.ZOMBIE);
   const [showModeModal, setShowModeModal] = useState<boolean>(false);
   const [highScoreZombie, setHighScoreZombie] = useState<number>(0);
   const [highScoreAlien, setHighScoreAlien] = useState<number>(0);
   const [wave, setWave] = useState(0);
+  const waveRef = useRef<number>(wave);
+  waveRef.current = wave;
   const [zombiesRemaining, setZombiesRemaining] = useState(0);
   const [highScore, setHighScore] = useState(0);
   const [soundActive, setSoundActive] = useState(isSoundEnabled());
@@ -368,6 +397,9 @@ export default function App() {
   // Single equipped weapon & unlocked arsenal system (Infinite Ammo)
   const [unlockedWeapons, setUnlockedWeapons] = useState<WeaponType[]>([WeaponType.PISTOL]);
   const [equippedWeapon, setEquippedWeapon] = useState<WeaponType>(WeaponType.PISTOL);
+  const [unlockedSkins, setUnlockedSkins] = useState<string[]>(['skin_default']);
+  const [equippedSkin, setEquippedSkin] = useState<string>('skin_default');
+  const skinEffectTimerRef = useRef({ voltZap: 0, cryoChill: 0 });
 
 
   // Slow-motion dramatic death collapse ref
@@ -433,11 +465,13 @@ export default function App() {
   const gamepadSnapshotRef = useRef<GamepadInputSnapshot>({
     connected: false,
     id: '',
+    detectedProfile: 'STANDARD',
     moveX: 0,
     moveY: 0,
     aimX: 0,
     aimY: 0,
     aimActive: false,
+    aimFire: false,
     fireHeld: false,
     warpHeld: false,
     switchPressed: false,
@@ -605,6 +639,8 @@ export default function App() {
   const bloodSplatsRef = useRef<BloodSplat[]>([]);
   const itemDropsRef = useRef<ItemDrop[]>([]);
   const flameStreamRef = useRef<FlameStreamPoint[]>([]);
+  const flashLightsRef = useRef<SceneFlashLight[]>([]);
+  const lastDrawDtRef = useRef<number>(0.016);
 
   // Wave manager ref
   const waveActiveRef = useRef(false);
@@ -672,6 +708,35 @@ export default function App() {
       localStorage.setItem('zombie_shooter_equipped_weapon', WeaponType.PISTOL);
     }
 
+    // Load unlocked & equipped operator skins
+    const savedUnlockedSkins = localStorage.getItem('zombie_shooter_unlocked_skins');
+    let initialSkins: string[] = ['skin_default'];
+    if (savedUnlockedSkins) {
+      try {
+        const parsed = JSON.parse(savedUnlockedSkins);
+        if (Array.isArray(parsed)) {
+          initialSkins = parsed.filter((sid: string) => OPERATOR_SKINS.some((s) => s.id === sid));
+        }
+      } catch {
+        initialSkins = ['skin_default'];
+      }
+    }
+    if (!initialSkins.includes('skin_default')) {
+      initialSkins.unshift('skin_default');
+    }
+    setUnlockedSkins(initialSkins);
+    playerRef.current.unlockedSkins = initialSkins;
+
+    const savedSkin = localStorage.getItem('zombie_shooter_equipped_skin');
+    if (savedSkin && initialSkins.includes(savedSkin)) {
+      setEquippedSkin(savedSkin);
+      playerRef.current.equippedSkin = savedSkin;
+    } else {
+      setEquippedSkin('skin_default');
+      playerRef.current.equippedSkin = 'skin_default';
+      localStorage.setItem('zombie_shooter_equipped_skin', 'skin_default');
+    }
+
     const savedCoins = localStorage.getItem('zombie_shooter_coins');
     if (savedCoins) {
       setCoins(parseInt(savedCoins, 10));
@@ -730,6 +795,7 @@ export default function App() {
       try {
         const parsed = JSON.parse(savedMastery);
         const merged: AllShipMasteryState = {
+          TROPER: parsed.TROPER || { xp: 0, unlockedNodes: [] },
           DESTRUCTOR: parsed.DESTRUCTOR || { xp: 0, unlockedNodes: [] },
           INTERCEPTOR: parsed.INTERCEPTOR || { xp: 0, unlockedNodes: [] },
           NAVE_REI: parsed.NAVE_REI || { xp: 0, unlockedNodes: [] },
@@ -789,6 +855,27 @@ export default function App() {
       ifd.megaHead = { x: px + 44, y: py, angle: playerRef.current.angle };
       ifd.megaSegments = createCompanionDragonSegments(px + 44, py, 20, 15.5);
     }
+    syncHudPlayer();
+    sound.playPowerup();
+  };
+
+  const handleBuySkin = (skinId: string, price: number): boolean => {
+    if (coins < price) return false;
+    updateCoins(-price);
+    setUnlockedSkins((prev) => {
+      const updated = prev.includes(skinId) ? prev : [...prev, skinId];
+      localStorage.setItem('zombie_shooter_unlocked_skins', JSON.stringify(updated));
+      playerRef.current.unlockedSkins = updated;
+      return updated;
+    });
+    handleEquipSkin(skinId);
+    return true;
+  };
+
+  const handleEquipSkin = (skinId: string) => {
+    setEquippedSkin(skinId);
+    localStorage.setItem('zombie_shooter_equipped_skin', skinId);
+    playerRef.current.equippedSkin = skinId;
     syncHudPlayer();
     sound.playPowerup();
   };
@@ -970,23 +1057,27 @@ export default function App() {
 
   const syncMasterySkillHud = useCallback((wt: WeaponType, cd: number) => {
     const shipKey: ShipTypeKey | null =
-      wt === WeaponType.DESTRUCTOR
-        ? 'DESTRUCTOR'
-        : wt === WeaponType.INTERCEPTOR
-          ? 'INTERCEPTOR'
-          : wt === WeaponType.NAVE_REI
-            ? 'NAVE_REI'
-            : null;
+      wt === WeaponType.TROPER
+        ? 'TROPER'
+        : wt === WeaponType.DESTRUCTOR
+          ? 'DESTRUCTOR'
+          : wt === WeaponType.INTERCEPTOR
+            ? 'INTERCEPTOR'
+            : wt === WeaponType.NAVE_REI
+              ? 'NAVE_REI'
+              : null;
     if (!shipKey) {
       setMasterySkillHud((prev) => (prev.available ? { ...prev, available: false } : prev));
       return;
     }
     const skillNodeId =
-      shipKey === 'DESTRUCTOR'
-        ? 'dest_pulse_skill'
-        : shipKey === 'INTERCEPTOR'
-          ? 'int_supersonic_skill'
-          : 'rei_judgement_skill';
+      shipKey === 'TROPER'
+        ? 'trop_nova_skill'
+        : shipKey === 'DESTRUCTOR'
+          ? 'dest_pulse_skill'
+          : shipKey === 'INTERCEPTOR'
+            ? 'int_supersonic_skill'
+            : 'rei_judgement_skill';
     const unlocked = hasMasteryNode(shipMasteryRef.current, shipKey, skillNodeId);
     const meta = SHIP_META[shipKey];
     setMasterySkillHud({
@@ -1004,33 +1095,79 @@ export default function App() {
 
     const p = playerRef.current;
     const shipKey: ShipTypeKey | null =
-      p.currentWeapon === WeaponType.DESTRUCTOR
-        ? 'DESTRUCTOR'
-        : p.currentWeapon === WeaponType.INTERCEPTOR
-          ? 'INTERCEPTOR'
-          : p.currentWeapon === WeaponType.NAVE_REI
-            ? 'NAVE_REI'
-            : null;
+      p.currentWeapon === WeaponType.TROPER
+        ? 'TROPER'
+        : p.currentWeapon === WeaponType.DESTRUCTOR
+          ? 'DESTRUCTOR'
+          : p.currentWeapon === WeaponType.INTERCEPTOR
+            ? 'INTERCEPTOR'
+            : p.currentWeapon === WeaponType.NAVE_REI
+              ? 'NAVE_REI'
+              : null;
     if (!shipKey) return;
 
     const skillNodeId =
-      shipKey === 'DESTRUCTOR'
-        ? 'dest_pulse_skill'
-        : shipKey === 'INTERCEPTOR'
-          ? 'int_supersonic_skill'
-          : 'rei_judgement_skill';
+      shipKey === 'TROPER'
+        ? 'trop_nova_skill'
+        : shipKey === 'DESTRUCTOR'
+          ? 'dest_pulse_skill'
+          : shipKey === 'INTERCEPTOR'
+            ? 'int_supersonic_skill'
+            : 'rei_judgement_skill';
 
     if (!hasMasteryNode(shipMasteryRef.current, shipKey, skillNodeId)) return;
 
     const meta = SHIP_META[shipKey];
     masterySkillCooldownRef.current = meta.activeSkillCooldown;
     sound.playMasterySkill(shipKey);
-    screenShakeRef.current = Math.min(28, screenShakeRef.current + 14);
+    screenShakeRef.current = Math.min(28, screenShakeRef.current + (shipKey === 'TROPER' ? 7 : 14));
 
-    if (shipKey === 'DESTRUCTOR') {
+    if (shipKey === 'TROPER') {
+      // Pulso de Orbes: 8 small radial sky-blue orbs + +18 shield (or +12 HP)
+      const tw = p.weapons[WeaponType.TROPER] || INITIAL_WEAPONS[WeaponType.TROPER];
+      const pulseOrbDmg = Math.max(16, Math.round(tw.damage * 2.2));
+      for (let i = 0; i < 8; i++) {
+        const a = (i * Math.PI * 2) / 8 + p.angle;
+        bulletsRef.current.push({
+          id: `trop-skill-orb-${Date.now()}-${i}-${Math.random()}`,
+          x: p.x + Math.cos(a) * 18,
+          y: p.y + Math.sin(a) * 18,
+          vx: Math.cos(a) * 620,
+          vy: Math.sin(a) * 620,
+          radius: 4.0,
+          damage: pulseOrbDmg,
+          piercingRemaining: 3,
+          color: '#38bdf8',
+          distanceTraveled: 0,
+          maxDistance: 640,
+          ownerAngle: a,
+          isOrb: true,
+          homingStrength: 2.0,
+          weaponType: WeaponType.TROPER,
+        });
+      }
+      if (p.maxShield > 0) {
+        p.shield = Math.min(p.maxShield, p.shield + 18);
+      } else {
+        p.hp = Math.min(p.maxHp, p.hp + 12);
+      }
+      particlesRef.current.push({
+        id: `trop-skill-ring-${Date.now()}`,
+        type: 'RAY_RING',
+        x: p.x,
+        y: p.y,
+        vx: 0,
+        vy: 0,
+        radius: 16,
+        growthSpeed: 400,
+        color: '#38bdf8',
+        alpha: 0.9,
+        decay: 0.06,
+      });
+    } else if (shipKey === 'DESTRUCTOR') {
       // Pulso de Sobrecarga: 260px EMP blast + heavy damage + 1.6s stun
       const dw = p.weapons[WeaponType.DESTRUCTOR] || INITIAL_WEAPONS[WeaponType.DESTRUCTOR];
-      const pulseDmg = Math.max(110, Math.round(dw.damage * 4.2));
+      const pulseDmg = Math.max(55, Math.round(dw.damage * 3.8));
       particlesRef.current.push({
         id: `dest-emp-${Date.now()}`,
         type: 'PLASMA_RING',
@@ -1060,7 +1197,7 @@ export default function App() {
     } else if (shipKey === 'INTERCEPTOR') {
       // Rajada Supersônica: 14 piercing 360° orbs + +35 shield (or +20 HP)
       const iw = p.weapons[WeaponType.INTERCEPTOR] || INITIAL_WEAPONS[WeaponType.INTERCEPTOR];
-      const orbDmg = Math.max(45, Math.round(iw.damage * 2.4));
+      const orbDmg = Math.max(22, Math.round(iw.damage * 2.5));
       for (let i = 0; i < 14; i++) {
         const a = (i * Math.PI * 2) / 14 + p.angle;
         bulletsRef.current.push({
@@ -1101,7 +1238,7 @@ export default function App() {
     } else {
       // Julgamento Real: 8 crimson lightning strikes on closest enemies within 450px
       const rw = p.weapons[WeaponType.NAVE_REI] || INITIAL_WEAPONS[WeaponType.NAVE_REI];
-      const strikeDmg = Math.max(180, Math.round(rw.damage * 4.8));
+      const strikeDmg = Math.max(75, Math.round(rw.damage * 4.2));
       const candidates = zombiesRef.current
         .filter((z) => z.hp > 0 && Math.hypot(z.x - p.x, z.y - p.y) <= 460)
         .sort((a, b) => Math.hypot(a.x - p.x, a.y - p.y) - Math.hypot(b.x - p.x, b.y - p.y))
@@ -1510,6 +1647,15 @@ export default function App() {
       let wDmgMult = damageMult;
       let wRateMult = tokenFireRateMult;
 
+      if (w.type === WeaponType.TROPER) {
+        if (hasMasteryNode(sm, 'TROPER', 'trop_core')) {
+          wDmgMult *= 1.2;
+        }
+        if (hasMasteryNode(sm, 'TROPER', 'trop_barrel')) {
+          wRateMult *= 1.25;
+          w.piercing += 1;
+        }
+      }
       if (w.type === WeaponType.DESTRUCTOR && hasMasteryNode(sm, 'DESTRUCTOR', 'dest_core')) {
         wDmgMult *= 1.2;
       }
@@ -1520,7 +1666,7 @@ export default function App() {
         wDmgMult *= 1.2;
       }
 
-      w.damage = Math.round(w.damage * wDmgMult);
+      w.damage = Math.max(1, Math.round(w.damage * wDmgMult));
       w.fireRate = Number((w.fireRate * wRateMult).toFixed(2));
       if (unlockedWeapons.includes(w.type)) {
         w.unlocked = true;
@@ -1534,6 +1680,10 @@ export default function App() {
       weapons[activeWeapon].unlocked = true;
     }
 
+    const tropCoreSpeedMult =
+      activeWeapon === WeaponType.TROPER && hasMasteryNode(sm, 'TROPER', 'trop_core')
+        ? 1.15
+        : 1.0;
     const intAeroSpeedMult =
       activeWeapon === WeaponType.INTERCEPTOR && hasMasteryNode(sm, 'INTERCEPTOR', 'int_aero')
         ? 1.15
@@ -1543,15 +1693,31 @@ export default function App() {
         ? 60
         : 0;
 
-    const totalMaxHp = 100 + maxHealthLevel * 15 + tokenHpBonus;
-    const totalMaxShield = maxShieldLevel * 20 + tokenShieldBonus + reiArmorShieldBonus;
+    const activeSkin = unlockedSkins.includes(equippedSkin) ? equippedSkin : 'skin_default';
+    const skinSpeedMult = activeSkin === 'skin_ghost_recon' ? 1.06 : 1.0;
+    const skinHpBonus =
+      activeSkin === 'skin_hazard_juggernaut' ? 30 : activeSkin === 'skin_solar_valkyrie' ? 25 : 0;
+    const skinShieldBonus =
+      activeSkin === 'skin_cryo_warden' ? 35 : activeSkin === 'skin_solar_valkyrie' ? 25 : 0;
+    const skinDmgMult = activeSkin === 'skin_solar_valkyrie' ? 1.12 : 1.0;
+    const skinRateMult = activeSkin === 'skin_volt_cyber' ? 1.10 : 1.0;
+
+    if (skinDmgMult !== 1.0 || skinRateMult !== 1.0) {
+      Object.values(weapons).forEach((w: any) => {
+        w.damage = Math.max(1, Math.round(w.damage * skinDmgMult));
+        w.fireRate = Number((w.fireRate * skinRateMult).toFixed(2));
+      });
+    }
+
+    const totalMaxHp = 100 + maxHealthLevel * 15 + tokenHpBonus + skinHpBonus;
+    const totalMaxShield = maxShieldLevel * 20 + tokenShieldBonus + reiArmorShieldBonus + skinShieldBonus;
 
     playerRef.current = {
       x: ARENA_SIZE / 2,
       y: ARENA_SIZE / 2,
       radius: 18,
       angle: 0,
-      speed: 180 * (1 + speedLevel * 0.08) * tokenSpeedMult * intAeroSpeedMult,
+      speed: 180 * (1 + speedLevel * 0.08) * tokenSpeedMult * tropCoreSpeedMult * intAeroSpeedMult * skinSpeedMult,
       hp: totalMaxHp,
       maxHp: totalMaxHp,
       xp: 0,
@@ -1567,6 +1733,8 @@ export default function App() {
       vx: 0,
       vy: 0,
       unlockedWeapons: [...unlockedWeapons],
+      equippedSkin: activeSkin,
+      unlockedSkins: [...unlockedSkins],
       coinsEarned: 0,
       vampirism: 0,
       bonusCoinsMult: prestigeBonus.coinsMult * tokenWealthMult,
@@ -1585,6 +1753,7 @@ export default function App() {
       knockbackMult: 1,
       acquiredUpgrades: {},
     };
+    skinEffectTimerRef.current = { voltZap: 0, cryoChill: 0 };
 
     masterySkillCooldownRef.current = 0;
     masteryCombatTimersRef.current = {
@@ -1604,6 +1773,7 @@ export default function App() {
     bloodSplatsRef.current = [];
     itemDropsRef.current = [];
     flameStreamRef.current = [];
+    flashLightsRef.current = [];
 
     // Reset wave
     setWave(0);
@@ -1783,6 +1953,8 @@ export default function App() {
     setLuckLevel(0);
     setUnlockedWeapons([WeaponType.PISTOL]);
     setEquippedWeapon(WeaponType.PISTOL);
+    setUnlockedSkins(['skin_default']);
+    setEquippedSkin('skin_default');
     setHighScore(0);
     setHighScoreZombie(0);
     setHighScoreAlien(0);
@@ -1802,8 +1974,12 @@ export default function App() {
   // Spawning Zombies Wave logic
   const startNextWave = (nextWaveNum: number) => {
     if (waveSpawnTimerRef.current) clearTimeout(waveSpawnTimerRef.current);
+    waveSpawnTimerRef.current = null;
+    mythicCombatRef.current.orbitalHitCooldowns = {};
+    mythicCombatRef.current.chainLightningCooldowns = {};
     
     setWave(nextWaveNum);
+    waveRef.current = nextWaveNum;
     waveActiveRef.current = true;
 
     const isAlienMode = modeRef.current === GameMode.ALIEN;
@@ -2092,22 +2268,12 @@ export default function App() {
     syncHudPlayer();
   };
 
-  const unlockWeaponFromUpgrade = (weaponType: WeaponType) => {
-    setEquippedWeapon(weaponType);
-    localStorage.setItem('zombie_shooter_equipped_weapon', weaponType);
-    setUnlockedWeapons((prev) => {
-      const updated = prev.includes(weaponType) ? prev : [...prev, weaponType];
-      localStorage.setItem('zombie_shooter_unlocked_weapons', JSON.stringify(updated));
-      return updated;
-    });
-  };
-
   // Triggered on level up with dynamic rarity roll
   const handleLevelUp = (currentLvl: number) => {
     setRerollsLeft(1);
     const rolled = rollLevelUpOptions(
       currentLvl,
-      { updateCoins, unlockWeapon: unlockWeaponFromUpgrade },
+      { updateCoins },
       luckLevel,
       playerRef.current.acquiredUpgrades
     );
@@ -2121,7 +2287,7 @@ export default function App() {
     setRerollsLeft((prev) => Math.max(0, prev - 1));
     const rolled = rollLevelUpOptions(
       playerRef.current.level,
-      { updateCoins, unlockWeapon: unlockWeaponFromUpgrade },
+      { updateCoins },
       luckLevel,
       playerRef.current.acquiredUpgrades
     );
@@ -2129,14 +2295,22 @@ export default function App() {
   };
 
   const handleSelectUpgrade = (option: UpgradeOption) => {
-    // Apply the upgrade effect
-    const updatedPlayer = option.effect({ ...playerRef.current });
-    playerRef.current = updatedPlayer;
+    // Apply the upgrade effect defensively
+    try {
+      const updatedPlayer = option.effect({ ...playerRef.current });
+      if (updatedPlayer) {
+        playerRef.current = updatedPlayer;
+      }
+    } catch {
+      // keep current player state safe if upgrade callback throws
+    }
 
     // Deduct XP and scale threshold for next level
-    playerRef.current.xp = Math.max(0, playerRef.current.xp - playerRef.current.xpNeeded);
-    playerRef.current.xpNeeded = Math.round(playerRef.current.xpNeeded * 1.28 + 20);
-    playerRef.current.level += 1;
+    const curXp = Number.isFinite(playerRef.current.xp) ? playerRef.current.xp : 0;
+    const curNeeded = Number.isFinite(playerRef.current.xpNeeded) ? playerRef.current.xpNeeded : 100;
+    playerRef.current.xp = Math.max(0, curXp - curNeeded);
+    playerRef.current.xpNeeded = Math.max(100, Math.round(curNeeded * 1.28 + 20));
+    playerRef.current.level = (playerRef.current.level || 1) + 1;
 
     syncHudPlayer();
 
@@ -2237,6 +2411,14 @@ export default function App() {
     sound.playExplosion();
     screenShakeRef.current = Math.min(40, screenShakeRef.current + 30);
     muzzleFlashIntensityRef.current = 1.0;
+    flashLightsRef.current.push({
+      x: expX,
+      y: expY,
+      radius: 260,
+      color: 'orange',
+      alpha: 0.72,
+      decay: 2.6,
+    });
 
     // 1. Fire shockwave ring expanding rapidly
     particlesRef.current.push({
@@ -2341,6 +2523,14 @@ export default function App() {
     sound.playExplosion();
     screenShakeRef.current = Math.min(50, screenShakeRef.current + 38);
     muzzleFlashIntensityRef.current = 1.0;
+    flashLightsRef.current.push({
+      x: expX,
+      y: expY,
+      radius: 320,
+      color: 'red',
+      alpha: 0.8,
+      decay: 2.2,
+    });
 
     // 1. Double expanding stealth fire rings (stealth crimson + high-heat core)
     particlesRef.current.push({
@@ -2542,9 +2732,9 @@ export default function App() {
       const muzzleY = p.y + Math.sin(angle) * (p.radius + 20);
 
       // Backblast smoke behind player
-      for (let b = 0; b < 8; b++) {
-        const bbAngle = angle + Math.PI + (Math.random() * 0.6 - 0.3);
-        const bbSpeed = 80 + Math.random() * 120;
+      for (let b = 0; b < 9; b++) {
+        const bbAngle = angle + Math.PI + (Math.random() * 0.7 - 0.35);
+        const bbSpeed = 75 + Math.random() * 135;
         particlesRef.current.push({
           id: `backblast-${Date.now()}-${b}-${Math.random()}`,
           type: 'SMOKE',
@@ -2552,11 +2742,13 @@ export default function App() {
           y: p.y - Math.sin(angle) * 20,
           vx: Math.cos(bbAngle) * bbSpeed,
           vy: Math.sin(bbAngle) * bbSpeed,
-          radius: 8 + Math.random() * 6,
-          growthSpeed: 22,
-          color: 'rgba(234, 88, 12, 0.65)',
-          alpha: 0.85,
-          decay: 0.05,
+          radius: 8 + Math.random() * 7,
+          growthSpeed: 24,
+          color: b < 3 ? 'rgba(234, 88, 12, 0.65)' : 'rgba(100, 116, 139, 0.65)',
+          alpha: 0.8,
+          decay: 0.036 + Math.random() * 0.015,
+          rotation: Math.random() * Math.PI * 2,
+          rotSpeed: (Math.random() - 0.5) * 0.06,
         });
       }
 
@@ -2666,12 +2858,20 @@ export default function App() {
     // Play dedicated authentic sounds per weapon
     if (p.currentWeapon === WeaponType.PISTOL) {
       sound.playPistol();
+    } else if (p.currentWeapon === WeaponType.MAGNUM) {
+      sound.playMagnum();
     } else if (p.currentWeapon === WeaponType.SHOTGUN) {
       sound.playShotgun();
     } else if (p.currentWeapon === WeaponType.MACHINE_GUN) {
       sound.playMachineGun();
+    } else if (p.currentWeapon === WeaponType.ASSAULT_RIFLE) {
+      sound.playAssaultRifle();
+    } else if (p.currentWeapon === WeaponType.LMG) {
+      sound.playLmg();
     } else if (p.currentWeapon === WeaponType.MINIGUN) {
       sound.playMinigun();
+    } else if (p.currentWeapon === WeaponType.SNIPER) {
+      sound.playSniper();
     } else if (p.currentWeapon === WeaponType.PLASMA_RIFLE) {
       sound.playShoot(true);
     } else if (p.currentWeapon === WeaponType.RAYGUN) {
@@ -2687,12 +2887,88 @@ export default function App() {
     // Dynamic recoil parameters based on weapon
     const isPlasma = p.currentWeapon === WeaponType.PLASMA_RIFLE;
     const isShotgun = p.currentWeapon === WeaponType.SHOTGUN;
+    const isMagnum = p.currentWeapon === WeaponType.MAGNUM;
     const isMG = p.currentWeapon === WeaponType.MACHINE_GUN;
+    const isAR = p.currentWeapon === WeaponType.ASSAULT_RIFLE;
+    const isLMG = p.currentWeapon === WeaponType.LMG;
+    const isMinigun = p.currentWeapon === WeaponType.MINIGUN;
+    const isSniper = p.currentWeapon === WeaponType.SNIPER;
+    const isHeavyBallistic = isShotgun || isSniper || isMagnum;
 
-    const shakeAmt = isLaserMinigun ? 1.5 : isRayRifle ? 7 : isRaygun ? 5 : isPlasma ? 12 : isShotgun ? 10 : isMG ? 2.5 : 3.5;
-    const recoilKick = isLaserMinigun ? 2 : isRayRifle ? 7 : isRaygun ? 5 : isPlasma ? 11 : isShotgun ? 9 : isMG ? 4 : 5.5;
-    const pushbackForce = isLaserMinigun ? 1.0 : isRayRifle ? 3.5 : isRaygun ? 2.5 : isPlasma ? 7 : isShotgun ? 8.5 : isMG ? 1.8 : 2.5;
-    const bloomIncrease = isLaserMinigun ? 0.002 : isRayRifle ? 0.008 : isRaygun ? 0.01 : isPlasma ? 0.005 : isShotgun ? 0.012 : isMG ? 0.022 : 0.015;
+    const shakeAmt = isLaserMinigun
+      ? 1.5
+      : isSniper
+        ? 14
+        : isRayRifle
+          ? 7
+          : isRaygun
+            ? 5
+            : isPlasma
+              ? 12
+              : isShotgun
+                ? 10
+                : isMagnum
+                  ? 8
+                  : isLMG || isMinigun
+                    ? 3.2
+                    : isAR
+                      ? 4.2
+                      : isMG
+                        ? 2.5
+                        : 3.5;
+    const recoilKick = isLaserMinigun
+      ? 2
+      : isSniper
+        ? 12
+        : isRayRifle
+          ? 7
+          : isRaygun
+            ? 5
+            : isPlasma
+              ? 11
+              : isShotgun
+                ? 9
+                : isMagnum
+                  ? 8.5
+                  : isAR || isLMG
+                    ? 5.2
+                    : isMG || isMinigun
+                      ? 4
+                      : 5.5;
+    const pushbackForce = isLaserMinigun
+      ? 1.0
+      : isSniper
+        ? 9.5
+        : isRayRifle
+          ? 3.5
+          : isRaygun
+            ? 2.5
+            : isPlasma
+              ? 7
+              : isShotgun
+                ? 8.5
+                : isMagnum
+                  ? 5.5
+                  : isAR || isLMG
+                    ? 2.8
+                    : isMG || isMinigun
+                      ? 1.8
+                      : 2.5;
+    const bloomIncrease = isLaserMinigun
+      ? 0.002
+      : isSniper
+        ? 0.014
+        : isRayRifle
+          ? 0.008
+          : isRaygun
+            ? 0.01
+            : isPlasma
+              ? 0.005
+              : isShotgun
+                ? 0.012
+                : isMG || isMinigun
+                  ? 0.022
+                  : 0.014;
 
     // Apply screen shake
     screenShakeRef.current = Math.min(18, screenShakeRef.current + shakeAmt);
@@ -2713,13 +2989,28 @@ export default function App() {
     dynamicSpreadRef.current = Math.min(0.18, dynamicSpreadRef.current + bloomIncrease);
 
     // Bullet spawning parameters
-    const bulletRadius = isRaygun ? 8 : isRayRifle ? 7 : isLaserMinigun ? 5 : isPlasma ? 10 : 4;
+    const bulletRadius = isRaygun
+      ? 8
+      : isRayRifle
+        ? 7
+        : isLaserMinigun
+          ? 5
+          : isPlasma
+            ? 10
+            : isSniper
+              ? 6.5
+              : isMagnum
+                ? 5.2
+                : isHeavyBallistic
+                  ? 4.5
+                  : 4;
     const bColor = w.color;
     const bSpeed = w.bulletSpeed;
 
-    // Create muzzle flash particles
-    const muzzleX = p.x + Math.cos(angle) * (p.radius + 15);
-    const muzzleY = p.y + Math.sin(angle) * (p.radius + 15);
+    // Create muzzle flash particles (calibrated per firearm barrel length)
+    const barrelLenOffset = isSniper ? 26 : isLMG || isMinigun || isAR ? 21 : isShotgun || isMagnum ? 18 : 15;
+    const muzzleX = p.x + Math.cos(angle) * (p.radius + barrelLenOffset);
+    const muzzleY = p.y + Math.sin(angle) * (p.radius + barrelLenOffset);
 
     // Spawn nice muzzle flash sparks
     const sparkCount = isPlasma ? 8 : (isRaygun || isRayRifle || isLaserMinigun) ? 6 : 5;
@@ -2822,12 +3113,17 @@ export default function App() {
         });
       }
     } else {
-      // Normal weapons (Pistol, Shotgun, Machine Gun) muzzle flash enhancements
-      // 1. Spawning a high-intensity customized MUZZLE_FLARE at the end of the barrel
-      const flareColor = isShotgun ? 'rgba(248, 113, 113, 0.95)' : isMG ? 'rgba(192, 132, 252, 0.95)' : 'rgba(251, 191, 36, 0.95)';
-      const flareRadius = isShotgun ? 14 : isMG ? 8 : 6;
-      const flareGrowth = isShotgun ? 45 : isMG ? 25 : 18;
-      const flareDecay = isShotgun ? 0.25 : isMG ? 0.35 : 0.28;
+      // Firearms (Pistol, Magnum, Shotgun, SMG, Assault Rifle, LMG, Minigun, Sniper) muzzle flash + realistic gunsmoke
+      const flareColor = isShotgun
+        ? 'rgba(248, 113, 113, 0.95)'
+        : isSniper
+          ? 'rgba(253, 224, 71, 0.96)'
+          : isMG
+            ? 'rgba(192, 132, 252, 0.95)'
+            : 'rgba(251, 191, 36, 0.95)';
+      const flareRadius = isSniper ? 16 : isShotgun ? 14 : isMagnum ? 11 : isAR || isLMG ? 9 : isMG || isMinigun ? 8 : 7;
+      const flareGrowth = isSniper ? 52 : isShotgun ? 45 : isMagnum ? 34 : 24;
+      const flareDecay = isShotgun || isSniper ? 0.24 : 0.30;
 
       particlesRef.current.push({
         id: `muzzle-flare-${Date.now()}-${Math.random()}`,
@@ -2843,35 +3139,130 @@ export default function App() {
         decay: flareDecay,
       });
 
-      // 2. Spawning realistic smoke puffs
-      const smokeCount = isShotgun ? 6 : isMG ? 1 : 2;
+      // Realistic multi-stage gunsmoke plumes for ALL firearms
+      const smokeCount = isShotgun
+        ? 10
+        : isSniper
+          ? 8
+          : isMagnum
+            ? 6
+            : isAR || isLMG
+              ? 4
+              : isMG || isMinigun
+                ? 3
+                : 4; // Pistol
+      const maxSmokeSpread = isShotgun ? 0.52 : isSniper ? 0.30 : isMagnum ? 0.38 : 0.28;
+      const smokeColors = ['#e2e8f0', '#cbd5e1', '#94a3b8', '#64748b'];
+
+      // Initial burnt-powder hot flash puff right at barrel exit
+      particlesRef.current.push({
+        id: `gunsmoke-hot-${Date.now()}-${Math.random()}`,
+        type: 'SMOKE',
+        x: muzzleX + Math.cos(angle) * 3,
+        y: muzzleY + Math.sin(angle) * 3,
+        vx: Math.cos(angle) * (isShotgun || isSniper ? 95 : 55) + (p.vx || 0) * 0.15,
+        vy: Math.sin(angle) * (isShotgun || isSniper ? 95 : 55) + (p.vy || 0) * 0.15,
+        radius: isShotgun || isSniper ? 6.8 : 4.6,
+        growthSpeed: isShotgun || isSniper ? 30 : 18,
+        color: 'rgba(234, 88, 12, 0.58)',
+        alpha: 0.52,
+        decay: 0.036,
+        rotation: Math.random() * Math.PI * 2,
+        rotSpeed: (Math.random() - 0.5) * 0.09,
+      });
+
       for (let s = 0; s < smokeCount; s++) {
-        // Smoke expands outward in a cone from the barrel tip
-        const maxSmokeSpread = isShotgun ? 0.45 : 0.25;
         const smokeAngle = angle + (Math.random() * maxSmokeSpread * 2 - maxSmokeSpread);
-        const smokeSpeed = (isShotgun ? 45 : 25) + Math.random() * (isShotgun ? 60 : 35);
-        
-        // Select an ambient particle color: slate-gray, light gray, soft charcoal
-        const smokeColors = ['rgba(148, 163, 184, 0.35)', 'rgba(203, 213, 225, 0.3)', 'rgba(100, 116, 139, 0.3)'];
-        const chosenColor = smokeColors[Math.floor(Math.random() * smokeColors.length)];
-        
+        const smokeSpeed =
+          (isShotgun || isSniper ? 78 : isMagnum ? 62 : 44) +
+          Math.random() * (isShotgun || isSniper ? 110 : 62);
+        const chosenColor = smokeColors[s % smokeColors.length];
+        const baseRad = isShotgun || isSniper ? 6.5 : isMagnum ? 5.6 : isAR || isLMG ? 4.8 : 4.2;
+
         particlesRef.current.push({
-          id: `smoke-${Date.now()}-${s}-${Math.random()}`,
+          id: `gunsmoke-${Date.now()}-${s}-${Math.random()}`,
           type: 'SMOKE',
-          x: muzzleX + Math.cos(smokeAngle) * (s * 3),
-          y: muzzleY + Math.sin(smokeAngle) * (s * 3),
-          vx: Math.cos(smokeAngle) * smokeSpeed + (p.vx || 0) * 0.1,
-          vy: Math.sin(smokeAngle) * smokeSpeed + (p.vy || 0) * 0.1,
-          radius: (isShotgun ? 5 : 3.5) + Math.random() * (isShotgun ? 6 : 3),
-          growthSpeed: (isShotgun ? 24 : 14) + Math.random() * 8,
+          x: muzzleX + Math.cos(smokeAngle) * (s * 3.4),
+          y: muzzleY + Math.sin(smokeAngle) * (s * 3.4),
+          vx: Math.cos(smokeAngle) * smokeSpeed + (p.vx || 0) * 0.12,
+          vy: Math.sin(smokeAngle) * smokeSpeed + (p.vy || 0) * 0.12,
+          radius: baseRad + Math.random() * 4.0,
+          growthSpeed: (isShotgun || isSniper ? 26 : 16) + Math.random() * 9,
           color: chosenColor,
-          alpha: 0.55 + Math.random() * 0.25,
-          decay: isShotgun ? 0.045 + Math.random() * 0.03 : 0.065 + Math.random() * 0.04,
+          alpha: 0.48 + Math.random() * 0.24,
+          decay: isShotgun || isSniper ? 0.012 + Math.random() * 0.007 : 0.015 + Math.random() * 0.009,
+          rotation: Math.random() * Math.PI * 2,
+          rotSpeed: (Math.random() - 0.5) * 0.075,
+        });
+      }
+
+      // Thin curling smoke wisps drifting slowly from the hot barrel
+      const wispCount = isHeavyBallistic ? 2 : 1;
+      for (let wc = 0; wc < wispCount; wc++) {
+        if (wc === 0 || Math.random() < 0.75) {
+          const wispAngle = angle + (Math.random() - 0.5) * 0.35;
+          particlesRef.current.push({
+            id: `wisp-smoke-${Date.now()}-${wc}-${Math.random()}`,
+            type: 'SMOKE',
+            x: muzzleX + Math.cos(angle) * (2 + wc * 4),
+            y: muzzleY + Math.sin(angle) * (2 + wc * 4),
+            vx: Math.cos(wispAngle) * (18 + wc * 12) + (p.vx || 0) * 0.08,
+            vy: Math.sin(wispAngle) * (18 + wc * 12) - 20 + (p.vy || 0) * 0.08,
+            radius: 3.4 + Math.random() * 2.2,
+            growthSpeed: 11.5,
+            color: '#e2e8f0',
+            alpha: 0.38,
+            decay: 0.010,
+            rotation: Math.random() * Math.PI * 2,
+            rotSpeed: (Math.random() - 0.5) * 0.05,
+          });
+        }
+      }
+
+      // Side muzzle-brake vents (Sniper .50 BMG) or revolver cylinder gap gas puffs (Magnum)
+      if (isSniper || isMagnum) {
+        const ventBaseX = isSniper ? muzzleX - Math.cos(angle) * 4 : p.x + Math.cos(angle) * (p.radius + 7);
+        const ventBaseY = isSniper ? muzzleY - Math.sin(angle) * 4 : p.y + Math.sin(angle) * (p.radius + 7);
+        [-1, 1].forEach((side) => {
+          const ventAngle = angle + side * (Math.PI * 0.55) + (Math.random() - 0.5) * 0.25;
+          const ventSpeed = (isSniper ? 115 : 68) + Math.random() * 45;
+          particlesRef.current.push({
+            id: `side-smoke-${Date.now()}-${side}-${Math.random()}`,
+            type: 'SMOKE',
+            x: ventBaseX,
+            y: ventBaseY,
+            vx: Math.cos(ventAngle) * ventSpeed + (p.vx || 0) * 0.1,
+            vy: Math.sin(ventAngle) * ventSpeed + (p.vy || 0) * 0.1,
+            radius: isSniper ? 5.6 : 4.2,
+            growthSpeed: isSniper ? 24 : 15,
+            color: '#cbd5e1',
+            alpha: 0.48,
+            decay: 0.015,
+            rotation: Math.random() * Math.PI * 2,
+            rotSpeed: side * 0.06,
+          });
         });
       }
     }
 
     const currentSpread = w.spread + dynamicSpreadRef.current;
+    const isPyroSkinIgnite =
+      p.equippedSkin === 'skin_pyro_igniter' && Math.random() < 0.22;
+
+    if (isPyroSkinIgnite) {
+      particlesRef.current.push({
+        id: `pyro-muzzle-${Date.now()}-${Math.random()}`,
+        type: 'FLAME',
+        x: muzzleX,
+        y: muzzleY,
+        vx: Math.cos(angle) * 140,
+        vy: Math.sin(angle) * 140,
+        radius: 4.5,
+        color: '#fb923c',
+        alpha: 0.9,
+        decay: 0.1,
+      });
+    }
 
     // Shotgun fires organic, randomized buckshot scatter (never in a rigid line)
     if (isShotgun) {
@@ -2904,15 +3295,16 @@ export default function App() {
           radius: pelletRadius,
           damage: w.damage,
           piercingRemaining: w.piercing,
-          color: bColor,
+          color: isPyroSkinIgnite ? '#fb923c' : bColor,
           distanceTraveled: 0,
           maxDistance: maxRange,
           ownerAngle: angle,
           weaponType: WeaponType.SHOTGUN,
+          isIgnite: isPyroSkinIgnite,
         });
       }
     } else {
-      // Standard single bullet (Pistol, Machine Gun, Plasma, Minigun, Laser Minigun, etc.)
+      // Standard single bullet (Pistol, Magnum, Assault Rifle, LMG, Sniper, Machine Gun, Plasma, Minigun, Laser Minigun, etc.)
       const finalAngle = angle + (Math.random() * currentSpread * 2 - currentSpread);
       bulletsRef.current.push({
         id: `bullet-${Date.now()}-${Math.random()}`,
@@ -2923,13 +3315,24 @@ export default function App() {
         radius: bulletRadius,
         damage: w.damage,
         piercingRemaining: w.piercing,
-        color: bColor,
+        color: isPyroSkinIgnite ? '#fb923c' : bColor,
         distanceTraveled: 0,
-        maxDistance: isLaserMinigun ? 950 : isRayRifle ? 850 : isRaygun ? 700 : p.currentWeapon === WeaponType.PISTOL ? 600 : 750,
+        maxDistance: isSniper
+          ? 1250
+          : isLaserMinigun
+            ? 950
+            : isRayRifle
+              ? 850
+              : isRaygun
+                ? 700
+                : p.currentWeapon === WeaponType.PISTOL
+                  ? 600
+                  : 780,
         ownerAngle: angle,
         isRay: isRaygun || isRayRifle,
         isLaser: isLaserMinigun,
         weaponType: p.currentWeapon,
+        isIgnite: isPyroSkinIgnite,
       });
     }
 
@@ -3192,6 +3595,8 @@ export default function App() {
         }
       }
 
+      lastDrawDtRef.current = dt;
+
       if (gameState === GameState.PLAYING || dyingRef.current?.active) {
         updateGame(dt);
       }
@@ -3209,6 +3614,8 @@ export default function App() {
       let levelUpQueuedThisFrame = false;
 
       const handleZombieDeath = (z: Zombie, depth: number = 0) => {
+        if (!z || z.isDead || depth > 2) return;
+        z.isDead = true;
         const isAlienUnit = modeRef.current === GameMode.ALIEN;
         if (isAlienUnit) {
           sound.playFreeze();
@@ -3229,6 +3636,14 @@ export default function App() {
 
         if (z.isBoss) {
           sound.playPowerup();
+          flashLightsRef.current.push({
+            x: z.x,
+            y: z.y,
+            radius: 360,
+            color: isAlienUnit ? 'purple' : 'amber',
+            alpha: 0.85,
+            decay: 1.8,
+          });
           for (let exp = 0; exp < 16; exp++) {
             const expAngle = Math.random() * Math.PI * 2;
             const expSpeed = 60 + Math.random() * 140;
@@ -3342,18 +3757,62 @@ export default function App() {
           }
         }
 
-        const finalSplatColor = isAlienUnit
-          ? (z.isBoss ? '#be185d' : z.type === ZombieType.ALIEN_DRONE ? '#7e22ce' : '#0e7490')
-          : (z.isBoss ? '#6b21a8' : z.type === ZombieType.TOXIC_SPITTER ? '#3f6212' : z.type === ZombieType.RUNNER ? '#7f1d1d' : '#052e16');
+        // Realistic organic blood / alien ichor splatter burst on enemy death
+        const deathFluidColors = isAlienUnit
+          ? (z.isBoss || z.type === ZombieType.ALIEN_OVERLORD
+              ? ['#ec4899', '#f43f5e', '#9d174d']
+              : z.type === ZombieType.ALIEN_DRONE
+                ? ['#c084fc', '#a855f7', '#06b6d4']
+                : ['#00ffcc', '#2dd4bf', '#0e7490'])
+          : (z.isBoss
+              ? ['#991b1b', '#7f1d1d', '#be123c']
+              : z.type === ZombieType.TOXIC_SPITTER
+                ? ['#84cc16', '#65a30d', '#3f6212']
+                : ['#450a0a', '#7f1d1d', '#991b1b', '#b91c1c', '#dc2626']);
+        const deathBurstCount = z.isBoss ? 22 : z.type === ZombieType.TANK || z.type === ZombieType.ALIEN_COLOSSUS ? 16 : 11;
+        for (let dk = 0; dk < deathBurstCount; dk++) {
+          const dAng = Math.random() * Math.PI * 2;
+          const dSpd = 45 + Math.random() * (z.isBoss ? 150 : 120);
+          particlesRef.current.push({
+            id: `death-fluid-${Date.now()}-${dk}-${Math.random()}`,
+            type: isAlienUnit ? 'ALIEN_BLOOD' : z.type === ZombieType.TOXIC_SPITTER ? 'TOXIC_ACID' : 'BLOOD',
+            x: z.x + Math.cos(dAng) * (z.radius * 0.25),
+            y: z.y + Math.sin(dAng) * (z.radius * 0.25),
+            vx: Math.cos(dAng) * dSpd,
+            vy: Math.sin(dAng) * dSpd,
+            radius: 1.8 + Math.random() * 2.4,
+            color: deathFluidColors[dk % deathFluidColors.length],
+            alpha: 0.94,
+            decay: 0.024 + Math.random() * 0.018,
+          });
+        }
 
+        const finalSplatColor = isAlienUnit
+          ? (z.isBoss ? '#9d174d' : z.type === ZombieType.ALIEN_DRONE ? '#7e22ce' : '#0e7490')
+          : (z.isBoss ? '#450a0a' : z.type === ZombieType.TOXIC_SPITTER ? '#3f6212' : z.type === ZombieType.RUNNER ? '#7f1d1d' : '#450a0a');
+
+        // Natural coagulated central blood pool + 2-3 organic peripheral droplets
         bloodSplatsRef.current.push({
           x: z.x,
           y: z.y,
-          radius: z.radius * (1.2 + Math.random() * 0.6),
-          alpha: 0.6,
+          radius: z.radius * (1.05 + Math.random() * 0.45),
+          alpha: 0.78,
           color: finalSplatColor,
         });
-        if (bloodSplatsRef.current.length > 140) {
+        for (let ds = 0; ds < 3; ds++) {
+          const sa = Math.random() * Math.PI * 2;
+          const sDist = z.radius * (0.65 + Math.random() * 0.95);
+          bloodSplatsRef.current.push({
+            x: z.x + Math.cos(sa) * sDist,
+            y: z.y + Math.sin(sa) * sDist,
+            radius: 3.8 + Math.random() * 4.5,
+            alpha: 0.62,
+            color: ds === 0 ? '#7f1d1d' : finalSplatColor,
+            angle: sa,
+            stretch: 1.0 + Math.random() * 0.35,
+          });
+        }
+        while (bloodSplatsRef.current.length > 160) {
           bloodSplatsRef.current.shift();
         }
 
@@ -3361,13 +3820,15 @@ export default function App() {
         p.xp += Math.round(z.xpValue * xpMult);
 
         const activeShipKey: ShipTypeKey | null =
-          p.currentWeapon === WeaponType.DESTRUCTOR
-            ? 'DESTRUCTOR'
-            : p.currentWeapon === WeaponType.INTERCEPTOR
-              ? 'INTERCEPTOR'
-              : p.currentWeapon === WeaponType.NAVE_REI
-                ? 'NAVE_REI'
-                : null;
+          p.currentWeapon === WeaponType.TROPER
+            ? 'TROPER'
+            : p.currentWeapon === WeaponType.DESTRUCTOR
+              ? 'DESTRUCTOR'
+              : p.currentWeapon === WeaponType.INTERCEPTOR
+                ? 'INTERCEPTOR'
+                : p.currentWeapon === WeaponType.NAVE_REI
+                  ? 'NAVE_REI'
+                  : null;
         if (activeShipKey) {
           addShipMasteryXp(activeShipKey, z.isBoss ? 45 : 8);
           if (
@@ -3384,7 +3845,7 @@ export default function App() {
             depth < 1
           ) {
             const rw = p.weapons[WeaponType.NAVE_REI] || INITIAL_WEAPONS[WeaponType.NAVE_REI];
-            const empBlastDmg = Math.max(45, Math.round(rw.damage * 1.4));
+            const empBlastDmg = Math.max(20, Math.round(rw.damage * 1.25));
             particlesRef.current.push({
               id: `rei-emp-kill-${Date.now()}-${Math.random()}`,
               type: 'FIRE_RING',
@@ -3420,11 +3881,18 @@ export default function App() {
           const updated = Math.max(0, prev - 1);
           if (updated === 0) {
             waveActiveRef.current = false;
-            p.coinsEarned = (p.coinsEarned || 0) + wave * 50;
+            const curWave = waveRef.current;
+            p.coinsEarned = (p.coinsEarned || 0) + curWave * 50;
             p.score = p.coinsEarned;
-            waveSpawnTimerRef.current = window.setTimeout(() => {
-              startNextWave(wave + 1);
-            }, 2500);
+            const scheduleNextWave = () => {
+              if (gameStateRef.current !== GameState.PLAYING) {
+                waveSpawnTimerRef.current = window.setTimeout(scheduleNextWave, 400);
+                return;
+              }
+              startNextWave(waveRef.current + 1);
+            };
+            if (waveSpawnTimerRef.current) clearTimeout(waveSpawnTimerRef.current);
+            waveSpawnTimerRef.current = window.setTimeout(scheduleNextWave, 2500);
           }
           return updated;
         });
@@ -3560,6 +4028,7 @@ export default function App() {
         if (p.currentWeapon === WeaponType.ICE_AND_FIRE_DRAGON) {
           triggerIceFireMergeRef.current();
         } else if (
+          p.currentWeapon === WeaponType.TROPER ||
           p.currentWeapon === WeaponType.DESTRUCTOR ||
           p.currentWeapon === WeaponType.INTERCEPTOR ||
           p.currentWeapon === WeaponType.NAVE_REI
@@ -3592,13 +4061,15 @@ export default function App() {
 
       let shootingAngle = p.angle;
       let shouldFire = false;
+      const isTroper = p.currentWeapon === WeaponType.TROPER;
       const isDestructor = p.currentWeapon === WeaponType.DESTRUCTOR;
       const isInterceptor = p.currentWeapon === WeaponType.INTERCEPTOR;
       const isRei = p.currentWeapon === WeaponType.NAVE_REI;
       const isEastDragon = p.currentWeapon === WeaponType.EAST_DRAGON;
       const isIronMan = p.currentWeapon === WeaponType.IRON_MAN;
       const isIceFireDragon = p.currentWeapon === WeaponType.ICE_AND_FIRE_DRAGON;
-      const isShip = isDestructor || isInterceptor || isRei;
+      const hasWarpShip = isDestructor || isInterceptor || isRei;
+      const isShip = isTroper || hasWarpShip;
       const ds = destructorStateRef.current;
       const ed = eastDragonStateRef.current;
       const im = ironManStateRef.current;
@@ -3608,8 +4079,8 @@ export default function App() {
       let destructorTargetY = p.y + Math.sin(p.angle) * 300;
 
       if (isShip && !dyingRef.current?.active) {
-        // Ships: blasters ALWAYS aim toward cursor (or right joystick / gamepad stick) within ±30° gimbal cone;
-        // ship hull rotates with silky-smooth exponential angular damping (no snap, no pause).
+        // Ships: aim toward cursor / right joystick / gamepad stick within ±30° gimbal cone;
+        // ship hull rotates smoothly with exponential angular damping.
         if (rightJoystick.current.active) {
           const rx = rightJoystick.current.x;
           const ry = rightJoystick.current.y;
@@ -3624,7 +4095,7 @@ export default function App() {
           const gpAngle = gp.aimActive ? Math.atan2(gp.aimY, gp.aimX) : p.angle;
           destructorTargetX = p.x + Math.cos(gpAngle) * 360;
           destructorTargetY = p.y + Math.sin(gpAngle) * 360;
-          shouldFire = gp.aimActive || gp.fireHeld;
+          shouldFire = gp.aimFire || gp.fireHeld;
         } else if (canvasRef.current) {
           if (hasMouseMovedRef.current) {
             const camLeft = cameraRef.current.x - canvasRef.current.width / 2;
@@ -3655,11 +4126,11 @@ export default function App() {
         }
         const smNow = shipMasteryRef.current;
 
-        // Smooth angular turn smoothing (no instant snap, no pause delay)
+        // Smooth angular turn smoothing
         const destTurnBoost =
           isDestructor && hasMasteryNode(smNow, 'DESTRUCTOR', 'dest_core') ? 1.15 : 1.0;
         const turnResponsiveness =
-          (isRei ? 3.9 : isDestructor ? 5.2 : 6.8) * (ds.warpActive ? 1.25 : 1.0) * destTurnBoost;
+          (isTroper ? 7.8 : isRei ? 3.9 : isDestructor ? 5.2 : 6.8) * (hasWarpShip && ds.warpActive ? 1.25 : 1.0) * destTurnBoost;
         if (Math.abs(excess) > 0.001) {
           const lerpFactor = 1 - Math.exp(-turnResponsiveness * dt);
           const step = excess * lerpFactor;
@@ -3672,213 +4143,232 @@ export default function App() {
         while (p.angle > Math.PI) p.angle -= Math.PI * 2;
         while (p.angle < -Math.PI) p.angle += Math.PI * 2;
 
-        // Shift charge: 3s Warp (2.1s with Capacitor) or 6s Modo Fúria (4.5s with Reator Carmesim)
+        // Troper has NO Warp — only Destructor, Interceptor & Nave Rei charge Warp/Fúria
         const hasDestCapacitor = isDestructor && hasMasteryNode(smNow, 'DESTRUCTOR', 'dest_capacitor');
         const hasReiCore = isRei && hasMasteryNode(smNow, 'NAVE_REI', 'rei_crimson_core');
         const WARP_CHARGE_DURATION = isRei ? (hasReiCore ? 4.5 : 6.0) : hasDestCapacitor ? 2.1 : 3.0;
         const WARP_MODE_DURATION = isRei ? 10.0 : hasDestCapacitor ? 10.0 : 8.0;
-        const holdingShift = !!keysPressed.current['shift'] || mobileWarpHoldingRef.current || gp.warpHeld;
 
-        if (!ds.warpActive) {
-          if (holdingShift) {
-            ds.warpChargeTimer = Math.min(WARP_CHARGE_DURATION, ds.warpChargeTimer + dt);
-            ds.warpSoundTimer += dt;
-            if (ds.warpSoundTimer >= 0.2) {
+        if (hasWarpShip) {
+          const holdingShift = !!keysPressed.current['shift'] || mobileWarpHoldingRef.current || gp.warpHeld;
+
+          if (!ds.warpActive) {
+            if (holdingShift) {
+              ds.warpChargeTimer = Math.min(WARP_CHARGE_DURATION, ds.warpChargeTimer + dt);
+              ds.warpSoundTimer += dt;
+              if (ds.warpSoundTimer >= 0.2) {
+                ds.warpSoundTimer = 0;
+                sound.playDestructorWarpChargeTick(ds.warpChargeTimer / WARP_CHARGE_DURATION);
+              }
+
+              // Nave Rei: emits crackling red electricity & particles during charge!
+              const chargeP = ds.warpChargeTimer / WARP_CHARGE_DURATION;
+              if (isRei && chargeP > 0.12 && Math.random() < 0.35 + chargeP * 0.55) {
+                const arcStartA = Math.random() * Math.PI * 2;
+                const arcPoints: { x: number; y: number }[] = [];
+                let ax = p.x + Math.cos(arcStartA) * 26;
+                let ay = p.y + Math.sin(arcStartA) * 26;
+                for (let seg = 0; seg < 4; seg++) {
+                  const stepA = arcStartA + (Math.random() - 0.5) * 1.1;
+                  const stepL = 12 + Math.random() * 14;
+                  ax += Math.cos(stepA) * stepL;
+                  ay += Math.sin(stepA) * stepL;
+                  arcPoints.push({ x: ax, y: ay });
+                }
+                particlesRef.current.push({
+                  id: `rei-celec-${Date.now()}-${Math.random()}`,
+                  type: 'ENERGY_ARC',
+                  x: p.x,
+                  y: p.y,
+                  vx: 0,
+                  vy: 0,
+                  radius: 2.2,
+                  color: '#ef4444',
+                  alpha: 0.95,
+                  decay: 0.14,
+                  points: arcPoints,
+                });
+              }
+
+              if (ds.warpChargeTimer >= WARP_CHARGE_DURATION) {
+                ds.warpActive = true;
+                ds.warpTimer = WARP_MODE_DURATION;
+                ds.warpChargeTimer = 0;
+                ds.warpSoundTimer = 0;
+                if (isRei) {
+                  sound.playReiFuryActivate();
+                } else {
+                  sound.playDestructorWarpActivate();
+                }
+                screenShakeRef.current = Math.min(30, screenShakeRef.current + (isRei ? 20 : 14));
+                particlesRef.current.push({
+                  id: `warp-ring-1-${Date.now()}-${Math.random()}`,
+                  type: 'PLASMA_RING',
+                  x: p.x,
+                  y: p.y,
+                  vx: 0,
+                  vy: 0,
+                  radius: isRei ? 36 : 26,
+                  growthSpeed: isRei ? 520 : 420,
+                  color: isRei ? '#ef4444' : '#e879f9',
+                  alpha: 1,
+                  decay: 0.032,
+                });
+                particlesRef.current.push({
+                  id: `warp-ring-2-${Date.now()}-${Math.random()}`,
+                  type: 'PLASMA_RING',
+                  x: p.x,
+                  y: p.y,
+                  vx: 0,
+                  vy: 0,
+                  radius: 20,
+                  growthSpeed: isRei ? 380 : 300,
+                  color: isRei ? '#fbbf24' : isInterceptor ? '#00f5d4' : '#22d3ee',
+                  alpha: 1,
+                  decay: 0.038,
+                });
+              }
+            } else {
+              ds.warpChargeTimer = Math.max(0, ds.warpChargeTimer - dt * 2.5);
               ds.warpSoundTimer = 0;
-              sound.playDestructorWarpChargeTick(ds.warpChargeTimer / WARP_CHARGE_DURATION);
             }
+          } else {
+            ds.warpTimer -= dt;
+            if (hasReiCore && p.maxShield > 0 && p.shield < p.maxShield) {
+              p.shield = Math.min(p.maxShield, p.shield + 14 * dt);
+            }
+            if (ds.warpTimer <= 0) {
+              ds.warpActive = false;
+              ds.warpTimer = 0;
+            }
+          }
 
-            // Nave Rei: emits crackling red electricity & particles during charge!
-            const chargeP = ds.warpChargeTimer / WARP_CHARGE_DURATION;
-            if (isRei && chargeP > 0.12 && Math.random() < 0.35 + chargeP * 0.55) {
+          // Advance particle accelerator spheres rapidly (super-super-fast during Nave Rei Modo Fúria!)
+          const chargeRatio = ds.warpActive ? 1 : ds.warpChargeTimer / WARP_CHARGE_DURATION;
+          const accelSpeed = isRei
+            ? (ds.warpActive ? 68 : 8 + Math.pow(chargeRatio, 1.25) * 48)
+            : (ds.warpActive ? 42 : 7 + Math.pow(chargeRatio, 1.35) * 34);
+          ds.orbitAngle = (ds.orbitAngle + accelSpeed * dt) % (Math.PI * 200);
+
+          // Destructor Tier 3: Refração Orbital — accelerator spheres damage touching enemies
+          if (
+            isDestructor &&
+            (ds.warpActive || ds.warpChargeTimer > 0.25) &&
+            hasMasteryNode(smNow, 'DESTRUCTOR', 'dest_orbital_burn')
+          ) {
+            masteryCombatTimersRef.current.orbitalBurnTimer += dt;
+            if (masteryCombatTimersRef.current.orbitalBurnTimer >= 0.22) {
+              masteryCombatTimersRef.current.orbitalBurnTimer = 0;
+              const dw = p.weapons[WeaponType.DESTRUCTOR] || INITIAL_WEAPONS[WeaponType.DESTRUCTOR];
+              const orbSlashDmg = Math.max(24, Math.round(dw.damage * 0.9));
+              for (let zi = 0; zi < zombiesRef.current.length; zi++) {
+                const oz = zombiesRef.current[zi];
+                if (oz.hp <= 0) continue;
+                if (Math.hypot(oz.x - p.x, oz.y - p.y) <= 82 + oz.radius) {
+                  oz.hp -= orbSlashDmg;
+                  if (oz.hp <= 0) handleZombieDeath(oz);
+                }
+              }
+            }
+          }
+
+          // Nave Rei Tier 3: Tempestade de Fúria — continuous red lightning arcs shock nearby enemies
+          if (
+            isRei &&
+            (ds.warpActive || chargeRatio > 0.2) &&
+            hasMasteryNode(smNow, 'NAVE_REI', 'rei_storm')
+          ) {
+            masteryCombatTimersRef.current.reiStormTimer += dt;
+            if (masteryCombatTimersRef.current.reiStormTimer >= (ds.warpActive ? 0.26 : 0.45)) {
+              masteryCombatTimersRef.current.reiStormTimer = 0;
+              const rw = p.weapons[WeaponType.NAVE_REI] || INITIAL_WEAPONS[WeaponType.NAVE_REI];
+              const shockDmg = Math.max(28, Math.round(rw.damage * (ds.warpActive ? 1.2 : 0.65)));
+              for (let zi = 0; zi < zombiesRef.current.length; zi++) {
+                const rz = zombiesRef.current[zi];
+                if (rz.hp <= 0) continue;
+                if (Math.hypot(rz.x - p.x, rz.y - p.y) <= 195 + rz.radius) {
+                  rz.hp -= shockDmg;
+                  rz.isStunned = true;
+                  rz.stunTimer = Math.max(rz.stunTimer, 0.25);
+                  if (rz.hp <= 0) handleZombieDeath(rz);
+                }
+              }
+            }
+          }
+
+          // Nave Rei Modo Fúria: continuous dense crimson particles + red electricity bolts + proximity shock
+          if (isRei && ds.warpActive) {
+            for (let fp = 0; fp < 4; fp++) {
+              const pa = Math.random() * Math.PI * 2;
+              const spd = 95 + Math.random() * 190;
+              particlesRef.current.push({
+                id: `rei-fury-pt-${Date.now()}-${fp}-${Math.random()}`,
+                type: fp % 2 === 0 ? 'SPARK' : 'MUZZLE',
+                x: p.x + Math.cos(pa) * (20 + Math.random() * 24),
+                y: p.y + Math.sin(pa) * (20 + Math.random() * 24),
+                vx: Math.cos(pa) * spd,
+                vy: Math.sin(pa) * spd,
+                radius: 2.5 + Math.random() * 3.0,
+                color: fp === 0 ? '#fca5a5' : fp % 2 === 0 ? '#ef4444' : '#dc2626',
+                alpha: 1,
+                decay: 0.05,
+              });
+            }
+            for (let eb = 0; eb < 2; eb++) {
               const arcStartA = Math.random() * Math.PI * 2;
               const arcPoints: { x: number; y: number }[] = [];
-              let ax = p.x + Math.cos(arcStartA) * 26;
-              let ay = p.y + Math.sin(arcStartA) * 26;
+              let ax = p.x + Math.cos(arcStartA) * 24;
+              let ay = p.y + Math.sin(arcStartA) * 24;
               for (let seg = 0; seg < 4; seg++) {
                 const stepA = arcStartA + (Math.random() - 0.5) * 1.1;
-                const stepL = 12 + Math.random() * 14;
+                const stepL = 16 + Math.random() * 18;
                 ax += Math.cos(stepA) * stepL;
                 ay += Math.sin(stepA) * stepL;
                 arcPoints.push({ x: ax, y: ay });
               }
               particlesRef.current.push({
-                id: `rei-celec-${Date.now()}-${Math.random()}`,
+                id: `rei-felec-${Date.now()}-${eb}-${Math.random()}`,
                 type: 'ENERGY_ARC',
                 x: p.x,
                 y: p.y,
                 vx: 0,
                 vy: 0,
-                radius: 2.2,
-                color: '#ef4444',
-                alpha: 0.95,
-                decay: 0.14,
+                radius: 2.6,
+                color: eb === 0 ? '#ef4444' : '#fca5a5',
+                alpha: 1,
+                decay: 0.16,
                 points: arcPoints,
               });
             }
-
-            if (ds.warpChargeTimer >= WARP_CHARGE_DURATION) {
-              ds.warpActive = true;
-              ds.warpTimer = WARP_MODE_DURATION;
-              ds.warpChargeTimer = 0;
-              ds.warpSoundTimer = 0;
-              if (isRei) {
-                sound.playReiFuryActivate();
-              } else {
-                sound.playDestructorWarpActivate();
-              }
-              screenShakeRef.current = Math.min(30, screenShakeRef.current + (isRei ? 20 : 14));
-              particlesRef.current.push({
-                id: `warp-ring-1-${Date.now()}-${Math.random()}`,
-                type: 'PLASMA_RING',
-                x: p.x,
-                y: p.y,
-                vx: 0,
-                vy: 0,
-                radius: isRei ? 36 : 26,
-                growthSpeed: isRei ? 520 : 420,
-                color: isRei ? '#ef4444' : '#e879f9',
-                alpha: 1,
-                decay: 0.032,
-              });
-              particlesRef.current.push({
-                id: `warp-ring-2-${Date.now()}-${Math.random()}`,
-                type: 'PLASMA_RING',
-                x: p.x,
-                y: p.y,
-                vx: 0,
-                vy: 0,
-                radius: 20,
-                growthSpeed: isRei ? 380 : 300,
-                color: isRei ? '#fbbf24' : isInterceptor ? '#00f5d4' : '#22d3ee',
-                alpha: 1,
-                decay: 0.038,
-              });
-            }
-          } else {
-            ds.warpChargeTimer = Math.max(0, ds.warpChargeTimer - dt * 2.5);
-            ds.warpSoundTimer = 0;
           }
         } else {
-          ds.warpTimer -= dt;
-          if (hasReiCore && p.maxShield > 0 && p.shield < p.maxShield) {
-            p.shield = Math.min(p.maxShield, p.shield + 14 * dt);
-          }
-          if (ds.warpTimer <= 0) {
-            ds.warpActive = false;
-            ds.warpTimer = 0;
-          }
-        }
-
-        // Advance particle accelerator spheres rapidly (super-super-fast during Nave Rei Modo Fúria!)
-        const chargeRatio = ds.warpActive ? 1 : ds.warpChargeTimer / WARP_CHARGE_DURATION;
-        const accelSpeed = isRei
-          ? (ds.warpActive ? 68 : 8 + Math.pow(chargeRatio, 1.25) * 48)
-          : (ds.warpActive ? 42 : 7 + Math.pow(chargeRatio, 1.35) * 34);
-        ds.orbitAngle = (ds.orbitAngle + accelSpeed * dt) % (Math.PI * 200);
-
-        // Destructor Tier 3: Refração Orbital — accelerator spheres damage touching enemies
-        if (
-          isDestructor &&
-          (ds.warpActive || ds.warpChargeTimer > 0.25) &&
-          hasMasteryNode(smNow, 'DESTRUCTOR', 'dest_orbital_burn')
-        ) {
-          masteryCombatTimersRef.current.orbitalBurnTimer += dt;
-          if (masteryCombatTimersRef.current.orbitalBurnTimer >= 0.22) {
-            masteryCombatTimersRef.current.orbitalBurnTimer = 0;
-            const dw = p.weapons[WeaponType.DESTRUCTOR] || INITIAL_WEAPONS[WeaponType.DESTRUCTOR];
-            const orbSlashDmg = Math.max(24, Math.round(dw.damage * 0.9));
-            for (let zi = 0; zi < zombiesRef.current.length; zi++) {
-              const oz = zombiesRef.current[zi];
-              if (oz.hp <= 0) continue;
-              if (Math.hypot(oz.x - p.x, oz.y - p.y) <= 82 + oz.radius) {
-                oz.hp -= orbSlashDmg;
-                if (oz.hp <= 0) handleZombieDeath(oz);
-              }
-            }
-          }
-        }
-
-        // Nave Rei Tier 3: Tempestade de Fúria — continuous red lightning arcs shock nearby enemies
-        if (
-          isRei &&
-          (ds.warpActive || chargeRatio > 0.2) &&
-          hasMasteryNode(smNow, 'NAVE_REI', 'rei_storm')
-        ) {
-          masteryCombatTimersRef.current.reiStormTimer += dt;
-          if (masteryCombatTimersRef.current.reiStormTimer >= (ds.warpActive ? 0.26 : 0.45)) {
-            masteryCombatTimersRef.current.reiStormTimer = 0;
-            const rw = p.weapons[WeaponType.NAVE_REI] || INITIAL_WEAPONS[WeaponType.NAVE_REI];
-            const shockDmg = Math.max(28, Math.round(rw.damage * (ds.warpActive ? 1.2 : 0.65)));
-            for (let zi = 0; zi < zombiesRef.current.length; zi++) {
-              const rz = zombiesRef.current[zi];
-              if (rz.hp <= 0) continue;
-              if (Math.hypot(rz.x - p.x, rz.y - p.y) <= 195 + rz.radius) {
-                rz.hp -= shockDmg;
-                rz.isStunned = true;
-                rz.stunTimer = Math.max(rz.stunTimer, 0.25);
-                if (rz.hp <= 0) handleZombieDeath(rz);
-              }
-            }
-          }
-        }
-
-        // Nave Rei Modo Fúria: continuous dense crimson particles + red electricity bolts + proximity shock
-        if (isRei && ds.warpActive) {
-          for (let fp = 0; fp < 4; fp++) {
-            const pa = Math.random() * Math.PI * 2;
-            const spd = 95 + Math.random() * 190;
-            particlesRef.current.push({
-              id: `rei-fury-pt-${Date.now()}-${fp}-${Math.random()}`,
-              type: fp % 2 === 0 ? 'SPARK' : 'MUZZLE',
-              x: p.x + Math.cos(pa) * (20 + Math.random() * 24),
-              y: p.y + Math.sin(pa) * (20 + Math.random() * 24),
-              vx: Math.cos(pa) * spd,
-              vy: Math.sin(pa) * spd,
-              radius: 2.5 + Math.random() * 3.0,
-              color: fp === 0 ? '#fca5a5' : fp % 2 === 0 ? '#ef4444' : '#dc2626',
-              alpha: 1,
-              decay: 0.05,
-            });
-          }
-          for (let eb = 0; eb < 2; eb++) {
-            const arcStartA = Math.random() * Math.PI * 2;
-            const arcPoints: { x: number; y: number }[] = [];
-            let ax = p.x + Math.cos(arcStartA) * 24;
-            let ay = p.y + Math.sin(arcStartA) * 24;
-            for (let seg = 0; seg < 4; seg++) {
-              const stepA = arcStartA + (Math.random() - 0.5) * 1.1;
-              const stepL = 16 + Math.random() * 18;
-              ax += Math.cos(stepA) * stepL;
-              ay += Math.sin(stepA) * stepL;
-              arcPoints.push({ x: ax, y: ay });
-            }
-            particlesRef.current.push({
-              id: `rei-felec-${Date.now()}-${eb}-${Math.random()}`,
-              type: 'ENERGY_ARC',
-              x: p.x,
-              y: p.y,
-              vx: 0,
-              vy: 0,
-              radius: 2.6,
-              color: eb === 0 ? '#ef4444' : '#fca5a5',
-              alpha: 1,
-              decay: 0.16,
-              points: arcPoints,
-            });
-          }
+          ds.warpActive = false;
+          ds.warpChargeTimer = 0;
+          ds.warpTimer = 0;
+          ds.warpSoundTimer = 0;
+          mobileWarpHoldingRef.current = false;
         }
 
         ds.hudSyncTimer += dt;
         if (ds.hudSyncTimer >= 0.08) {
           ds.hudSyncTimer = 0;
-          setDestructorWarpHud({
-            chargeProgress: ds.warpChargeTimer / WARP_CHARGE_DURATION,
-            active: ds.warpActive,
-            remainingRatio: ds.warpActive ? Math.max(0, ds.warpTimer / WARP_MODE_DURATION) : 0,
-            remainingSeconds: ds.warpActive ? Math.max(0, ds.warpTimer) : 0,
-            chargeDuration: WARP_CHARGE_DURATION,
-          });
+          if (hasWarpShip) {
+            setDestructorWarpHud({
+              chargeProgress: ds.warpChargeTimer / WARP_CHARGE_DURATION,
+              active: ds.warpActive,
+              remainingRatio: ds.warpActive ? Math.max(0, ds.warpTimer / WARP_MODE_DURATION) : 0,
+              remainingSeconds: ds.warpActive ? Math.max(0, ds.warpTimer) : 0,
+              chargeDuration: WARP_CHARGE_DURATION,
+            });
+          } else {
+            setDestructorWarpHud({
+              chargeProgress: 0,
+              active: false,
+              remainingRatio: 0,
+              remainingSeconds: 0,
+              chargeDuration: 3.0,
+            });
+          }
           syncMasterySkillHud(p.currentWeapon, masterySkillCooldownRef.current);
         }
       } else {
@@ -3925,7 +4415,7 @@ export default function App() {
             while (diff < -Math.PI) diff += Math.PI * 2;
             p.angle += diff * (1 - Math.exp(-10 * dt));
             shootingAngle = p.angle;
-            shouldFire = gp.aimActive || gp.fireHeld;
+            shouldFire = gp.aimFire || gp.fireHeld;
           } else if (canvasRef.current && (hasMouseMovedRef.current || isMouseDown.current)) {
             const camLeft = cameraRef.current.x - canvasRef.current.width / 2;
             const camTop = cameraRef.current.y - canvasRef.current.height / 2;
@@ -3965,7 +4455,7 @@ export default function App() {
                 ? Math.atan2(moveY, moveX)
                 : p.angle;
             p.angle = shootingAngle;
-            shouldFire = gp.aimActive || gp.fireHeld;
+            shouldFire = gp.aimFire || gp.fireHeld;
           } else if (isMouseDown.current && canvasRef.current) {
             const camLeft = cameraRef.current.x - canvasRef.current.width / 2;
             const camTop = cameraRef.current.y - canvasRef.current.height / 2;
@@ -3997,7 +4487,7 @@ export default function App() {
       }
 
       // 2. PLAYER POSITION UPDATE
-      const warpSpeedMult = isShip && ds.warpActive
+      const warpSpeedMult = hasWarpShip && ds.warpActive
         ? (isInterceptor ? 2.85 : isRei ? 2.25 : 2.65)
         : isEastDragon
           ? 1.15
@@ -4014,21 +4504,8 @@ export default function App() {
       p.x = Math.max(p.radius, Math.min(ARENA_SIZE - p.radius, p.x));
       p.y = Math.max(p.radius, Math.min(ARENA_SIZE - p.radius, p.y));
 
-      // Keep ship blaster geometry & rear twin thruster trails locked to post-movement coords
+      // Keep ship blaster geometry & rear thruster trails locked to post-movement coords
       if (isShip && !dyingRef.current?.active) {
-        if (isRei) {
-          ds.reiBlasters = getReiBlastersWorld(p.x, p.y, p.angle, destructorTargetX, destructorTargetY);
-        } else {
-          const geo = isInterceptor
-            ? getInterceptorBlastersWorld(p.x, p.y, p.angle, destructorTargetX, destructorTargetY)
-            : getDestructorBlastersWorld(p.x, p.y, p.angle, destructorTargetX, destructorTargetY);
-          ds.leftBlasterAngle = geo.leftAngle;
-          ds.rightBlasterAngle = geo.rightAngle;
-          ds.leftMuzzleX = geo.leftMuzzleX;
-          ds.leftMuzzleY = geo.leftMuzzleY;
-          ds.rightMuzzleX = geo.rightMuzzleX;
-          ds.rightMuzzleY = geo.rightMuzzleY;
-        }
         ds.isFiring = shouldFire;
         if (shouldFire) {
           ds.laserChargeProgress = Math.min(1, ds.laserChargeProgress + dt / 0.26);
@@ -4036,65 +4513,84 @@ export default function App() {
           ds.laserChargeProgress = 0;
         }
 
-        // Compute world nozzle coordinates for BOTH rear thrusters
-        const nozzleXOffset = isRei ? -24 : -17;
-        const nozzleYOffset = isRei ? 12 : isInterceptor ? 9 : 8.5;
-        const cosA = Math.cos(p.angle);
-        const sinA = Math.sin(p.angle);
-        const leftNozzleX = p.x + (nozzleXOffset * cosA - -nozzleYOffset * sinA);
-        const leftNozzleY = p.y + (nozzleXOffset * sinA + -nozzleYOffset * cosA);
-        const rightNozzleX = p.x + (nozzleXOffset * cosA - nozzleYOffset * sinA);
-        const rightNozzleY = p.y + (nozzleXOffset * sinA + nozzleYOffset * cosA);
-
-        const movingNow = Math.hypot(p.vx || 0, p.vy || 0) > 8;
-        const trailMaxLife = ds.warpActive ? 0.56 : 0.36;
-
-        // Decay existing thruster trail nodes
-        for (let ti = 0; ti < ds.leftTrail.length; ti++) {
-          ds.leftTrail[ti].life -= dt;
-        }
-        for (let ti = 0; ti < ds.rightTrail.length; ti++) {
-          ds.rightTrail[ti].life -= dt;
-        }
-        ds.leftTrail = ds.leftTrail.filter((pt) => pt.life > 0);
-        ds.rightTrail = ds.rightTrail.filter((pt) => pt.life > 0);
-
-        if (movingNow || ds.warpActive) {
-          ds.leftTrail.push({
-            x: leftNozzleX,
-            y: leftNozzleY,
-            life: trailMaxLife,
-            maxLife: trailMaxLife,
-            warp: ds.warpActive,
-          });
-          ds.rightTrail.push({
-            x: rightNozzleX,
-            y: rightNozzleY,
-            life: trailMaxLife,
-            maxLife: trailMaxLife,
-            warp: ds.warpActive,
-          });
-          const maxPts = ds.warpActive ? 42 : 28;
-          if (ds.leftTrail.length > maxPts) ds.leftTrail.splice(0, ds.leftTrail.length - maxPts);
-          if (ds.rightTrail.length > maxPts) ds.rightTrail.splice(0, ds.rightTrail.length - maxPts);
-        }
-
-        // High-speed Warp / Fury Mode plasma afterburner streaks
-        if (ds.warpActive && (Math.abs(p.vx) > 20 || Math.abs(p.vy) > 20)) {
-          for (let ws = 0; ws < 2; ws++) {
-            particlesRef.current.push({
-              id: `warp-spark-${Date.now()}-${ws}-${Math.random()}`,
-              type: 'SPARK',
-              x: p.x - Math.cos(p.angle) * (isRei ? 24 : 18) + (Math.random() - 0.5) * 18,
-              y: p.y - Math.sin(p.angle) * (isRei ? 24 : 18) + (Math.random() - 0.5) * 18,
-              vx: -p.vx * 0.28 + (Math.random() - 0.5) * 45,
-              vy: -p.vy * 0.28 + (Math.random() - 0.5) * 45,
-              radius: 2.2 + Math.random() * 2.2,
-              color: isRei ? (ws % 2 === 0 ? '#ef4444' : '#fbbf24') : ws % 2 === 0 ? '#e879f9' : isInterceptor ? '#00f5d4' : '#22d3ee',
-              alpha: 0.9,
-              decay: 0.06,
-            });
+        if (hasWarpShip) {
+          if (isRei) {
+            ds.reiBlasters = getReiBlastersWorld(p.x, p.y, p.angle, destructorTargetX, destructorTargetY);
+          } else {
+            const geo = isInterceptor
+              ? getInterceptorBlastersWorld(p.x, p.y, p.angle, destructorTargetX, destructorTargetY)
+              : getDestructorBlastersWorld(p.x, p.y, p.angle, destructorTargetX, destructorTargetY);
+            ds.leftBlasterAngle = geo.leftAngle;
+            ds.rightBlasterAngle = geo.rightAngle;
+            ds.leftMuzzleX = geo.leftMuzzleX;
+            ds.leftMuzzleY = geo.leftMuzzleY;
+            ds.rightMuzzleX = geo.rightMuzzleX;
+            ds.rightMuzzleY = geo.rightMuzzleY;
           }
+
+          // Compute world nozzle coordinates for BOTH rear thrusters
+          const nozzleXOffset = isRei ? -24 : -17;
+          const nozzleYOffset = isRei ? 12 : isInterceptor ? 9 : 8.5;
+          const cosA = Math.cos(p.angle);
+          const sinA = Math.sin(p.angle);
+          const leftNozzleX = p.x + (nozzleXOffset * cosA - -nozzleYOffset * sinA);
+          const leftNozzleY = p.y + (nozzleXOffset * sinA + -nozzleYOffset * cosA);
+          const rightNozzleX = p.x + (nozzleXOffset * cosA - nozzleYOffset * sinA);
+          const rightNozzleY = p.y + (nozzleXOffset * sinA + nozzleYOffset * cosA);
+
+          const movingNow = Math.hypot(p.vx || 0, p.vy || 0) > 8;
+          const trailMaxLife = ds.warpActive ? 0.56 : 0.36;
+
+          // Decay existing thruster trail nodes
+          for (let ti = 0; ti < ds.leftTrail.length; ti++) {
+            ds.leftTrail[ti].life -= dt;
+          }
+          for (let ti = 0; ti < ds.rightTrail.length; ti++) {
+            ds.rightTrail[ti].life -= dt;
+          }
+          ds.leftTrail = ds.leftTrail.filter((pt) => pt.life > 0);
+          ds.rightTrail = ds.rightTrail.filter((pt) => pt.life > 0);
+
+          if (movingNow || ds.warpActive) {
+            ds.leftTrail.push({
+              x: leftNozzleX,
+              y: leftNozzleY,
+              life: trailMaxLife,
+              maxLife: trailMaxLife,
+              warp: ds.warpActive,
+            });
+            ds.rightTrail.push({
+              x: rightNozzleX,
+              y: rightNozzleY,
+              life: trailMaxLife,
+              maxLife: trailMaxLife,
+              warp: ds.warpActive,
+            });
+            const maxPts = ds.warpActive ? 42 : 28;
+            if (ds.leftTrail.length > maxPts) ds.leftTrail.splice(0, ds.leftTrail.length - maxPts);
+            if (ds.rightTrail.length > maxPts) ds.rightTrail.splice(0, ds.rightTrail.length - maxPts);
+          }
+
+          // High-speed Warp / Fury Mode plasma afterburner streaks
+          if (ds.warpActive && (Math.abs(p.vx) > 20 || Math.abs(p.vy) > 20)) {
+            for (let ws = 0; ws < 2; ws++) {
+              particlesRef.current.push({
+                id: `warp-spark-${Date.now()}-${ws}-${Math.random()}`,
+                type: 'SPARK',
+                x: p.x - Math.cos(p.angle) * (isRei ? 24 : 18) + (Math.random() - 0.5) * 18,
+                y: p.y - Math.sin(p.angle) * (isRei ? 24 : 18) + (Math.random() - 0.5) * 18,
+                vx: -p.vx * 0.28 + (Math.random() - 0.5) * 45,
+                vy: -p.vy * 0.28 + (Math.random() - 0.5) * 45,
+                radius: 2.2 + Math.random() * 2.2,
+                color: isRei ? (ws % 2 === 0 ? '#ef4444' : '#fbbf24') : ws % 2 === 0 ? '#e879f9' : isInterceptor ? '#00f5d4' : '#22d3ee',
+                alpha: 0.9,
+                decay: 0.06,
+              });
+            }
+          }
+        } else {
+          ds.leftTrail = [];
+          ds.rightTrail = [];
         }
       } else {
         ds.leftTrail = [];
@@ -4924,6 +5420,61 @@ export default function App() {
           ds.beamTickTimer = 0.05;
           ds.beamSoundTimer = 0.09;
         }
+      } else if (isTroper) {
+        if (shouldFire && !dyingRef.current?.active) {
+          const tw = p.weapons[WeaponType.TROPER] || INITIAL_WEAPONS[WeaponType.TROPER];
+          const shotInterval = 1 / Math.max(0.6, tw.fireRate);
+          ds.beamTickTimer += dt;
+
+          if (ds.beamTickTimer >= shotInterval) {
+            ds.beamTickTimer = 0;
+            sound.playTroperOrb();
+
+            const smTrop = shipMasteryRef.current;
+            const hasTropHoming = hasMasteryNode(smTrop, 'TROPER', 'trop_homing');
+            const hasTropTwin = hasMasteryNode(smTrop, 'TROPER', 'trop_twin');
+            const hasTropHeavy = hasMasteryNode(smTrop, 'TROPER', 'trop_heavy_core');
+
+            masteryCombatTimersRef.current.orbBurstCount += 1;
+            const isDenseOrb = hasTropHeavy && masteryCombatTimersRef.current.orbBurstCount >= 4;
+            if (isDenseOrb) {
+              masteryCombatTimersRef.current.orbBurstCount = 0;
+            }
+
+            const muzzleX = p.x + Math.cos(p.angle) * 16;
+            const muzzleY = p.y + Math.sin(p.angle) * 16;
+            const perpA = shootingAngle + Math.PI / 2;
+            const offsets = hasTropTwin ? [-5.5, 5.5] : [0];
+            const orbSpeed = tw.bulletSpeed || 440;
+            const spread = tw.spread || 0.02;
+
+            for (let oi = 0; oi < offsets.length; oi++) {
+              const finalA = shootingAngle + (Math.random() * spread * 2 - spread);
+              const ox = muzzleX + Math.cos(perpA) * offsets[oi];
+              const oy = muzzleY + Math.sin(perpA) * offsets[oi];
+              const useDense = isDenseOrb && oi === 0;
+              bulletsRef.current.push({
+                id: `trop-orb-${Date.now()}-${oi}-${Math.random()}`,
+                x: ox,
+                y: oy,
+                vx: Math.cos(finalA) * orbSpeed,
+                vy: Math.sin(finalA) * orbSpeed,
+                radius: useDense ? 5.2 : 3.6,
+                damage: useDense ? Math.round(tw.damage * 1.6) : tw.damage,
+                piercingRemaining: tw.piercing,
+                color: useDense ? '#7dd3fc' : tw.color || '#38bdf8',
+                distanceTraveled: 0,
+                maxDistance: 720,
+                ownerAngle: finalA,
+                isOrb: true,
+                homingStrength: hasTropHoming ? 3.0 : 0,
+                weaponType: WeaponType.TROPER,
+              });
+            }
+          }
+        } else {
+          ds.beamTickTimer = 0.25;
+        }
       } else if (isEastDragon) {
         if (shouldFire && !dyingRef.current?.active) {
           const edw = p.weapons[WeaponType.EAST_DRAGON] || INITIAL_WEAPONS[WeaponType.EAST_DRAGON];
@@ -5584,6 +6135,60 @@ export default function App() {
         p.hp = Math.min(p.maxHp, p.hp + p.regenHpRate * dt);
       }
 
+      // Operator Skin Special Runtime Perks (Cryo Chill & Volt Static Zap)
+      if (!dyingRef.current?.active && p.equippedSkin) {
+        if (p.equippedSkin === 'skin_cryo_warden') {
+          skinEffectTimerRef.current.cryoChill += dt;
+          if (skinEffectTimerRef.current.cryoChill >= 0.25) {
+            skinEffectTimerRef.current.cryoChill = 0;
+            for (let zi = 0; zi < zombiesRef.current.length; zi++) {
+              const cz = zombiesRef.current[zi];
+              if (cz.hp <= 0) continue;
+              if (Math.hypot(cz.x - p.x, cz.y - p.y) <= 105 + cz.radius) {
+                cz.isStunned = true;
+                cz.stunTimer = Math.max(cz.stunTimer, 0.14);
+              }
+            }
+          }
+        } else if (p.equippedSkin === 'skin_volt_cyber') {
+          skinEffectTimerRef.current.voltZap += dt;
+          if (skinEffectTimerRef.current.voltZap >= 1.1) {
+            skinEffectTimerRef.current.voltZap = 0;
+            let zapped = 0;
+            const shockDmg = 18 + waveRef.current * 3;
+            for (let zi = 0; zi < zombiesRef.current.length && zapped < 2; zi++) {
+              const vz = zombiesRef.current[zi];
+              if (vz.hp <= 0) continue;
+              if (Math.hypot(vz.x - p.x, vz.y - p.y) <= 125 + vz.radius) {
+                zapped++;
+                vz.hp -= shockDmg;
+                vz.isStunned = true;
+                vz.stunTimer = Math.max(vz.stunTimer, 0.22);
+                const midX = (p.x + vz.x) * 0.5 + (Math.random() - 0.5) * 18;
+                const midY = (p.y + vz.y) * 0.5 + (Math.random() - 0.5) * 18;
+                particlesRef.current.push({
+                  id: `volt-skin-${Date.now()}-${zi}-${Math.random()}`,
+                  type: 'ENERGY_ARC',
+                  x: p.x,
+                  y: p.y,
+                  vx: 0,
+                  vy: 0,
+                  radius: 2,
+                  color: '#22d3ee',
+                  alpha: 1,
+                  decay: 0.16,
+                  points: [
+                    { x: midX, y: midY },
+                    { x: vz.x, y: vz.y },
+                  ],
+                });
+                if (vz.hp <= 0) handleZombieDeath(vz, 1);
+              }
+            }
+          }
+        }
+      }
+
       // ============================================================
       // 2b. ACTIVE MYTHIC & LEGENDARY POWER-UPS COMBAT RUNTIME
       // ============================================================
@@ -5960,6 +6565,9 @@ export default function App() {
           }
         }
       }
+      if (activeBullets.length > 320) {
+        activeBullets.splice(0, activeBullets.length - 320);
+      }
       bulletsRef.current = activeBullets;
 
       // 4. UPDATE ZOMBIES
@@ -5969,7 +6577,10 @@ export default function App() {
 
       for (let i = 0; i < zombies.length; i++) {
         const z = zombies[i];
-        if (z.hp <= 0) continue;
+        if (z.hp <= 0) {
+          if (!z.isDead) handleZombieDeath(z, 1);
+          continue;
+        }
 
         // Apply stun states
         if (z.isStunned) {
@@ -6418,6 +7029,31 @@ export default function App() {
               }
             } else {
               z.hp -= hitDamage;
+              if (b.isIgnite) {
+                z.isOnFire = true;
+                z.burnTimer = Math.max(z.burnTimer || 0, 2.8);
+              }
+              if (b.weaponType === WeaponType.TROPER && b.radius >= 5.0) {
+                const splashDmg = Math.max(4, Math.round(hitDamage * 0.6));
+                particlesRef.current.push({
+                  id: `trop-dense-ring-${Date.now()}-${Math.random()}`,
+                  type: 'PLASMA_RING',
+                  x: b.x,
+                  y: b.y,
+                  vx: 0,
+                  vy: 0,
+                  radius: 8,
+                  growthSpeed: 280,
+                  color: '#38bdf8',
+                  alpha: 0.85,
+                  decay: 0.075,
+                });
+                zombiesRef.current.forEach((nz) => {
+                  if (nz.id !== z.id && nz.hp > 0 && Math.hypot(nz.x - b.x, nz.y - b.y) <= 72 + nz.radius) {
+                    nz.hp -= splashDmg;
+                  }
+                });
+              }
               b.piercingRemaining--;
             }
 
@@ -6459,45 +7095,63 @@ export default function App() {
               });
             }
 
-            // Mode-specific blood / plasma impact particles
+            // Mode-specific realistic impact blood / alien ichor droplets (no continuous arterial gushing)
             const isAlienUnit = modeRef.current === GameMode.ALIEN;
-            const bloodColor = isAlienUnit 
-              ? (z.type === ZombieType.ALIEN_OVERLORD ? '#ec4899' : z.type === ZombieType.ALIEN_DRONE ? '#c084fc' : '#00ffcc')
-              : (z.type === ZombieType.BOSS ? '#c084fc' : z.type === ZombieType.TOXIC_SPITTER ? '#84cc16' : z.type === ZombieType.RUNNER ? '#f87171' : '#15803d');
+            const bloodPalette = isAlienUnit
+              ? (z.isBoss || z.type === ZombieType.ALIEN_OVERLORD
+                  ? ['#ec4899', '#f43f5e', '#9d174d']
+                  : z.type === ZombieType.ALIEN_DRONE
+                    ? ['#c084fc', '#a855f7', '#06b6d4']
+                    : ['#00ffcc', '#2dd4bf', '#0e7490'])
+              : (z.isBoss
+                  ? ['#991b1b', '#7f1d1d', '#be123c']
+                  : z.type === ZombieType.TOXIC_SPITTER
+                    ? ['#84cc16', '#65a30d', '#3f6212']
+                    : ['#450a0a', '#7f1d1d', '#991b1b', '#b91c1c', '#dc2626']);
 
-            for (let k = 0; k < 8; k++) {
-              const bloodAngle = b.ownerAngle + (Math.random() * 1.5 - 0.75);
-              const bloodSpeed = 60 + Math.random() * 130;
+            const exitAngle = b.ownerAngle;
+            const woundX = z.x + Math.cos(b.ownerAngle) * (z.radius * 0.45);
+            const woundY = z.y + Math.sin(b.ownerAngle) * (z.radius * 0.45);
+            const isHeavyImpact = b.damage >= 35 || p.currentWeapon === WeaponType.SHOTGUN || p.currentWeapon === WeaponType.SNIPER;
+
+            // Natural kinetic exit/impact blood droplets
+            const dropCount = isHeavyImpact ? 8 : 5;
+            for (let k = 0; k < dropCount; k++) {
+              const sprayAngle = exitAngle + (Math.random() - 0.5) * 1.15;
+              const spraySpeed = (isHeavyImpact ? 75 : 50) + Math.random() * 115;
               particlesRef.current.push({
-                id: `blood-${Date.now()}-${k}-${Math.random()}`,
-                type: isAlienUnit ? 'ALIEN_PLASMA' : 'BLOOD',
-                x: z.x,
-                y: z.y,
-                vx: Math.cos(bloodAngle) * bloodSpeed,
-                vy: Math.sin(bloodAngle) * bloodSpeed,
-                radius: 2 + Math.random() * 3,
-                color: bloodColor,
-                alpha: 1,
-                decay: 0.02 + Math.random() * 0.03,
+                id: `blood-drop-${Date.now()}-${k}-${Math.random()}`,
+                type: isAlienUnit ? 'ALIEN_BLOOD' : z.type === ZombieType.TOXIC_SPITTER ? 'TOXIC_ACID' : 'BLOOD',
+                x: woundX + (Math.random() - 0.5) * 6,
+                y: woundY + (Math.random() - 0.5) * 6,
+                vx: Math.cos(sprayAngle) * spraySpeed,
+                vy: Math.sin(sprayAngle) * spraySpeed,
+                radius: 1.4 + Math.random() * 1.9,
+                color: bloodPalette[k % bloodPalette.length],
+                alpha: 0.94,
+                decay: 0.025 + Math.random() * 0.02,
               });
             }
 
-            // Floor splatter chance on hits
-            if (Math.random() < 0.35) {
-              const dropColor = isAlienUnit
-                ? (z.type === ZombieType.ALIEN_OVERLORD ? '#831843' : '#083344')
-                : (z.type === ZombieType.BOSS ? '#6b21a8' : '#022c22');
-
+            // Compact organic floor splatter near wound
+            const floorColor = isAlienUnit
+              ? (z.isBoss || z.type === ZombieType.ALIEN_OVERLORD ? '#9d174d' : z.type === ZombieType.ALIEN_DRONE ? '#6b21a8' : '#0e7490')
+              : (z.isBoss ? '#450a0a' : z.type === ZombieType.TOXIC_SPITTER ? '#3f6212' : '#7f1d1d');
+            if (isHeavyImpact || Math.random() < 0.6) {
+              const splatA = exitAngle + (Math.random() - 0.5) * 0.85;
+              const splatDist = z.radius * 0.5 + Math.random() * 16;
               bloodSplatsRef.current.push({
-                x: z.x + (Math.random() * 16 - 8),
-                y: z.y + (Math.random() * 16 - 8),
-                radius: z.radius * (0.3 + Math.random() * 0.4),
-                alpha: 0.35 + Math.random() * 0.25,
-                color: dropColor,
+                x: woundX + Math.cos(splatA) * splatDist,
+                y: woundY + Math.sin(splatA) * splatDist,
+                radius: 2.8 + Math.random() * 3.4,
+                alpha: 0.56 + Math.random() * 0.2,
+                color: Math.random() < 0.45 && !isAlienUnit && z.type !== ZombieType.TOXIC_SPITTER ? '#450a0a' : floorColor,
+                angle: splatA,
+                stretch: 1.0 + Math.random() * 0.3,
               });
-              if (bloodSplatsRef.current.length > 140) {
-                bloodSplatsRef.current.shift();
-              }
+            }
+            while (bloodSplatsRef.current.length > 160) {
+              bloodSplatsRef.current.shift();
             }
 
             // Enemy Death Trigger
@@ -6610,8 +7264,29 @@ export default function App() {
 
         if (pt.type === 'SMOKE') {
           if (pt.growthSpeed !== undefined) pt.radius += pt.growthSpeed * dt;
-          pt.vx *= Math.exp(-4 * dt);
-          pt.vy *= Math.exp(-4 * dt);
+          // Swirling turbulent curl + upward thermal drift
+          if (pt.rotation !== undefined) {
+            pt.vx += Math.cos(pt.rotation) * 20 * dt;
+            pt.vy += (Math.sin(pt.rotation) * 14 - 16) * dt;
+          }
+          pt.vx *= Math.exp(-2.8 * dt);
+          pt.vy *= Math.exp(-2.8 * dt);
+        }
+
+        if (pt.type === 'BLOOD' || pt.type === 'ALIEN_BLOOD' || pt.type === 'ALIEN_PLASMA' || pt.type === 'TOXIC_ACID') {
+          pt.vx *= Math.exp(-3.1 * dt);
+          pt.vy *= Math.exp(-3.1 * dt);
+
+          // Settle small organic blood drop onto the floor when heavy droplet finishes
+          if (pt.alpha <= 0.06 && pt.alpha > 0 && Math.random() < 0.18 && bloodSplatsRef.current.length < 160) {
+            bloodSplatsRef.current.push({
+              x: pt.x,
+              y: pt.y,
+              radius: Math.max(2.2, pt.radius * 1.15),
+              alpha: 0.5,
+              color: pt.color,
+            });
+          }
         }
 
         if (pt.type === 'MUZZLE_FLARE' && pt.growthSpeed !== undefined) {
@@ -6626,8 +7301,8 @@ export default function App() {
           activeParticles.push(pt);
         }
       }
-      if (activeParticles.length > 260) {
-        activeParticles.splice(0, activeParticles.length - 260);
+      if (activeParticles.length > 320) {
+        activeParticles.splice(0, activeParticles.length - 320);
       }
       particlesRef.current = activeParticles;
 
@@ -6655,6 +7330,17 @@ export default function App() {
 
       dynamicSpreadRef.current *= Math.exp(-6 * dt);
       if (dynamicSpreadRef.current < 0.001) dynamicSpreadRef.current = 0;
+
+      // Decay transient explosion/impact flash lights
+      if (flashLightsRef.current.length > 0) {
+        const nextLights: SceneFlashLight[] = [];
+        for (let i = 0; i < flashLightsRef.current.length; i++) {
+          const fl = flashLightsRef.current[i];
+          fl.alpha -= fl.decay * dt;
+          if (fl.alpha > 0.01) nextLights.push(fl);
+        }
+        flashLightsRef.current = nextLights;
+      }
     };
 
     // Spawn sparkles on item collection
@@ -6706,90 +7392,36 @@ export default function App() {
       const viewRight = camX + canvas.width;
       const viewBottom = camY + canvas.height;
 
-      // 1. DRAW TILE GRID LINES (Batched into a single path stroke for max FPS)
+      // 1. DRAW REALISTIC TEXTURED ARENA SURFACE & PERIMETER WALLS (Pre-cached offscreen tile)
       const isAlienStage = modeRef.current === GameMode.ALIEN;
-      ctx.strokeStyle = isAlienStage ? 'rgba(6, 182, 212, 0.18)' : 'rgba(51, 65, 85, 0.25)';
-      ctx.lineWidth = 1;
-      const gridSize = 80;
-      const startX = Math.floor(camX / gridSize) * gridSize;
-      const startY = Math.floor(camY / gridSize) * gridSize;
-      const endX = startX + canvas.width + gridSize;
-      const endY = startY + canvas.height + gridSize;
-      const minLineY = Math.max(0, camY) - camY;
-      const maxLineY = Math.min(ARENA_SIZE, camY + canvas.height) - camY;
-      const minLineX = Math.max(0, camX) - camX;
-      const maxLineX = Math.min(ARENA_SIZE, camX + canvas.width) - camX;
+      renderArenaGround(ctx, camX, camY, canvas.width, canvas.height, ARENA_SIZE, isAlienStage);
 
-      ctx.beginPath();
-      for (let x = startX; x <= endX; x += gridSize) {
-        if (x >= 0 && x <= ARENA_SIZE) {
-          const sx = x - camX;
-          ctx.moveTo(sx, minLineY);
-          ctx.lineTo(sx, maxLineY);
-        }
-      }
-      for (let y = startY; y <= endY; y += gridSize) {
-        if (y >= 0 && y <= ARENA_SIZE) {
-          const sy = y - camY;
-          ctx.moveTo(minLineX, sy);
-          ctx.lineTo(maxLineX, sy);
-        }
-      }
-      ctx.stroke();
+      // 2. DRAW ORGANIC BLOOD SPLATTERS & SCORCH CRATERS (Culled)
+      renderRealisticSplats(
+        ctx,
+        bloodSplatsRef.current,
+        camX,
+        camY,
+        viewLeft,
+        viewTop,
+        viewRight,
+        viewBottom
+      );
 
-      // 2. DRAW ARENA BOUNDARY BORDERS (No shadowBlur)
-      ctx.strokeStyle = isAlienStage ? '#06b6d4' : '#7f1d1d';
-      ctx.lineWidth = 10;
-      ctx.strokeRect(-camX, -camY, ARENA_SIZE, ARENA_SIZE);
-
-      // 3. DRAW PERMANENT BLOOD SPLATTERS (Culled + no per-splat save/restore)
-      const splats = bloodSplatsRef.current;
-      for (let i = 0; i < splats.length; i++) {
-        const s = splats[i];
-        if (
-          s.x + s.radius < viewLeft ||
-          s.x - s.radius > viewRight ||
-          s.y + s.radius < viewTop ||
-          s.y - s.radius > viewBottom
-        ) {
-          continue;
-        }
-        ctx.globalAlpha = s.alpha;
-        ctx.fillStyle = s.color;
-        ctx.beginPath();
-        ctx.arc(s.x - camX, s.y - camY, s.radius, 0, Math.PI * 2);
-        ctx.fill();
-      }
-      ctx.globalAlpha = 1;
-
-      // 3b. DRAW MUZZLE FLASH AMBIENT GLOW (Fast layered circles instead of createRadialGradient)
-      if (muzzleFlashIntensityRef.current > 0) {
-        let rgbColor = '251, 191, 36';
-        if (p.currentWeapon === WeaponType.SHOTGUN) rgbColor = '248, 113, 113';
-        else if (p.currentWeapon === WeaponType.MACHINE_GUN) rgbColor = '167, 139, 250';
-        else if (p.currentWeapon === WeaponType.PLASMA_RIFLE) rgbColor = '56, 189, 248';
-
-        const flashX = p.x + Math.cos(p.angle) * (p.radius + 15) - camX;
-        const flashY = p.y + Math.sin(p.angle) * (p.radius + 15) - camY;
-        const glowRadius =
-          (p.currentWeapon === WeaponType.PLASMA_RIFLE
-            ? 150
-            : p.currentWeapon === WeaponType.SHOTGUN
-              ? 130
-              : 95) * muzzleFlashIntensityRef.current;
-
-        ctx.save();
-        ctx.globalCompositeOperation = 'lighter';
-        ctx.fillStyle = `rgba(${rgbColor}, ${(0.14 * muzzleFlashIntensityRef.current).toFixed(3)})`;
-        ctx.beginPath();
-        ctx.arc(flashX, flashY, glowRadius, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = `rgba(${rgbColor}, ${(0.24 * muzzleFlashIntensityRef.current).toFixed(3)})`;
-        ctx.beginPath();
-        ctx.arc(flashX, flashY, glowRadius * 0.45, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
-      }
+      // 3. DRAW GROUNDED CAST SHADOWS UNDER ALL ENTITIES
+      renderGroundCastShadows(
+        ctx,
+        p,
+        zombiesRef.current,
+        itemDropsRef.current,
+        camX,
+        camY,
+        viewLeft,
+        viewTop,
+        viewRight,
+        viewBottom,
+        Boolean(dyingRef.current?.active)
+      );
 
       // 4. DRAW CONSUMABLE ITEM DROPS (Culled + fast glow ring instead of shadowBlur)
       const drops = itemDropsRef.current;
@@ -6942,12 +7574,22 @@ export default function App() {
         ctx.arc(0, 0, z.radius * 0.78, 0, Math.PI * 2);
         ctx.fill();
 
-        // Fire aura if burning (fast layered translucent halo without shadowBlur)
+        // Realistic flickering multi-tongue fire on ignited enemies
         if (z.isOnFire) {
-          ctx.fillStyle = 'rgba(249, 115, 22, 0.34)';
+          const fWave = time * 0.018 + i * 1.7;
+          ctx.fillStyle = 'rgba(249, 115, 22, 0.36)';
           ctx.beginPath();
-          ctx.arc(0, 0, z.radius + 6, 0, Math.PI * 2);
+          ctx.arc(0, 0, z.radius + 5 + Math.sin(fWave) * 1.5, 0, Math.PI * 2);
           ctx.fill();
+          for (let ft = 0; ft < 3; ft++) {
+            const ta = fWave * 0.6 + (ft * Math.PI * 2) / 3;
+            const fx = Math.cos(ta) * (z.radius * 0.65);
+            const fy = Math.sin(ta) * (z.radius * 0.65);
+            ctx.fillStyle = ft === 0 ? 'rgba(254, 240, 138, 0.72)' : 'rgba(251, 146, 60, 0.68)';
+            ctx.beginPath();
+            ctx.arc(fx, fy, 4 + Math.sin(fWave + ft) * 1.6, 0, Math.PI * 2);
+            ctx.fill();
+          }
         }
 
         // Stroke outline
@@ -7280,7 +7922,7 @@ export default function App() {
         ctx.ellipse(3, 4, p.radius * (1 - deathProgress * 0.15), p.radius * 0.7, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        renderOperatorBody(ctx, 'skin_default', p.radius, time, false, deathProgress);
+        renderOperatorBody(ctx, p.equippedSkin || 'skin_default', p.radius, time, false, deathProgress);
         ctx.restore();
       } else {
         const isMoving = Math.hypot(p.vx || 0, p.vy || 0) > 10;
@@ -7291,24 +7933,28 @@ export default function App() {
         }
 
         if (
+          p.currentWeapon === WeaponType.TROPER ||
           p.currentWeapon === WeaponType.DESTRUCTOR ||
           p.currentWeapon === WeaponType.INTERCEPTOR ||
           p.currentWeapon === WeaponType.NAVE_REI
         ) {
           const ds = destructorStateRef.current;
           const isReiDraw = p.currentWeapon === WeaponType.NAVE_REI;
+          const isTroperDraw = p.currentWeapon === WeaponType.TROPER;
 
-          // A0: Continuous Thruster Exhaust Ribbon Trails behind both rear nozzles
-          renderDestructorThrusterTrails(
-            ctx,
-            ds.leftTrail,
-            ds.rightTrail,
-            camX,
-            camY,
-            ds.warpActive,
-            time,
-            isReiDraw && (ds.warpActive || ds.warpChargeTimer > 0.6)
-          );
+          // A0: Continuous Thruster Exhaust Ribbon Trails behind both rear nozzles (not used on Troper mini-ship)
+          if (!isTroperDraw) {
+            renderDestructorThrusterTrails(
+              ctx,
+              ds.leftTrail,
+              ds.rightTrail,
+              camX,
+              camY,
+              ds.warpActive,
+              time,
+              isReiDraw && (ds.warpActive || ds.warpChargeTimer > 0.6)
+            );
+          }
 
           const smDraw = shipMasteryRef.current;
           const hasCapDraw = hasMasteryNode(smDraw, 'DESTRUCTOR', 'dest_capacitor');
@@ -7317,7 +7963,19 @@ export default function App() {
           const destWarpMax = hasCapDraw ? 10.0 : 8.0;
           const reiChargeMax = hasReiCoreDraw ? 4.5 : 6.0;
 
-          if (p.currentWeapon === WeaponType.DESTRUCTOR) {
+          if (p.currentWeapon === WeaponType.TROPER) {
+            renderTroperShip(
+              ctx,
+              spX,
+              spY,
+              p.angle,
+              isMoving,
+              ds.isFiring,
+              time,
+              p.shield,
+              ds.angularVel
+            );
+          } else if (p.currentWeapon === WeaponType.DESTRUCTOR) {
             // A: Continuous Twin Laser Beams when firing (+ 3rd center singularity beam if unlocked)
             if (ds.isFiring) {
               const BEAM_RANGE = 950;
@@ -7508,19 +8166,28 @@ export default function App() {
             p.shield
           );
         } else {
-          // Spawn subtle motion trail particles if moving
-          if (isMoving && Math.random() < 0.45) {
+          // Spawn special operator skin / motion trail particles when moving
+          const activeSkinDef = getOperatorSkinById(p.equippedSkin);
+          if (isMoving && Math.random() < (p.equippedSkin && p.equippedSkin !== 'skin_default' ? 0.65 : 0.45)) {
+            const pColor = activeSkinDef.accentColor || '#38bdf8';
+            const pType =
+              p.equippedSkin === 'skin_pyro_igniter'
+                ? 'FLAME'
+                : p.equippedSkin === 'skin_hazard_juggernaut'
+                  ? 'SMOKE'
+                  : 'SPARK';
             particlesRef.current.push({
               id: `ptrail-${Date.now()}-${Math.random()}`,
-              type: 'SPARK',
-              x: p.x + (Math.random() - 0.5) * 8,
-              y: p.y + (Math.random() - 0.5) * 8,
-              vx: -(p.vx || 0) * 0.15,
-              vy: -(p.vy || 0) * 0.15,
-              radius: 2 + Math.random() * 2,
-              color: '#38bdf8',
-              alpha: 0.6,
-              decay: 0.05,
+              type: pType,
+              x: p.x + (Math.random() - 0.5) * 10,
+              y: p.y + (Math.random() - 0.5) * 10,
+              vx: -(p.vx || 0) * 0.16 + (Math.random() - 0.5) * 18,
+              vy: -(p.vy || 0) * 0.16 + (Math.random() - 0.5) * 18,
+              radius: pType === 'SMOKE' ? 4.2 : 2.2 + Math.random() * 2,
+              growthSpeed: pType === 'SMOKE' ? 12 : undefined,
+              color: pType === 'SMOKE' ? 'rgba(132, 204, 22, 0.45)' : pColor,
+              alpha: pType === 'SMOKE' ? 0.42 : 0.72,
+              decay: pType === 'SMOKE' ? 0.032 : 0.055,
             });
           }
 
@@ -7537,8 +8204,8 @@ export default function App() {
           ctx.arc(3, 3, p.radius, 0, Math.PI * 2);
           ctx.fill();
 
-          // C: Draw rich bespoke tactical operator suit, armor plates, and visor
-          renderOperatorBody(ctx, 'skin_default', p.radius, time, isMoving, 0);
+          // C: Draw rich bespoke tactical operator suit, armor plates, visor & skin FX
+          renderOperatorBody(ctx, p.equippedSkin || 'skin_default', p.radius, time, isMoving, 0);
 
           ctx.restore();
 
@@ -7777,8 +8444,57 @@ export default function App() {
           }
           ctx.stroke();
         } else if (pt.type === 'SMOKE') {
+          renderRealisticSmokeParticle(
+            ctx,
+            pt.x - camX,
+            pt.y - camY,
+            Math.max(1.5, pt.radius),
+            pt.alpha,
+            pt.rotation || 0,
+            pt.color
+          );
+        } else if (pt.type === 'BLOOD' || pt.type === 'ALIEN_BLOOD' || pt.type === 'ALIEN_PLASMA' || pt.type === 'TOXIC_ACID') {
+          const bx = pt.x - camX;
+          const by = pt.y - camY;
+          const speed = Math.hypot(pt.vx, pt.vy);
+          const streakAngle = speed > 10 ? Math.atan2(pt.vy, pt.vx) : 0;
+          const tailLen = pt.radius * Math.min(2.05, 1.05 + speed / 155);
+          const headR = Math.max(1.2, pt.radius * 0.82);
+
+          ctx.translate(bx, by);
+          ctx.rotate(streakAngle);
+
+          if (pt.type === 'ALIEN_BLOOD' || pt.type === 'ALIEN_PLASMA') {
+            ctx.globalAlpha = pt.alpha * 0.22;
+            ctx.fillStyle = pt.color;
+            ctx.beginPath();
+            ctx.ellipse(-tailLen * 0.2, 0, tailLen * 0.78, headR * 1.45, 0, 0, Math.PI * 2);
+            ctx.fill();
+          }
+
+          // Natural viscous blood/ichor droplet shape
+          ctx.globalAlpha = pt.alpha * 0.92;
+          ctx.fillStyle = pt.color;
           ctx.beginPath();
-          ctx.arc(pt.x - camX, pt.y - camY, pt.radius, 0, Math.PI * 2);
+          ctx.moveTo(-tailLen, 0);
+          ctx.quadraticCurveTo(-tailLen * 0.22, -headR * 0.85, headR * 0.2, -headR);
+          ctx.arc(headR * 0.2, 0, headR, -Math.PI * 0.5, Math.PI * 0.5);
+          ctx.quadraticCurveTo(-tailLen * 0.22, headR * 0.85, -tailLen, 0);
+          ctx.closePath();
+          ctx.fill();
+
+          // Deep coagulated core (or glowing core for alien ichor)
+          ctx.globalAlpha = pt.alpha * 0.45;
+          ctx.fillStyle = pt.type === 'ALIEN_BLOOD' || pt.type === 'ALIEN_PLASMA' ? '#ffffff' : '#450a0a';
+          ctx.beginPath();
+          ctx.arc(headR * 0.05, 0, headR * 0.48, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Wet specular highlight
+          ctx.globalAlpha = pt.alpha * 0.42;
+          ctx.fillStyle = '#ffffff';
+          ctx.beginPath();
+          ctx.arc(headR * 0.35, -headR * 0.3, Math.max(0.65, headR * 0.24), 0, Math.PI * 2);
           ctx.fill();
         } else if (pt.type === 'MUZZLE_FLARE') {
           const rx = pt.x - camX;
@@ -7812,6 +8528,43 @@ export default function App() {
           ctx.fill();
         }
         ctx.restore();
+      }
+
+      // 8b. DYNAMIC MULTI-SOURCE ENVIRONMENTAL & COMBAT LIGHTING (NO FLASHLIGHT!)
+      renderSceneLighting(
+        ctx,
+        p,
+        zombiesRef.current,
+        bulletsRef.current,
+        itemDropsRef.current,
+        flashLightsRef.current,
+        camX,
+        camY,
+        canvas.width,
+        canvas.height,
+        ARENA_SIZE,
+        isAlienStage,
+        muzzleFlashIntensityRef.current,
+        time
+      );
+
+      // 8c. ATMOSPHERIC DRIFTING ASH / BIO-SPORES
+      renderAtmosphericDust(ctx, canvas.width, canvas.height, lastDrawDtRef.current, isAlienStage, time);
+
+      // 8d. GAMEPAD 360° RIGHT-STICK AIM RETICLE
+      if (
+        gameState === GameState.PLAYING &&
+        !dyingRef.current?.active &&
+        gamepadSnapshotRef.current.connected
+      ) {
+        renderGamepadAimReticle(
+          ctx,
+          spX,
+          spY,
+          p.angle,
+          gamepadSnapshotRef.current.aimActive,
+          time
+        );
       }
 
       // 9. DRAW "WAVE TRANSITION / INCOMING HORDE" ALERTS OVERLAYS
@@ -8065,6 +8818,10 @@ export default function App() {
             equippedWeapon={equippedWeapon}
             onBuyWeapon={handleBuyWeapon}
             onEquipWeapon={handleEquipWeapon}
+            unlockedSkins={unlockedSkins}
+            equippedSkin={equippedSkin}
+            onBuySkin={handleBuySkin}
+            onEquipSkin={handleEquipSkin}
             onBuyShieldUpgrade={handleBuyShieldUpgrade}
             onBuyHealthUpgrade={handleBuyHealthUpgrade}
             onBuySpeedUpgrade={handleBuySpeedUpgrade}
@@ -8124,19 +8881,23 @@ export default function App() {
             onLeftJoystick={handleLeftJoystick}
             onRightJoystick={handleRightJoystick}
             isShip={
+              hudPlayer.currentWeapon === WeaponType.TROPER ||
               hudPlayer.currentWeapon === WeaponType.DESTRUCTOR ||
               hudPlayer.currentWeapon === WeaponType.INTERCEPTOR ||
               hudPlayer.currentWeapon === WeaponType.NAVE_REI
             }
             shipType={
-              hudPlayer.currentWeapon === WeaponType.NAVE_REI
-                ? 'NAVE_REI'
-                : hudPlayer.currentWeapon === WeaponType.INTERCEPTOR
-                ? 'INTERCEPTOR'
-                : hudPlayer.currentWeapon === WeaponType.DESTRUCTOR
-                ? 'DESTRUCTOR'
-                : null
+              hudPlayer.currentWeapon === WeaponType.TROPER
+                ? 'TROPER'
+                : hudPlayer.currentWeapon === WeaponType.NAVE_REI
+                  ? 'NAVE_REI'
+                  : hudPlayer.currentWeapon === WeaponType.INTERCEPTOR
+                    ? 'INTERCEPTOR'
+                    : hudPlayer.currentWeapon === WeaponType.DESTRUCTOR
+                      ? 'DESTRUCTOR'
+                      : null
             }
+            showWarp={hudPlayer.currentWeapon !== WeaponType.TROPER}
             warpChargeProgress={destructorWarpHud.chargeProgress}
             warpActive={destructorWarpHud.active}
             warpRemainingRatio={destructorWarpHud.remainingRatio}

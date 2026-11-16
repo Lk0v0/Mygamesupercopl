@@ -1,57 +1,239 @@
 import React, { useEffect, useRef } from 'react';
 
 /**
- * Renders the clean, standard tactical operator body (Vanguarda-01).
+ * Renders the top-down tactical operator body tailored to the equipped skin,
+ * complete with animated armor details and special visual effects (zero shadowBlur for 60fps).
  */
 export function renderOperatorBody(
   ctx: CanvasRenderingContext2D,
-  _skinId: string,
+  skinId: string,
   radius: number,
-  _time: number,
-  _isMoving: boolean,
+  time: number,
+  isMoving: boolean,
   deathProgress: number = 0
 ) {
   ctx.save();
 
-  // If dying, apply ragdoll collapse flattening and rotation
+  // If dying, apply ragdoll collapse flattening
   if (deathProgress > 0) {
     const collapseScale = 1 - deathProgress * 0.25;
     ctx.scale(collapseScale, collapseScale * (1 - deathProgress * 0.15));
   }
 
-  // === RECRUTA DE CHOQUE (VANGUARDA-01) ===
-  // Elite tactical assault soldier with modern high-cut ballistic helmet, NVG mount,
-  // tactical polarized cyan HUD visor, and MOLLE chest armor.
+  const dead = deathProgress > 0;
+  const pulse = 0.75 + Math.sin(time * 0.008) * 0.25;
 
-  // Base High-Spec Ballistic Armor (darkens if dying)
+  // Color palette per skin
+  let coreColor = '#60a5fa';
+  let midColor = '#2563eb';
+  let rimDark = '#1e3a8a';
+  let outerStroke = '#3b82f6';
+  let visorColor = '#38bdf8';
+  let pauldronColor = '#1e40af';
+  let strapColor = '#1d4ed8';
+
+  switch (skinId) {
+    case 'skin_ghost_recon':
+      coreColor = '#334155';
+      midColor = '#1e293b';
+      rimDark = '#020617';
+      outerStroke = '#f43f5e';
+      visorColor = '#fb7185';
+      pauldronColor = '#0f172a';
+      strapColor = '#be123c';
+      break;
+    case 'skin_hazard_juggernaut':
+      coreColor = '#facc15';
+      midColor = '#ca8a04';
+      rimDark = '#3f6212';
+      outerStroke = '#a3e635';
+      visorColor = '#bef264';
+      pauldronColor = '#365314';
+      strapColor = '#1e293b';
+      break;
+    case 'skin_pyro_igniter':
+      coreColor = '#dc2626';
+      midColor = '#7f1d1d';
+      rimDark = '#1c1917';
+      outerStroke = '#f97316';
+      visorColor = '#fb923c';
+      pauldronColor = '#450a0a';
+      strapColor = '#ea580c';
+      break;
+    case 'skin_cryo_warden':
+      coreColor = '#e0f2fe';
+      midColor = '#0284c7';
+      rimDark = '#0c4a6e';
+      outerStroke = '#7dd3fc';
+      visorColor = '#bae6fd';
+      pauldronColor = '#0369a1';
+      strapColor = '#e0f2fe';
+      break;
+    case 'skin_volt_cyber':
+      coreColor = '#334155';
+      midColor = '#0f172a';
+      rimDark = '#020617';
+      outerStroke = '#22d3ee';
+      visorColor = '#22d3ee';
+      pauldronColor = '#164e63';
+      strapColor = '#06b6d4';
+      break;
+    case 'skin_solar_valkyrie':
+      coreColor = '#fffbeb';
+      midColor = '#f59e0b';
+      rimDark = '#78350f';
+      outerStroke = '#fde047';
+      visorColor = '#fef08a';
+      pauldronColor = '#b45309';
+      strapColor = '#e879f9';
+      break;
+    default:
+      break;
+  }
+
+  // Skin-specific outer animated aura / special FX beneath suit (when alive)
+  if (!dead) {
+    if (skinId === 'skin_pyro_igniter') {
+      ctx.globalAlpha = 0.22 * pulse;
+      ctx.fillStyle = '#f97316';
+      ctx.beginPath();
+      ctx.arc(0, 0, radius + 6, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    } else if (skinId === 'skin_cryo_warden') {
+      ctx.globalAlpha = 0.2 * pulse;
+      ctx.fillStyle = '#7dd3fc';
+      ctx.beginPath();
+      ctx.arc(0, 0, radius + 6, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    } else if (skinId === 'skin_volt_cyber') {
+      ctx.strokeStyle = `rgba(34, 211, 238, ${(0.45 * pulse).toFixed(2)})`;
+      ctx.lineWidth = 1.6;
+      const rot = time * 0.005;
+      ctx.beginPath();
+      ctx.arc(0, 0, radius + 5, rot, rot + 1.3);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(0, 0, radius + 5, rot + Math.PI, rot + Math.PI + 1.3);
+      ctx.stroke();
+    } else if (skinId === 'skin_solar_valkyrie') {
+      // Radiant golden-prismatic orbital ring + 3 floating star shards
+      ctx.strokeStyle = 'rgba(253, 224, 71, 0.45)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(0, 0, radius + 7, 0, Math.PI * 2);
+      ctx.stroke();
+
+      for (let i = 0; i < 3; i++) {
+        const a = time * 0.0038 + (i * Math.PI * 2) / 3;
+        const ox = Math.cos(a) * (radius + 7);
+        const oy = Math.sin(a) * (radius + 7);
+        ctx.fillStyle = i % 2 === 0 ? '#fde047' : '#e879f9';
+        ctx.beginPath();
+        ctx.moveTo(ox + Math.cos(a) * 4, oy + Math.sin(a) * 4);
+        ctx.lineTo(ox + Math.cos(a + 2.2) * 3, oy + Math.sin(a + 2.2) * 3);
+        ctx.lineTo(ox + Math.cos(a - 2.2) * 3, oy + Math.sin(a - 2.2) * 3);
+        ctx.closePath();
+        ctx.fill();
+      }
+    } else if (skinId === 'skin_ghost_recon' && isMoving) {
+      // Subtle stealth afterimage silhouette trailing backwards
+      ctx.fillStyle = 'rgba(244, 63, 94, 0.2)';
+      ctx.beginPath();
+      ctx.arc(-5, 0, radius * 0.92, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  // Base Suit Body (fast layered fills instead of per-frame gradients when possible, or clean radial gradient)
   const grad = ctx.createRadialGradient(0, 0, radius * 0.1, 0, 0, radius);
-  if (deathProgress > 0) {
+  if (dead) {
     grad.addColorStop(0, '#334155');
     grad.addColorStop(0.4, '#1e293b');
     grad.addColorStop(0.85, '#0f172a');
     grad.addColorStop(1, '#020617');
   } else {
-    grad.addColorStop(0, '#60a5fa');
-    grad.addColorStop(0.4, '#2563eb');
-    grad.addColorStop(0.85, '#1e3a8a');
-    grad.addColorStop(1, '#0f172a');
+    grad.addColorStop(0, coreColor);
+    grad.addColorStop(0.45, midColor);
+    grad.addColorStop(0.86, rimDark);
+    grad.addColorStop(1, '#020617');
   }
   ctx.fillStyle = grad;
   ctx.beginPath();
   ctx.arc(0, 0, radius, 0, Math.PI * 2);
   ctx.fill();
 
-  // Tactical Ballistic Helmet Rim & NVG Shroud Mount (Forehead)
+  // Rear Dorsal Pack / Cloak / Canisters depending on Skin
+  if (skinId === 'skin_hazard_juggernaut') {
+    // Pressurized Bio-Hazard Green Twin Tanks on Back
+    ctx.fillStyle = dead ? '#1e293b' : '#4d7c0f';
+    ctx.strokeStyle = dead ? '#334155' : '#a3e635';
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.roundRect(-radius * 1.05, -radius * 0.55, 7, radius * 0.45, 2);
+    ctx.roundRect(-radius * 1.05, radius * 0.1, 7, radius * 0.45, 2);
+    ctx.fill();
+    ctx.stroke();
+  } else if (skinId === 'skin_ghost_recon') {
+    // Stealth Recon Cloak Tail Fins
+    ctx.fillStyle = dead ? '#0f172a' : '#090d16';
+    ctx.strokeStyle = dead ? '#334155' : '#e11d48';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(-radius * 0.4, -radius * 0.72);
+    ctx.lineTo(-radius * 1.18, -radius * 0.36);
+    ctx.lineTo(-radius * 0.95, 0);
+    ctx.lineTo(-radius * 1.18, radius * 0.36);
+    ctx.lineTo(-radius * 0.4, radius * 0.72);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+  } else if (skinId === 'skin_pyro_igniter') {
+    // Molten Magma Vents on Armor
+    ctx.strokeStyle = dead ? '#451a03' : '#fbbf24';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(-radius * 0.55, -radius * 0.35);
+    ctx.lineTo(-radius * 0.1, -radius * 0.22);
+    ctx.moveTo(-radius * 0.55, radius * 0.35);
+    ctx.lineTo(-radius * 0.1, radius * 0.22);
+    ctx.stroke();
+  } else if (skinId === 'skin_cryo_warden') {
+    // Crystalline Frost Dorsal Spikes
+    ctx.fillStyle = dead ? '#334155' : '#bae6fd';
+    for (const side of [-1, 1]) {
+      ctx.beginPath();
+      ctx.moveTo(-radius * 0.3, side * radius * 0.55);
+      ctx.lineTo(-radius * 0.95, side * radius * 0.85);
+      ctx.lineTo(-radius * 0.68, side * radius * 0.25);
+      ctx.closePath();
+      ctx.fill();
+    }
+  } else if (skinId === 'skin_solar_valkyrie') {
+    // Twin Wing Fin Plumes
+    ctx.fillStyle = dead ? '#334155' : '#fde047';
+    for (const side of [-1, 1]) {
+      ctx.beginPath();
+      ctx.moveTo(-radius * 0.15, side * radius * 0.7);
+      ctx.lineTo(-radius * 1.12, side * radius * 1.02);
+      ctx.lineTo(-radius * 0.65, side * radius * 0.32);
+      ctx.closePath();
+      ctx.fill();
+    }
+  }
+
+  // Tactical Helmet Mount / NVG Shroud (Forehead)
   ctx.fillStyle = '#0f172a';
-  ctx.strokeStyle = deathProgress > 0 ? '#334155' : '#1e3a8a';
+  ctx.strokeStyle = dead ? '#334155' : rimDark;
   ctx.lineWidth = 1;
   ctx.beginPath();
   ctx.roundRect(radius * 0.3, -radius * 0.3, 4, radius * 0.6, 1);
   ctx.fill();
   ctx.stroke();
 
-  // Tactical Kevlar Vest Straps & MOLLE Webbing
-  ctx.strokeStyle = deathProgress > 0 ? '#1e293b' : '#1d4ed8';
+  // Tactical Kevlar Straps / Cyber Conduits
+  ctx.strokeStyle = dead ? '#1e293b' : strapColor;
   ctx.lineWidth = 2;
   ctx.beginPath();
   ctx.moveTo(-radius * 0.6, -radius * 0.4);
@@ -60,51 +242,61 @@ export function renderOperatorBody(
   ctx.lineTo(radius * 0.2, radius * 0.4);
   ctx.stroke();
 
-  // Forward Tactical Visor (Flickering, cracking, and dying when deathProgress > 0)
+  // Forward Tactical Visor (or Quad-Lens NVG for Ghost Recon / Cyber Visor for Volt)
   ctx.save();
-  if (deathProgress > 0) {
-    // Visor power failure animation: flickering cyan -> orange -> dull red -> dead black
+  let activeVisor = visorColor;
+  if (dead) {
     const flicker = Math.sin(deathProgress * 25) > 0;
     if (deathProgress < 0.35 && flicker) {
-      ctx.shadowColor = '#38bdf8';
-      ctx.shadowBlur = 8 * (1 - deathProgress);
-      ctx.fillStyle = '#38bdf8';
+      activeVisor = visorColor;
     } else if (deathProgress < 0.65) {
-      ctx.shadowColor = '#f97316';
-      ctx.shadowBlur = 6 * (1 - deathProgress);
-      ctx.fillStyle = '#ea580c';
+      activeVisor = '#ea580c';
     } else {
-      ctx.shadowColor = 'transparent';
-      ctx.shadowBlur = 0;
-      ctx.fillStyle = '#1e293b'; // completely dead offline visor
+      activeVisor = '#1e293b';
     }
-  } else {
-    ctx.shadowColor = '#38bdf8';
-    ctx.shadowBlur = 10;
-    ctx.fillStyle = '#38bdf8';
   }
 
-  ctx.beginPath();
-  ctx.moveTo(radius * 0.82, 0);
-  ctx.lineTo(radius * 0.28, -radius * 0.35);
-  ctx.lineTo(radius * 0.42, 0);
-  ctx.lineTo(radius * 0.28, radius * 0.35);
-  ctx.closePath();
-  ctx.fill();
-
-  // Inner White HUD reticle slit (only if alive)
-  if (deathProgress < 0.5) {
-    ctx.fillStyle = `rgba(255, 255, 255, ${1 - deathProgress * 2})`;
+  if (!dead) {
+    ctx.globalAlpha = 0.35;
+    ctx.fillStyle = activeVisor;
     ctx.beginPath();
-    ctx.moveTo(radius * 0.78, 0);
-    ctx.lineTo(radius * 0.38, -radius * 0.15);
-    ctx.lineTo(radius * 0.48, 0);
-    ctx.lineTo(radius * 0.38, radius * 0.15);
+    ctx.arc(radius * 0.52, 0, radius * 0.45, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+
+  if (skinId === 'skin_ghost_recon') {
+    // 4 Glowing Crimson NVG Lenses
+    ctx.fillStyle = activeVisor;
+    [-0.36, -0.14, 0.14, 0.36].forEach((offY) => {
+      ctx.beginPath();
+      ctx.arc(radius * 0.62, radius * offY, 2.5, 0, Math.PI * 2);
+      ctx.fill();
+    });
+  } else {
+    ctx.fillStyle = activeVisor;
+    ctx.beginPath();
+    ctx.moveTo(radius * 0.84, 0);
+    ctx.lineTo(radius * 0.28, -radius * 0.36);
+    ctx.lineTo(radius * 0.42, 0);
+    ctx.lineTo(radius * 0.28, radius * 0.36);
     ctx.closePath();
     ctx.fill();
+
+    // Inner White HUD reticle slit (if alive)
+    if (deathProgress < 0.5) {
+      ctx.fillStyle = `rgba(255, 255, 255, ${1 - deathProgress * 2})`;
+      ctx.beginPath();
+      ctx.moveTo(radius * 0.78, 0);
+      ctx.lineTo(radius * 0.38, -radius * 0.15);
+      ctx.lineTo(radius * 0.48, 0);
+      ctx.lineTo(radius * 0.38, radius * 0.15);
+      ctx.closePath();
+      ctx.fill();
+    }
   }
 
-  // Shattered Visor Glass Spiderweb Cracks when dying
+  // Shattered Visor Cracks when dying
   if (deathProgress > 0.2) {
     ctx.strokeStyle = `rgba(255, 255, 255, ${Math.min(0.85, (deathProgress - 0.2) * 1.5)})`;
     ctx.lineWidth = 1;
@@ -119,14 +311,23 @@ export function renderOperatorBody(
   ctx.restore();
 
   // Tactical Shoulder Pauldrons
-  ctx.fillStyle = deathProgress > 0 ? '#1e293b' : '#1e40af';
+  ctx.fillStyle = dead ? '#1e293b' : pauldronColor;
   ctx.beginPath();
-  ctx.arc(-radius * 0.25, -radius * 0.8, 3, 0, Math.PI * 2);
-  ctx.arc(-radius * 0.25, radius * 0.8, 3, 0, Math.PI * 2);
+  ctx.arc(-radius * 0.25, -radius * 0.8, skinId === 'skin_hazard_juggernaut' ? 4.2 : 3.2, 0, Math.PI * 2);
+  ctx.arc(-radius * 0.25, radius * 0.8, skinId === 'skin_hazard_juggernaut' ? 4.2 : 3.2, 0, Math.PI * 2);
   ctx.fill();
 
+  // Volt Cyber Shoulder Arc Coils
+  if (skinId === 'skin_volt_cyber' && !dead) {
+    ctx.fillStyle = '#22d3ee';
+    ctx.beginPath();
+    ctx.arc(-radius * 0.25, -radius * 0.8, 1.8, 0, Math.PI * 2);
+    ctx.arc(-radius * 0.25, radius * 0.8, 1.8, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
   // Outer Crisp Tactical Rim
-  ctx.strokeStyle = deathProgress > 0 ? '#475569' : '#3b82f6';
+  ctx.strokeStyle = dead ? '#475569' : outerStroke;
   ctx.lineWidth = 2.4;
   ctx.beginPath();
   ctx.arc(0, 0, radius, 0, Math.PI * 2);
@@ -145,7 +346,10 @@ export function renderOperatorBody(
   ctx.restore();
 }
 
-export const OperatorAvatarPreview: React.FC<{ skinId?: string; size?: number }> = ({ skinId = 'skin_default', size = 56 }) => {
+export const OperatorAvatarPreview: React.FC<{ skinId?: string; size?: number }> = ({
+  skinId = 'skin_default',
+  size = 56,
+}) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   useEffect(() => {
@@ -159,7 +363,8 @@ export const OperatorAvatarPreview: React.FC<{ skinId?: string; size?: number }>
       ctx.clearRect(0, 0, size, size);
       ctx.save();
       ctx.translate(size / 2, size / 2);
-      renderOperatorBody(ctx, skinId, size * 0.32, time, true);
+      ctx.rotate(-0.35);
+      renderOperatorBody(ctx, skinId, size * 0.3, time, true);
       ctx.restore();
       animId = requestAnimationFrame(render);
     };

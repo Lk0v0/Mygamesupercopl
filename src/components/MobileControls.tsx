@@ -6,7 +6,8 @@ export interface MobileControlsProps {
   onLeftJoystick: (input: JoystickInput) => void;
   onRightJoystick: (input: JoystickInput) => void;
   isShip?: boolean;
-  shipType?: 'DESTRUCTOR' | 'INTERCEPTOR' | 'NAVE_REI' | null;
+  shipType?: 'TROPER' | 'DESTRUCTOR' | 'INTERCEPTOR' | 'NAVE_REI' | null;
+  showWarp?: boolean;
   warpChargeProgress?: number; // 0 to 1
   warpActive?: boolean;
   warpRemainingRatio?: number; // 1 down to 0
@@ -36,6 +37,7 @@ export const MobileControls: React.FC<MobileControlsProps> = ({
   onRightJoystick,
   isShip = false,
   shipType = null,
+  showWarp = true,
   warpChargeProgress = 0,
   warpActive = false,
   warpRemainingRatio = 0,
@@ -468,6 +470,8 @@ export const MobileControls: React.FC<MobileControlsProps> = ({
 
           <div className="flex flex-col items-center gap-1.5">
           
+          {showWarp && (
+          <>
           <button
             id="mobile-warp-button"
             onTouchStart={(e) => {
@@ -636,6 +640,8 @@ export const MobileControls: React.FC<MobileControlsProps> = ({
                   ? 'SEGURE 6s'
                   : 'SEGURE 3s'}
           </div>
+          </>
+          )}
           </div>
 
         </div>
