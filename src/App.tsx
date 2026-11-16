@@ -55,6 +55,8 @@ import {
   renderIronManFlightTrail,
   renderCompanionDragon,
   renderDragonElementalBeam,
+  renderToxicChloroCloud,
+  renderVenomDemonForm,
 } from './components/WeaponVisuals';
 import { rollLevelUpOptions } from './components/UpgradeSystem';
 import { renderOperatorBody } from './components/OperatorVisuals';
@@ -374,6 +376,19 @@ const INITIAL_WEAPONS: Record<WeaponType, WeaponStats> = {
     color: '#a855f7',
     unlocked: false,
   },
+  [WeaponType.VENOM_FRUIT]: {
+    type: WeaponType.VENOM_FRUIT,
+    name: 'Fruta do Veneno',
+    damage: 15,
+    fireRate: 5.5,
+    ammoCapacity: Infinity,
+    currentAmmo: Infinity,
+    bulletSpeed: 700,
+    spread: 0.04,
+    piercing: 2,
+    color: '#a855f7',
+    unlocked: false,
+  },
 };
 
 export default function App() {
@@ -476,6 +491,9 @@ export default function App() {
     warpHeld: false,
     switchPressed: false,
     skillPressed: false,
+    venomSkill1Pressed: false,
+    venomSkill2Pressed: false,
+    venomSkill3Pressed: false,
     reloadPressed: false,
     pausePressed: false,
   });
@@ -588,6 +606,49 @@ export default function App() {
     remainingRatio: 0,
     remainingSeconds: 0,
     chargeDuration: 3.0,
+  });
+
+  // Fruta do Veneno (Doku Doku no Mi — 3 Skills + Venom Demon Kinjite Transformation)
+  const VENOM_HYDRA_CD = 5.5;
+  const VENOM_CHLORO_CD = 7.5;
+  const VENOM_ROAD_CD = 6.5;
+  const VENOM_DEMON_CD = 22.0;
+  const VENOM_DEMON_DURATION = 12.0;
+
+  interface VenomCloudArea {
+    x: number;
+    y: number;
+    radius: number;
+    timer: number;
+    maxTimer: number;
+    tickTimer: number;
+    damage: number;
+    isKinjite: boolean;
+  }
+
+  const venomFruitStateRef = useRef({
+    hydraCd: 0,
+    chloroCd: 0,
+    roadCd: 0,
+    demonCd: 0,
+    demonActive: false,
+    demonTimer: 0,
+    dashTimer: 0,
+    dashVx: 0,
+    dashVy: 0,
+    dashHitIds: {} as Record<string, boolean>,
+    auraTickTimer: 0,
+    hudSyncTimer: 0,
+    clouds: [] as VenomCloudArea[],
+  });
+  const [venomFruitHud, setVenomFruitHud] = useState({
+    hydraCd: 0,
+    chloroCd: 0,
+    roadCd: 0,
+    demonCd: 0,
+    demonActive: false,
+    demonTimer: 0,
+    demonDuration: VENOM_DEMON_DURATION,
   });
 
   // Active Mythic & Legendary runtime combat tracking
@@ -1450,6 +1511,221 @@ export default function App() {
     });
   }, []);
 
+  const syncVenomHudImmediate = useCallback(() => {
+    const vf = venomFruitStateRef.current;
+    setVenomFruitHud({
+      hydraCd: Math.max(0, vf.hydraCd),
+      chloroCd: Math.max(0, vf.chloroCd),
+      roadCd: Math.max(0, vf.roadCd),
+      demonCd: Math.max(0, vf.demonCd),
+      demonActive: vf.demonActive,
+      demonTimer: Math.max(0, vf.demonTimer),
+      demonDuration: VENOM_DEMON_DURATION,
+    });
+  }, []);
+
+  const triggerVenomHydra = useCallback(() => {
+    if (gameState !== GameState.PLAYING || dyingRef.current?.active) return;
+    const p = playerRef.current;
+    if (p.currentWeapon !== WeaponType.VENOM_FRUIT) return;
+    const vf = venomFruitStateRef.current;
+    if (vf.hydraCd > 0) return;
+
+    vf.hydraCd = VENOM_HYDRA_CD;
+    const vw = p.weapons[WeaponType.VENOM_FRUIT] || INITIAL_WEAPONS[WeaponType.VENOM_FRUIT];
+    const hydraDmg = Math.round(vw.damage * (vf.demonActive ? 4.2 : 3.0));
+    const headCol = vf.demonActive ? '#f43f5e' : '#a855f7';
+
+    sound.playVenomHydra();
+    screenShakeRef.current = Math.min(24, screenShakeRef.current + 10);
+
+    [-0.22, 0, 0.22].forEach((offset, idx) => {
+      const ang = p.angle + offset;
+      const sx = p.x + Math.cos(ang) * (p.radius + 16);
+      const sy = p.y + Math.sin(ang) * (p.radius + 16);
+      bulletsRef.current.push({
+        id: `venom-hydra-${Date.now()}-${idx}-${Math.random()}`,
+        x: sx,
+        y: sy,
+        vx: Math.cos(ang) * 820,
+        vy: Math.sin(ang) * 820,
+        radius: 17,
+        damage: hydraDmg,
+        piercingRemaining: 18,
+        color: headCol,
+        distanceTraveled: 0,
+        maxDistance: 720,
+        ownerAngle: ang,
+        isHydra: true,
+        isVenom: true,
+        weaponType: WeaponType.VENOM_FRUIT,
+      });
+    });
+
+    particlesRef.current.push({
+      id: `hydra-ring-${Date.now()}-${Math.random()}`,
+      type: 'PLASMA_RING',
+      x: p.x + Math.cos(p.angle) * 20,
+      y: p.y + Math.sin(p.angle) * 20,
+      vx: 0,
+      vy: 0,
+      radius: 14,
+      growthSpeed: 320,
+      color: headCol,
+      alpha: 0.9,
+      decay: 0.06,
+    });
+    syncVenomHudImmediate();
+  }, [gameState, syncVenomHudImmediate]);
+
+  const triggerVenomHydraRef = useRef(triggerVenomHydra);
+  triggerVenomHydraRef.current = triggerVenomHydra;
+
+  const triggerVenomChloro = useCallback(() => {
+    if (gameState !== GameState.PLAYING || dyingRef.current?.active) return;
+    const p = playerRef.current;
+    if (p.currentWeapon !== WeaponType.VENOM_FRUIT) return;
+    const vf = venomFruitStateRef.current;
+    if (vf.chloroCd > 0) return;
+
+    vf.chloroCd = VENOM_CHLORO_CD;
+    const vw = p.weapons[WeaponType.VENOM_FRUIT] || INITIAL_WEAPONS[WeaponType.VENOM_FRUIT];
+    sound.playChloroBall();
+
+    const sx = p.x + Math.cos(p.angle) * (p.radius + 14);
+    const sy = p.y + Math.sin(p.angle) * (p.radius + 14);
+    bulletsRef.current.push({
+      id: `venom-chloro-${Date.now()}-${Math.random()}`,
+      x: sx,
+      y: sy,
+      vx: Math.cos(p.angle) * 620,
+      vy: Math.sin(p.angle) * 620,
+      radius: 12,
+      damage: Math.round(vw.damage * (vf.demonActive ? 1.85 : 1.35)),
+      piercingRemaining: 1,
+      color: vf.demonActive ? '#f43f5e' : '#a3e635',
+      distanceTraveled: 0,
+      maxDistance: 360,
+      ownerAngle: p.angle,
+      isChloroBall: true,
+      isVenom: true,
+      weaponType: WeaponType.VENOM_FRUIT,
+    });
+    syncVenomHudImmediate();
+  }, [gameState, syncVenomHudImmediate]);
+
+  const triggerVenomChloroRef = useRef(triggerVenomChloro);
+  triggerVenomChloroRef.current = triggerVenomChloro;
+
+  const triggerVenomRoad = useCallback(() => {
+    if (gameState !== GameState.PLAYING || dyingRef.current?.active) return;
+    const p = playerRef.current;
+    if (p.currentWeapon !== WeaponType.VENOM_FRUIT) return;
+    const vf = venomFruitStateRef.current;
+    if (vf.roadCd > 0) return;
+
+    vf.roadCd = VENOM_ROAD_CD;
+    vf.dashTimer = 0.36;
+    vf.dashHitIds = {};
+
+    let dirX = 0;
+    let dirY = 0;
+    if (leftJoystick.current.active) {
+      dirX = leftJoystick.current.x;
+      dirY = leftJoystick.current.y;
+    } else {
+      if (keysPressed.current['w'] || keysPressed.current['arrowup']) dirY -= 1;
+      if (keysPressed.current['s'] || keysPressed.current['arrowdown']) dirY += 1;
+      if (keysPressed.current['a'] || keysPressed.current['arrowleft']) dirX -= 1;
+      if (keysPressed.current['d'] || keysPressed.current['arrowright']) dirX += 1;
+    }
+    const len = Math.hypot(dirX, dirY);
+    const dashAngle = len > 0.15 ? Math.atan2(dirY, dirX) : p.angle;
+    const dashSpeed = vf.demonActive ? 1100 : 960;
+    vf.dashVx = Math.cos(dashAngle) * dashSpeed;
+    vf.dashVy = Math.sin(dashAngle) * dashSpeed;
+
+    sound.playVenomRoad();
+    screenShakeRef.current = Math.min(20, screenShakeRef.current + 8);
+    particlesRef.current.push({
+      id: `venom-road-ring-${Date.now()}-${Math.random()}`,
+      type: 'PLASMA_RING',
+      x: p.x,
+      y: p.y,
+      vx: 0,
+      vy: 0,
+      radius: 16,
+      growthSpeed: 360,
+      color: vf.demonActive ? '#f43f5e' : '#c084fc',
+      alpha: 0.95,
+      decay: 0.06,
+    });
+    syncVenomHudImmediate();
+  }, [gameState, syncVenomHudImmediate]);
+
+  const triggerVenomRoadRef = useRef(triggerVenomRoad);
+  triggerVenomRoadRef.current = triggerVenomRoad;
+
+  const triggerVenomDemon = useCallback(() => {
+    if (gameState !== GameState.PLAYING || dyingRef.current?.active) return;
+    const p = playerRef.current;
+    if (p.currentWeapon !== WeaponType.VENOM_FRUIT) return;
+    const vf = venomFruitStateRef.current;
+    if (vf.demonActive || vf.demonCd > 0) return;
+
+    vf.demonActive = true;
+    vf.demonTimer = VENOM_DEMON_DURATION;
+    vf.auraTickTimer = 0.05;
+
+    // Instant Vitality & Shield Surge upon Kinjite transformation
+    p.hp = Math.min(p.maxHp, p.hp + 25);
+    if (p.maxShield > 0) {
+      p.shield = Math.min(p.maxShield, p.shield + 25);
+    }
+
+    sound.playVenomDemonTransform();
+    screenShakeRef.current = Math.min(28, screenShakeRef.current + 16);
+
+    ['#be123c', '#a855f7', '#fb7185'].forEach((col, idx) => {
+      particlesRef.current.push({
+        id: `vdemon-ring-${Date.now()}-${idx}-${Math.random()}`,
+        type: 'PLASMA_RING',
+        x: p.x,
+        y: p.y,
+        vx: 0,
+        vy: 0,
+        radius: 18 + idx * 8,
+        growthSpeed: 380 + idx * 90,
+        color: col,
+        alpha: 1,
+        decay: 0.04,
+      });
+    });
+
+    for (let k = 0; k < 24; k++) {
+      const a = (Math.PI * 2 * k) / 24;
+      const spd = 110 + Math.random() * 190;
+      particlesRef.current.push({
+        id: `vdemon-sp-${Date.now()}-${k}-${Math.random()}`,
+        type: 'SPARK',
+        x: p.x,
+        y: p.y,
+        vx: Math.cos(a) * spd,
+        vy: Math.sin(a) * spd,
+        radius: 3 + Math.random() * 2.5,
+        color: k % 2 === 0 ? '#f43f5e' : '#c084fc',
+        alpha: 1,
+        decay: 0.045,
+      });
+    }
+
+    syncHudPlayer();
+    syncVenomHudImmediate();
+  }, [gameState, syncHudPlayer, syncVenomHudImmediate]);
+
+  const triggerVenomDemonRef = useRef(triggerVenomDemon);
+  triggerVenomDemonRef.current = triggerVenomDemon;
+
   // Set up high score updates per mode
   const updateHighScore = (score: number) => {
     const activeMode = modeRef.current;
@@ -1514,22 +1790,46 @@ export default function App() {
         }
       }
 
-      if ((e.key === 'q' || e.key === 'Q') && !e.repeat) {
+      if ((e.key === 'q' || e.key === 'Q' || key === '1') && !e.repeat) {
         if (gameState === GameState.PLAYING) {
-          if (playerRef.current.currentWeapon === WeaponType.ICE_AND_FIRE_DRAGON) {
-            triggerIceFireMergeRef.current();
-          } else {
-            triggerShipMasterySkillRef.current();
+          if (playerRef.current.currentWeapon === WeaponType.VENOM_FRUIT) {
+            triggerVenomHydraRef.current();
+          } else if (key === 'q') {
+            if (playerRef.current.currentWeapon === WeaponType.ICE_AND_FIRE_DRAGON) {
+              triggerIceFireMergeRef.current();
+            } else {
+              triggerShipMasterySkillRef.current();
+            }
           }
         }
       }
 
-      if ((key === 'e' || key === 'shift') && !e.repeat) {
+      if ((key === 'e' || key === '2') && !e.repeat) {
         if (gameState === GameState.PLAYING) {
-          if (playerRef.current.currentWeapon === WeaponType.IRON_MAN) {
+          if (playerRef.current.currentWeapon === WeaponType.VENOM_FRUIT) {
+            triggerVenomChloroRef.current();
+          } else if (key === 'e' && playerRef.current.currentWeapon === WeaponType.IRON_MAN) {
             toggleIronManModeRef.current();
-          } else if (key === 'shift' && playerRef.current.currentWeapon === WeaponType.ICE_AND_FIRE_DRAGON) {
-            switchIceFireDragonRef.current();
+          }
+        }
+      }
+
+      if ((key === 'c' || key === '3') && !e.repeat) {
+        if (gameState === GameState.PLAYING && playerRef.current.currentWeapon === WeaponType.VENOM_FRUIT) {
+          triggerVenomRoadRef.current();
+        }
+      }
+
+      if ((key === 'shift' || key === '4') && !e.repeat) {
+        if (gameState === GameState.PLAYING) {
+          if (playerRef.current.currentWeapon === WeaponType.VENOM_FRUIT) {
+            triggerVenomDemonRef.current();
+          } else if (key === 'shift') {
+            if (playerRef.current.currentWeapon === WeaponType.IRON_MAN) {
+              toggleIronManModeRef.current();
+            } else if (playerRef.current.currentWeapon === WeaponType.ICE_AND_FIRE_DRAGON) {
+              switchIceFireDragonRef.current();
+            }
           }
         }
       }
@@ -1866,6 +2166,30 @@ export default function App() {
       mergeDuration: ICE_FIRE_MERGE_DURATION,
       cooldown: 0,
       maxCooldown: ICE_FIRE_MERGE_COOLDOWN,
+    });
+    venomFruitStateRef.current = {
+      hydraCd: 0,
+      chloroCd: 0,
+      roadCd: 0,
+      demonCd: 0,
+      demonActive: false,
+      demonTimer: 0,
+      dashTimer: 0,
+      dashVx: 0,
+      dashVy: 0,
+      dashHitIds: {},
+      auraTickTimer: 0,
+      hudSyncTimer: 0,
+      clouds: [],
+    };
+    setVenomFruitHud({
+      hydraCd: 0,
+      chloroCd: 0,
+      roadCd: 0,
+      demonCd: 0,
+      demonActive: false,
+      demonTimer: 0,
+      demonDuration: VENOM_DEMON_DURATION,
     });
     mobileWarpHoldingRef.current = false;
     setDestructorWarpHud({
@@ -2846,6 +3170,121 @@ export default function App() {
           alpha: 0.95,
           decay: 0.09,
         });
+      }
+
+      return;
+    }
+
+    if (p.currentWeapon === WeaponType.VENOM_FRUIT) {
+      const vf = venomFruitStateRef.current;
+      const demonMode = vf.demonActive;
+      sound.playVenomShot(demonMode);
+      screenShakeRef.current = Math.min(12, screenShakeRef.current + (demonMode ? 3.5 : 1.8));
+      muzzleFlashIntensityRef.current = demonMode ? 0.85 : 0.55;
+      gunRecoilRef.current = demonMode ? 5 : 3;
+
+      const spreadA = angle + (Math.random() * w.spread * 2 - w.spread);
+      const muzzleX = p.x + Math.cos(spreadA) * (p.radius + 18);
+      const muzzleY = p.y + Math.sin(spreadA) * (p.radius + 18);
+
+      bulletsRef.current.push({
+        id: `venom-shot-${Date.now()}-${Math.random()}`,
+        x: muzzleX,
+        y: muzzleY,
+        vx: Math.cos(spreadA) * (demonMode ? w.bulletSpeed * 1.15 : w.bulletSpeed),
+        vy: Math.sin(spreadA) * (demonMode ? w.bulletSpeed * 1.15 : w.bulletSpeed),
+        radius: demonMode ? 15 : 6.8,
+        damage: demonMode ? Math.round(w.damage * 2.1) : w.damage,
+        piercingRemaining: demonMode ? 6 : w.piercing,
+        color: demonMode ? '#f43f5e' : '#a855f7',
+        distanceTraveled: 0,
+        maxDistance: demonMode ? 780 : 720,
+        ownerAngle: spreadA,
+        isVenom: true,
+        isVenomWave: demonMode,
+        weaponType: WeaponType.VENOM_FRUIT,
+      });
+
+      if (p.mythicSplitShot && p.mythicSplitShot > 0) {
+        [-0.2, 0.2].forEach((off, idx) => {
+          const sa = spreadA + off;
+          bulletsRef.current.push({
+            id: `venom-split-${Date.now()}-${idx}-${Math.random()}`,
+            x: muzzleX,
+            y: muzzleY,
+            vx: Math.cos(sa) * w.bulletSpeed,
+            vy: Math.sin(sa) * w.bulletSpeed,
+            radius: demonMode ? 11 : 5.5,
+            damage: Math.round(w.damage * (demonMode ? 1.5 : 0.9) * (p.mythicSplitShot || 1)),
+            piercingRemaining: demonMode ? 4 : w.piercing,
+            color: demonMode ? '#fb7185' : '#c084fc',
+            distanceTraveled: 0,
+            maxDistance: 680,
+            ownerAngle: sa,
+            isVenom: true,
+            isVenomWave: demonMode,
+            weaponType: WeaponType.VENOM_FRUIT,
+          });
+        });
+      }
+
+      for (let vp = 0; vp < 3; vp++) {
+        const va = spreadA + (Math.random() - 0.5) * 0.7;
+        const vSpd = 65 + Math.random() * 90;
+        particlesRef.current.push({
+          id: `venom-muzz-${Date.now()}-${vp}-${Math.random()}`,
+          type: 'SPARK',
+          x: muzzleX,
+          y: muzzleY,
+          vx: Math.cos(va) * vSpd,
+          vy: Math.sin(va) * vSpd,
+          radius: 2.2 + Math.random() * 2,
+          color: demonMode ? '#fb7185' : '#d8b4fe',
+          alpha: 0.9,
+          decay: 0.08,
+        });
+      }
+
+      // MYTHIC SINGULARITY: Radial Nova Shot burst every 3 shots
+      if (p.mythicSingularity && p.mythicSingularity > 0) {
+        mythicCombatRef.current.novaShotCounter += 1;
+        if (mythicCombatRef.current.novaShotCounter >= 3) {
+          mythicCombatRef.current.novaShotCounter = 0;
+          const novaCount = 12;
+          const novaDmg = Math.round(w.damage * (1.25 + (p.mythicSingularity - 1) * 0.4));
+          for (let ni = 0; ni < novaCount; ni++) {
+            const na = (ni * Math.PI * 2) / novaCount + spreadA * 0.25;
+            bulletsRef.current.push({
+              id: `nova-${Date.now()}-${ni}-${Math.random()}`,
+              x: p.x + Math.cos(na) * 20,
+              y: p.y + Math.sin(na) * 20,
+              vx: Math.cos(na) * 760,
+              vy: Math.sin(na) * 760,
+              radius: 6,
+              damage: novaDmg,
+              piercingRemaining: 4,
+              color: ni % 2 === 0 ? '#38bdf8' : '#f0abfc',
+              distanceTraveled: 0,
+              maxDistance: 560,
+              ownerAngle: na,
+              isRay: true,
+            });
+          }
+          particlesRef.current.push({
+            id: `nova-ring-${Date.now()}-${Math.random()}`,
+            type: 'MYTHIC_NOVA',
+            x: p.x,
+            y: p.y,
+            vx: 0,
+            vy: 0,
+            radius: 16,
+            growthSpeed: 420,
+            color: '#38bdf8',
+            alpha: 0.9,
+            decay: 0.045,
+          });
+          sound.playMythicBlast();
+        }
       }
 
       return;
@@ -4024,7 +4463,12 @@ export default function App() {
           switchIceFireDragonRef.current();
         }
       }
-      if (gp.skillPressed) {
+      if (p.currentWeapon === WeaponType.VENOM_FRUIT) {
+        if (gp.venomSkill1Pressed) triggerVenomHydraRef.current();
+        if (gp.venomSkill2Pressed) triggerVenomChloroRef.current();
+        if (gp.venomSkill3Pressed) triggerVenomRoadRef.current();
+        if (gp.skillPressed) triggerVenomDemonRef.current();
+      } else if (gp.skillPressed) {
         if (p.currentWeapon === WeaponType.ICE_AND_FIRE_DRAGON) {
           triggerIceFireMergeRef.current();
         } else if (
@@ -4486,16 +4930,135 @@ export default function App() {
         ifd.beamExtension = 0;
       }
 
-      // 2. PLAYER POSITION UPDATE
-      const warpSpeedMult = hasWarpShip && ds.warpActive
-        ? (isInterceptor ? 2.85 : isRei ? 2.25 : 2.65)
-        : isEastDragon
-          ? 1.15
-          : isIronMan
-            ? 1.12
-            : 1.0;
-      p.vx = moveX * p.speed * warpSpeedMult;
-      p.vy = moveY * p.speed * warpSpeedMult;
+      // 2. PLAYER POSITION UPDATE & VENOM FRUIT DASH/COOLDOWNS
+      const vfState = venomFruitStateRef.current;
+      if (vfState.hydraCd > 0) vfState.hydraCd = Math.max(0, vfState.hydraCd - dt);
+      if (vfState.chloroCd > 0) vfState.chloroCd = Math.max(0, vfState.chloroCd - dt);
+      if (vfState.roadCd > 0) vfState.roadCd = Math.max(0, vfState.roadCd - dt);
+      if (vfState.demonCd > 0) vfState.demonCd = Math.max(0, vfState.demonCd - dt);
+      if (vfState.demonActive) {
+        vfState.demonTimer -= dt;
+        if (vfState.demonTimer <= 0 || p.currentWeapon !== WeaponType.VENOM_FRUIT) {
+          vfState.demonActive = false;
+          vfState.demonTimer = 0;
+          vfState.demonCd = VENOM_DEMON_CD;
+        }
+      }
+
+      if (vfState.dashTimer > 0 && !dyingRef.current?.active) {
+        vfState.dashTimer = Math.max(0, vfState.dashTimer - dt);
+        p.vx = vfState.dashVx;
+        p.vy = vfState.dashVy;
+
+        // Surging liquid venom trail particles during Estrada Venenosa dash
+        for (let vt = 0; vt < 2; vt++) {
+          particlesRef.current.push({
+            id: `vroad-tr-${Date.now()}-${vt}-${Math.random()}`,
+            type: 'SMOKE',
+            x: p.x + (Math.random() - 0.5) * 14,
+            y: p.y + (Math.random() - 0.5) * 14,
+            vx: -p.vx * 0.12 + (Math.random() - 0.5) * 35,
+            vy: -p.vy * 0.12 + (Math.random() - 0.5) * 35,
+            radius: 7 + Math.random() * 5,
+            growthSpeed: 12,
+            color: vfState.demonActive ? 'rgba(244, 63, 94, 0.6)' : 'rgba(168, 85, 247, 0.6)',
+            alpha: 0.72,
+            decay: 0.045,
+          });
+        }
+
+        const vwDash = p.weapons[WeaponType.VENOM_FRUIT] || INITIAL_WEAPONS[WeaponType.VENOM_FRUIT];
+        const dashDmg = Math.round(vwDash.damage * (vfState.demonActive ? 3.2 : 2.3));
+        for (let zi = 0; zi < zombiesRef.current.length; zi++) {
+          const dz = zombiesRef.current[zi];
+          if (dz.hp <= 0 || vfState.dashHitIds[dz.id]) continue;
+          if (Math.hypot(dz.x - p.x, dz.y - p.y) <= 88 + dz.radius) {
+            vfState.dashHitIds[dz.id] = true;
+            dz.hp -= dashDmg;
+            dz.isPoisoned = true;
+            dz.poisonTimer = Math.max(dz.poisonTimer || 0, 5.0);
+            dz.poisonDps = Math.max(dz.poisonDps || 0, vfState.demonActive ? 36 : 20);
+            if (vfState.demonActive) dz.isKinjitePoison = true;
+            const kba = Math.atan2(dz.y - p.y, dz.x - p.x);
+            dz.knockbackX += Math.cos(kba) * 380 * (p.knockbackMult || 1);
+            dz.knockbackY += Math.sin(kba) * 380 * (p.knockbackMult || 1);
+            if (dz.hp <= 0) handleZombieDeath(dz);
+          }
+        }
+      } else {
+        const warpSpeedMult = hasWarpShip && ds.warpActive
+          ? (isInterceptor ? 2.85 : isRei ? 2.25 : 2.65)
+          : p.currentWeapon === WeaponType.VENOM_FRUIT && vfState.demonActive
+            ? 1.25
+            : isEastDragon
+              ? 1.15
+              : isIronMan
+                ? 1.12
+                : 1.0;
+        p.vx = moveX * p.speed * warpSpeedMult;
+        p.vy = moveY * p.speed * warpSpeedMult;
+      }
+
+      // Venom Demon Kinjite corrosive proximity aura + Toxic Chloro Gas Clouds update
+      if (!dyingRef.current?.active) {
+        if (p.currentWeapon === WeaponType.VENOM_FRUIT && vfState.demonActive) {
+          vfState.auraTickTimer += dt;
+          if (vfState.auraTickTimer >= 0.25) {
+            vfState.auraTickTimer = 0;
+            const vwAura = p.weapons[WeaponType.VENOM_FRUIT] || INITIAL_WEAPONS[WeaponType.VENOM_FRUIT];
+            const auraDmg = Math.max(12, Math.round(vwAura.damage * 1.15));
+            for (let zi = 0; zi < zombiesRef.current.length; zi++) {
+              const az = zombiesRef.current[zi];
+              if (az.hp <= 0) continue;
+              if (Math.hypot(az.x - p.x, az.y - p.y) <= 115 + az.radius) {
+                az.hp -= auraDmg;
+                az.isPoisoned = true;
+                az.poisonTimer = Math.max(az.poisonTimer || 0, 4.5);
+                az.poisonDps = Math.max(az.poisonDps || 0, 36);
+                az.isKinjitePoison = true;
+                if (az.hp <= 0) handleZombieDeath(az);
+              }
+            }
+          }
+        }
+
+        if (vfState.clouds.length > 0) {
+          const nextClouds: VenomCloudArea[] = [];
+          for (let ci = 0; ci < vfState.clouds.length; ci++) {
+            const cl = vfState.clouds[ci];
+            cl.timer -= dt;
+            if (cl.timer <= 0) continue;
+            cl.tickTimer += dt;
+            if (cl.tickTimer >= 0.28) {
+              cl.tickTimer = 0;
+              for (let zi = 0; zi < zombiesRef.current.length; zi++) {
+                const cz = zombiesRef.current[zi];
+                if (cz.hp <= 0) continue;
+                if (Math.hypot(cz.x - cl.x, cz.y - cl.y) <= cl.radius + cz.radius) {
+                  cz.hp -= cl.damage;
+                  cz.isPoisoned = true;
+                  cz.poisonTimer = Math.max(cz.poisonTimer || 0, 4.0);
+                  cz.poisonDps = Math.max(cz.poisonDps || 0, cl.isKinjite ? 34 : 18);
+                  if (cl.isKinjite) cz.isKinjitePoison = true;
+                  cz.isStunned = true;
+                  cz.stunTimer = Math.max(cz.stunTimer, 0.16);
+                  if (cz.hp <= 0) handleZombieDeath(cz);
+                }
+              }
+            }
+            nextClouds.push(cl);
+          }
+          vfState.clouds = nextClouds;
+        }
+      }
+
+      if (p.currentWeapon === WeaponType.VENOM_FRUIT) {
+        vfState.hudSyncTimer += dt;
+        if (vfState.hudSyncTimer >= 0.08) {
+          vfState.hudSyncTimer = 0;
+          syncVenomHudImmediate();
+        }
+      }
 
       p.x += p.vx * dt;
       p.y += p.vy * dt;
@@ -6483,8 +7046,8 @@ export default function App() {
           if (distP < p.radius + b.radius) {
             b.piercingRemaining = 0;
 
-            // TEMPORAL DODGE check
-            if (p.dodgeChance && Math.random() < p.dodgeChance) {
+            // TEMPORAL DODGE OR VENOM ROAD DASH INVULNERABILITY check
+            if (venomFruitStateRef.current.dashTimer > 0 || (p.dodgeChance && Math.random() < p.dodgeChance)) {
               sound.playTemporalDodge();
               particlesRef.current.push({
                 id: `dodge-ring-${Date.now()}-${Math.random()}`,
@@ -6495,7 +7058,7 @@ export default function App() {
                 vy: 0,
                 radius: p.radius,
                 growthSpeed: 260,
-                color: '#38bdf8',
+                color: venomFruitStateRef.current.dashTimer > 0 ? '#a855f7' : '#38bdf8',
                 alpha: 0.9,
                 decay: 0.08,
               });
@@ -6503,15 +7066,20 @@ export default function App() {
               sound.playPlayerHit();
               screenShakeRef.current = Math.min(25, screenShakeRef.current + 12);
               const hadShield = p.shield > 0;
+              const demonRes =
+                p.currentWeapon === WeaponType.VENOM_FRUIT && venomFruitStateRef.current.demonActive
+                  ? 0.55
+                  : 1.0;
+              const incomingDmg = Math.max(1, Math.round(b.damage * demonRes));
 
               if (p.shield > 0) {
-                p.shield -= b.damage;
+                p.shield -= incomingDmg;
                 if (p.shield < 0) {
                   p.hp += p.shield;
                   p.shield = 0;
                 }
               } else {
-                p.hp -= b.damage;
+                p.hp -= incomingDmg;
               }
 
               if (hadShield) {
@@ -6562,6 +7130,34 @@ export default function App() {
             triggerCarpetBombExplosion(b.x, b.y, b.damage);
           } else if (b.isRocket || b.isMissile || b.isCosmic) {
             triggerRocketExplosion(b.x, b.y, b.damage);
+          } else if (b.isChloroBall) {
+            const vf = venomFruitStateRef.current;
+            const vw = p.weapons[WeaponType.VENOM_FRUIT] || INITIAL_WEAPONS[WeaponType.VENOM_FRUIT];
+            const isKinjite = vf.demonActive;
+            vf.clouds.push({
+              x: b.x,
+              y: b.y,
+              radius: 120,
+              timer: 4.8,
+              maxTimer: 4.8,
+              tickTimer: 0.28,
+              damage: Math.max(8, Math.round(vw.damage * (isKinjite ? 1.15 : 0.78))),
+              isKinjite,
+            });
+            if (vf.clouds.length > 6) vf.clouds.shift();
+            particlesRef.current.push({
+              id: `chloro-burst-${Date.now()}-${Math.random()}`,
+              type: 'PLASMA_RING',
+              x: b.x,
+              y: b.y,
+              vx: 0,
+              vy: 0,
+              radius: 18,
+              growthSpeed: 380,
+              color: isKinjite ? '#f43f5e' : '#a3e635',
+              alpha: 0.95,
+              decay: 0.06,
+            });
           }
         }
       }
@@ -6622,6 +7218,41 @@ export default function App() {
 
           if (z.burnTimer <= 0) {
             z.isOnFire = false;
+          }
+        }
+
+        // Apply Venom Fruit Poison DOT (Doku Doku / Kinjite)
+        if (z.isPoisoned) {
+          z.poisonTimer = (z.poisonTimer || 0) - dt;
+          z.poisonTickTimer = (z.poisonTickTimer || 0) + dt;
+
+          if (z.poisonTickTimer >= 0.25) {
+            const wasAlivePoison = z.hp > 0;
+            z.hp -= Math.max(2, Math.round((z.poisonDps || 14) * 0.25));
+            z.poisonTickTimer = 0;
+
+            particlesRef.current.push({
+              id: `zpoison-${Date.now()}-${Math.random()}`,
+              type: 'TOXIC_ACID',
+              x: z.x + (Math.random() - 0.5) * z.radius,
+              y: z.y + (Math.random() - 0.5) * z.radius,
+              vx: (Math.random() - 0.5) * 32,
+              vy: -42 - Math.random() * 35,
+              radius: 2.5 + Math.random() * 2.5,
+              color: z.isKinjitePoison ? '#fb7185' : Math.random() < 0.65 ? '#c084fc' : '#a3e635',
+              alpha: 0.95,
+              decay: 0.065,
+            });
+
+            if (wasAlivePoison && z.hp <= 0) {
+              handleZombieDeath(z);
+              continue;
+            }
+          }
+
+          if (z.poisonTimer <= 0) {
+            z.isPoisoned = false;
+            z.isKinjitePoison = false;
           }
         }
 
@@ -6870,8 +7501,8 @@ export default function App() {
           if (now - z.lastAttackTime > 800) { // attack rate limit 0.8s
             z.lastAttackTime = now;
 
-            // TEMPORAL DODGE check
-            if (p.dodgeChance && Math.random() < p.dodgeChance) {
+            // TEMPORAL DODGE OR VENOM ROAD DASH INVULNERABILITY check
+            if (venomFruitStateRef.current.dashTimer > 0 || (p.dodgeChance && Math.random() < p.dodgeChance)) {
               sound.playTemporalDodge();
               particlesRef.current.push({
                 id: `mdodge-ring-${Date.now()}-${Math.random()}`,
@@ -6882,13 +7513,17 @@ export default function App() {
                 vy: 0,
                 radius: p.radius,
                 growthSpeed: 280,
-                color: '#38bdf8',
+                color: venomFruitStateRef.current.dashTimer > 0 ? '#a855f7' : '#38bdf8',
                 alpha: 0.95,
                 decay: 0.08,
               });
             } else {
-              // Damage calculation: shields absorb 100% until depleted
-              const damageDealt = z.damage;
+              // Damage calculation: shields absorb 100% until depleted (+ Venom Demon 45% defense)
+              const demonRes =
+                p.currentWeapon === WeaponType.VENOM_FRUIT && venomFruitStateRef.current.demonActive
+                  ? 0.55
+                  : 1.0;
+              const damageDealt = Math.max(1, Math.round(z.damage * demonRes));
               sound.playPlayerHit();
               const hadShield = p.shield > 0;
 
@@ -7033,6 +7668,13 @@ export default function App() {
                 z.isOnFire = true;
                 z.burnTimer = Math.max(z.burnTimer || 0, 2.8);
               }
+              if (b.isVenom || b.isHydra || b.isVenomWave || b.isChloroBall) {
+                const isKinjiteHit = Boolean(b.isVenomWave || (b.isHydra && b.color === '#f43f5e'));
+                z.isPoisoned = true;
+                z.poisonTimer = Math.max(z.poisonTimer || 0, b.isHydra ? 5.0 : 4.0);
+                z.poisonDps = Math.max(z.poisonDps || 0, isKinjiteHit ? 36 : 16);
+                if (isKinjiteHit) z.isKinjitePoison = true;
+              }
               if (b.weaponType === WeaponType.TROPER && b.radius >= 5.0) {
                 const splashDmg = Math.max(4, Math.round(hitDamage * 0.6));
                 particlesRef.current.push({
@@ -7051,6 +7693,7 @@ export default function App() {
                 zombiesRef.current.forEach((nz) => {
                   if (nz.id !== z.id && nz.hp > 0 && Math.hypot(nz.x - b.x, nz.y - b.y) <= 72 + nz.radius) {
                     nz.hp -= splashDmg;
+                    if (nz.hp <= 0) handleZombieDeath(nz);
                   }
                 });
               }
@@ -7511,7 +8154,23 @@ export default function App() {
         ctx.restore();
       }
 
-      // 5. DRAW FLAMETHROWER STREAM AND BULLETS (Culled to viewport)
+      // 5. DRAW TOXIC CHLORO GAS CLOUDS, FLAMETHROWER STREAM AND BULLETS (Culled to viewport)
+      const vClouds = venomFruitStateRef.current.clouds;
+      for (let ci = 0; ci < vClouds.length; ci++) {
+        const cl = vClouds[ci];
+        renderToxicChloroCloud(
+          ctx,
+          cl.x,
+          cl.y,
+          cl.radius,
+          Math.max(0, cl.timer / Math.max(0.1, cl.maxTimer)),
+          cl.isKinjite,
+          camX,
+          camY,
+          time
+        );
+      }
+
       renderFlamethrowerStream(ctx, flameStreamRef.current, camX, camY, time);
 
       const bullets = bulletsRef.current;
@@ -7588,6 +8247,26 @@ export default function App() {
             ctx.fillStyle = ft === 0 ? 'rgba(254, 240, 138, 0.72)' : 'rgba(251, 146, 60, 0.68)';
             ctx.beginPath();
             ctx.arc(fx, fy, 4 + Math.sin(fWave + ft) * 1.6, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+
+        // Dripping Toxic Purple / Kinjite Crimson Venom aura on poisoned enemies
+        if (z.isPoisoned) {
+          const pWave = time * 0.015 + i * 1.4;
+          ctx.fillStyle = z.isKinjitePoison ? 'rgba(244, 63, 94, 0.30)' : 'rgba(168, 85, 247, 0.28)';
+          ctx.beginPath();
+          ctx.arc(0, 0, z.radius + 4 + Math.sin(pWave) * 1.3, 0, Math.PI * 2);
+          ctx.fill();
+          for (let pt = 0; pt < 3; pt++) {
+            const pa = pWave * 0.5 + (pt * Math.PI * 2) / 3;
+            const px = Math.cos(pa) * (z.radius * 0.72);
+            const py = Math.sin(pa) * (z.radius * 0.72);
+            ctx.fillStyle = z.isKinjitePoison
+              ? (pt === 0 ? 'rgba(253, 164, 175, 0.78)' : 'rgba(225, 29, 72, 0.72)')
+              : (pt === 0 ? 'rgba(217, 249, 157, 0.75)' : 'rgba(192, 132, 252, 0.72)');
+            ctx.beginPath();
+            ctx.arc(px, py, 3 + Math.sin(pWave + pt) * 1.2, 0, Math.PI * 2);
             ctx.fill();
           }
         }
@@ -8164,6 +8843,18 @@ export default function App() {
             im.isFiring,
             time,
             p.shield
+          );
+        } else if (p.currentWeapon === WeaponType.VENOM_FRUIT && venomFruitStateRef.current.demonActive) {
+          renderVenomDemonForm(
+            ctx,
+            spX,
+            spY,
+            p.angle,
+            p.radius,
+            isMoving,
+            time,
+            p.shield,
+            115
           );
         } else {
           // Spawn special operator skin / motion trail particles when moving
@@ -8796,6 +9487,11 @@ export default function App() {
           iceFireDragonHud={iceFireDragonHud}
           onSwitchIceFireDragon={switchIceFireDragon}
           onTriggerIceFireMerge={triggerIceFireMerge}
+          venomFruitHud={venomFruitHud}
+          onTriggerVenomHydra={triggerVenomHydra}
+          onTriggerVenomChloro={triggerVenomChloro}
+          onTriggerVenomRoad={triggerVenomRoad}
+          onTriggerVenomDemon={triggerVenomDemon}
           gamepadConnected={gamepadState.connected}
         />
 
@@ -8920,6 +9616,12 @@ export default function App() {
             iceFireMergeRemaining={iceFireDragonHud.mergeTimer}
             onSwitchIceFireDragon={switchIceFireDragon}
             onTriggerIceFireMerge={triggerIceFireMerge}
+            isVenomFruit={hudPlayer.currentWeapon === WeaponType.VENOM_FRUIT}
+            venomFruitHud={venomFruitHud}
+            onTriggerVenomHydra={triggerVenomHydra}
+            onTriggerVenomChloro={triggerVenomChloro}
+            onTriggerVenomRoad={triggerVenomRoad}
+            onTriggerVenomDemon={triggerVenomDemon}
           />
         )}
       </div>

@@ -20,6 +20,7 @@ import {
   Target,
   Star,
   Shirt,
+  Biohazard,
 } from 'lucide-react';
 import { sound } from '../sound';
 import { WeaponIllustration } from './WeaponGraphics';
@@ -357,6 +358,21 @@ export const WEAPON_CATALOG: WeaponStoreItem[] = [
     price: 115000,
     color: '#a855f7',
     icon: Flame,
+  },
+  {
+    type: WeaponType.VENOM_FRUIT,
+    name: 'Fruta do Veneno',
+    category: 'ALTA_ENERGIA',
+    categoryLabel: 'Akuma no Mi • Doku Doku no Mi',
+    description: 'Fruta do Diabo do Veneno (One Piece). Ataque primário envenena hordas com ácido roxo contínuo. Domine 3 golpes letais: [Q/1] Hidra (3 dragões), [E/2] Bola de Cloro (nuvem tóxica), [C/3] Estrada Venenosa (dash) e [Shift/4] Transformação Demônio do Veneno (Kinjite)!',
+    specialTrait: '[Q] Hidra • [E] Cloro • [C] Estrada • [Shift] Demônio do Veneno',
+    damage: 15,
+    fireRate: 5.5,
+    speed: 700,
+    piercing: 2,
+    price: 135000,
+    color: '#a855f7',
+    icon: Biohazard,
   },
 ];
 
@@ -768,9 +784,9 @@ export const StoreScreen: React.FC<StoreScreenProps> = ({
 
                     {/* Weapon Info & Icon Header */}
                     <div>
-                      {(item.type === WeaponType.DESTRUCTOR || item.type === WeaponType.INTERCEPTOR || item.type === WeaponType.NAVE_REI || item.type === WeaponType.EAST_DRAGON || item.type === WeaponType.IRON_MAN || item.type === WeaponType.ICE_AND_FIRE_DRAGON) && (
+                      {(item.type === WeaponType.DESTRUCTOR || item.type === WeaponType.INTERCEPTOR || item.type === WeaponType.NAVE_REI || item.type === WeaponType.EAST_DRAGON || item.type === WeaponType.IRON_MAN || item.type === WeaponType.ICE_AND_FIRE_DRAGON || item.type === WeaponType.VENOM_FRUIT) && (
                         <div className={`mb-2 rounded-xl bg-slate-950/85 border p-1.5 flex items-center justify-center ${
-                          item.type === WeaponType.ICE_AND_FIRE_DRAGON
+                          item.type === WeaponType.ICE_AND_FIRE_DRAGON || item.type === WeaponType.VENOM_FRUIT
                             ? 'border-purple-500/60'
                             : item.type === WeaponType.IRON_MAN
                               ? 'border-amber-400/50'

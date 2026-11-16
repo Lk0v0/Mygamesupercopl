@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { JoystickInput } from '../types';
-import { Flame, Zap, Crosshair, Sparkles, Snowflake, Crown } from 'lucide-react';
+import { Flame, Zap, Crosshair, Sparkles, Snowflake, Crown, Biohazard, Wind, Skull } from 'lucide-react';
 
 export interface MobileControlsProps {
   onLeftJoystick: (input: JoystickInput) => void;
@@ -30,6 +30,19 @@ export interface MobileControlsProps {
   iceFireMergeRemaining?: number;
   onSwitchIceFireDragon?: () => void;
   onTriggerIceFireMerge?: () => void;
+  isVenomFruit?: boolean;
+  venomFruitHud?: {
+    hydraCd: number;
+    chloroCd: number;
+    roadCd: number;
+    demonCd: number;
+    demonActive: boolean;
+    demonTimer: number;
+  };
+  onTriggerVenomHydra?: () => void;
+  onTriggerVenomChloro?: () => void;
+  onTriggerVenomRoad?: () => void;
+  onTriggerVenomDemon?: () => void;
 }
 
 export const MobileControls: React.FC<MobileControlsProps> = ({
@@ -60,6 +73,12 @@ export const MobileControls: React.FC<MobileControlsProps> = ({
   iceFireMergeRemaining = 0,
   onSwitchIceFireDragon,
   onTriggerIceFireMerge,
+  isVenomFruit = false,
+  venomFruitHud,
+  onTriggerVenomHydra,
+  onTriggerVenomChloro,
+  onTriggerVenomRoad,
+  onTriggerVenomDemon,
 }) => {
   // === 1. LEFT DYNAMIC JOYSTICK (MOVEMENT) ===
   const [leftTouchActive, setLeftTouchActive] = useState(false);
@@ -800,6 +819,127 @@ export const MobileControls: React.FC<MobileControlsProps> = ({
               </span>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Fruta do Veneno (Doku Doku no Mi) 3 Skills + Venom Demon Transform */}
+      {isVenomFruit && venomFruitHud && (
+        <div className="absolute bottom-16 right-2 sm:bottom-24 sm:right-6 grid grid-cols-2 gap-1.5 sm:gap-2 pointer-events-auto z-50">
+          {/* Skill 1: Hidra */}
+          <button
+            id="mobile-venom-hydra"
+            onTouchStart={(e) => {
+              e.stopPropagation();
+              if (venomFruitHud.hydraCd <= 0 && onTriggerVenomHydra) {
+                onTriggerVenomHydra();
+                if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(25);
+              }
+            }}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (venomFruitHud.hydraCd <= 0 && onTriggerVenomHydra) onTriggerVenomHydra();
+            }}
+            onContextMenu={(e) => e.preventDefault()}
+            className={`w-12 h-12 sm:w-14 sm:h-14 rounded-full flex flex-col items-center justify-center border-2 transition-all active:scale-95 select-none touch-none shadow-lg ${
+              venomFruitHud.hydraCd <= 0
+                ? 'bg-gradient-to-tr from-purple-950 via-violet-900 to-fuchsia-950 border-purple-400 text-purple-100 cursor-pointer'
+                : 'bg-slate-950/85 border-white/15 text-slate-400'
+            }`}
+          >
+            <Biohazard className="w-4 h-4 text-purple-300" />
+            <span className="text-[7px] font-mono font-black uppercase mt-0.5">
+              {venomFruitHud.hydraCd <= 0 ? 'HIDRA' : `${venomFruitHud.hydraCd.toFixed(1)}s`}
+            </span>
+          </button>
+
+          {/* Skill 2: Bola de Cloro */}
+          <button
+            id="mobile-venom-chloro"
+            onTouchStart={(e) => {
+              e.stopPropagation();
+              if (venomFruitHud.chloroCd <= 0 && onTriggerVenomChloro) {
+                onTriggerVenomChloro();
+                if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(25);
+              }
+            }}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (venomFruitHud.chloroCd <= 0 && onTriggerVenomChloro) onTriggerVenomChloro();
+            }}
+            onContextMenu={(e) => e.preventDefault()}
+            className={`w-12 h-12 sm:w-14 sm:h-14 rounded-full flex flex-col items-center justify-center border-2 transition-all active:scale-95 select-none touch-none shadow-lg ${
+              venomFruitHud.chloroCd <= 0
+                ? 'bg-gradient-to-tr from-lime-950 via-emerald-950 to-purple-950 border-lime-400 text-lime-100 cursor-pointer'
+                : 'bg-slate-950/85 border-white/15 text-slate-400'
+            }`}
+          >
+            <Sparkles className="w-4 h-4 text-lime-300" />
+            <span className="text-[7px] font-mono font-black uppercase mt-0.5">
+              {venomFruitHud.chloroCd <= 0 ? 'CLORO' : `${venomFruitHud.chloroCd.toFixed(1)}s`}
+            </span>
+          </button>
+
+          {/* Skill 3: Estrada Venenosa */}
+          <button
+            id="mobile-venom-road"
+            onTouchStart={(e) => {
+              e.stopPropagation();
+              if (venomFruitHud.roadCd <= 0 && onTriggerVenomRoad) {
+                onTriggerVenomRoad();
+                if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(25);
+              }
+            }}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (venomFruitHud.roadCd <= 0 && onTriggerVenomRoad) onTriggerVenomRoad();
+            }}
+            onContextMenu={(e) => e.preventDefault()}
+            className={`w-12 h-12 sm:w-14 sm:h-14 rounded-full flex flex-col items-center justify-center border-2 transition-all active:scale-95 select-none touch-none shadow-lg ${
+              venomFruitHud.roadCd <= 0
+                ? 'bg-gradient-to-tr from-fuchsia-950 via-purple-900 to-slate-950 border-fuchsia-400 text-fuchsia-100 cursor-pointer'
+                : 'bg-slate-950/85 border-white/15 text-slate-400'
+            }`}
+          >
+            <Wind className="w-4 h-4 text-fuchsia-300" />
+            <span className="text-[6.5px] font-mono font-black uppercase mt-0.5">
+              {venomFruitHud.roadCd <= 0 ? 'ESTRADA' : `${venomFruitHud.roadCd.toFixed(1)}s`}
+            </span>
+          </button>
+
+          {/* Transformation: Demônio do Veneno */}
+          <button
+            id="mobile-venom-demon"
+            onTouchStart={(e) => {
+              e.stopPropagation();
+              if (!venomFruitHud.demonActive && venomFruitHud.demonCd <= 0 && onTriggerVenomDemon) {
+                onTriggerVenomDemon();
+                if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(40);
+              }
+            }}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (!venomFruitHud.demonActive && venomFruitHud.demonCd <= 0 && onTriggerVenomDemon) {
+                onTriggerVenomDemon();
+              }
+            }}
+            onContextMenu={(e) => e.preventDefault()}
+            className={`w-12 h-12 sm:w-14 sm:h-14 rounded-full flex flex-col items-center justify-center border-2 transition-all active:scale-95 select-none touch-none shadow-lg ${
+              venomFruitHud.demonActive
+                ? 'bg-gradient-to-tr from-rose-950 via-red-900 to-fuchsia-950 border-rose-300 text-rose-100 animate-pulse'
+                : venomFruitHud.demonCd <= 0
+                  ? 'bg-gradient-to-tr from-rose-950 via-purple-950 to-slate-950 border-rose-400 text-rose-100 cursor-pointer'
+                  : 'bg-slate-950/85 border-white/15 text-slate-400'
+            }`}
+          >
+            <Skull className="w-4 h-4 text-rose-300" />
+            <span className="text-[6.5px] font-mono font-black uppercase mt-0.5">
+              {venomFruitHud.demonActive
+                ? `${venomFruitHud.demonTimer.toFixed(1)}s`
+                : venomFruitHud.demonCd <= 0
+                  ? 'DEMÔNIO'
+                  : `${venomFruitHud.demonCd.toFixed(1)}s`}
+            </span>
+          </button>
         </div>
       )}
 

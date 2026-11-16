@@ -1956,6 +1956,58 @@ export const WeaponIllustration: React.FC<WeaponIllustrationProps> = ({
         </svg>
       );
 
+    case WT.VENOM_FRUIT:
+      // === FRUTA DO VENENO (DOKU DOKU NO MI · HIDRA + DEMÔNIO KINJITE) ===
+      return (
+        <svg viewBox="0 0 340 140" className={className} fill="none" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="venom-hydra-grad" x1="110" y1="68" x2="330" y2="68" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stopColor="#a855f7" />
+              <stop offset="55%" stopColor="#c084fc" />
+              <stop offset="100%" stopColor="#f43f5e" />
+            </linearGradient>
+          </defs>
+          <text x="328" y="15" textAnchor="end" fill="#c084fc" opacity="0.95" fontSize="9.5" fontFamily="monospace" fontWeight="bold">
+            FRUTA DO VENENO · DOKU DOKU NO MI
+          </text>
+          <text x="328" y="26" textAnchor="end" fill="#fda4af" opacity="0.9" fontSize="8" fontFamily="monospace">
+            [Q/1] HIDRA · [E/2] CLORO · [C/3] ESTRADA · [SHIFT/4] DEMÔNIO KINJITE
+          </text>
+
+          {/* Purple Devil Fruit Sphere (left) */}
+          <path d="M56,42 C56,30 68,26 70,34" stroke="#22c55e" strokeWidth="4" strokeLinecap="round" />
+          <path d="M56,40 C48,34 45,38 50,44" stroke="#4ade80" strokeWidth="2.5" strokeLinecap="round" />
+          <circle cx="56" cy="72" r="27" fill="#6b21a8" stroke="#c084fc" strokeWidth="2.2" />
+          {/* Iconic Akuma no Mi Spiral Swirls */}
+          <path d="M42,63 C47,54 57,57 54,65 C51,71 42,69 44,61" stroke="#f0abfc" strokeWidth="2.2" strokeLinecap="round" fill="none" />
+          <path d="M62,58 C69,54 75,62 69,68 C64,72 58,67 62,61" stroke="#f0abfc" strokeWidth="2.2" strokeLinecap="round" fill="none" />
+          <path d="M47,82 C52,75 64,77 61,86 C58,92 48,91 49,83" stroke="#d8b4fe" strokeWidth="2.2" strokeLinecap="round" fill="none" />
+          {/* Dripping venom drops */}
+          <path d="M44,97 Q44,108 40,108 Q36,108 38,96" fill="#a855f7" />
+          <circle cx="67" cy="105" r="3.5" fill="#c084fc" />
+          <circle cx="54" cy="112" r="2.8" fill="#e879f9" />
+
+          {/* Surging Triple Hydra Serpent & Demon Silhouette */}
+          <path d="M86,70 Q135,44 180,62 T265,48" stroke="url(#venom-hydra-grad)" strokeWidth="8" strokeLinecap="round" opacity="0.85" />
+          <path d="M86,74 Q142,84 195,74 T288,72" stroke="#9333ea" strokeWidth="10" strokeLinecap="round" opacity="0.9" />
+          <path d="M86,78 Q138,104 188,90 T268,100" stroke="#7e22ce" strokeWidth="7.5" strokeLinecap="round" opacity="0.82" />
+
+          {/* Top Hydra Dragon Head */}
+          <polygon points="286,47 262,38 258,47 262,56" fill="#9333ea" stroke="#f0abfc" strokeWidth="1.5" />
+          <circle cx="272" cy="45" r="2" fill="#fef08a" />
+
+          {/* Center Venom Demon Head (Crimson Kinjite) */}
+          <path d="M294,54 L282,42 M294,90 L282,102" stroke="#f43f5e" strokeWidth="3.2" strokeLinecap="round" />
+          <polygon points="322,72 292,55 278,64 278,80 292,89" fill="#9f1239" stroke="#fb7185" strokeWidth="2" />
+          <circle cx="301" cy="67" r="2.6" fill="#fef08a" />
+          <circle cx="301" cy="77" r="2.6" fill="#fef08a" />
+
+          {/* Chloro Toxic Bubble Cloud accent */}
+          <circle cx="230" cy="108" r="9" fill="#84cc16" fillOpacity="0.35" stroke="#a3e635" strokeWidth="1.2" />
+          <circle cx="241" cy="104" r="6" fill="#a855f7" fillOpacity="0.4" />
+        </svg>
+      );
+
     default:
       return null;
   }

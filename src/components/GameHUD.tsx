@@ -97,6 +97,19 @@ interface GameHUDProps {
   };
   onSwitchIceFireDragon?: () => void;
   onTriggerIceFireMerge?: () => void;
+  venomFruitHud?: {
+    hydraCd: number;
+    chloroCd: number;
+    roadCd: number;
+    demonCd: number;
+    demonActive: boolean;
+    demonTimer: number;
+    demonDuration: number;
+  };
+  onTriggerVenomHydra?: () => void;
+  onTriggerVenomChloro?: () => void;
+  onTriggerVenomRoad?: () => void;
+  onTriggerVenomDemon?: () => void;
   gamepadConnected?: boolean;
 }
 
@@ -129,6 +142,8 @@ const getWeaponIcon = (wt: WeaponType) => {
     case WeaponType.RAYGUN:
     case WeaponType.TROPER:
       return Sparkles;
+    case WeaponType.VENOM_FRUIT:
+      return Biohazard;
     case WeaponType.LASER_MINIGUN:
       return Radio;
     default:
@@ -169,6 +184,11 @@ export const GameHUD: React.FC<GameHUDProps> = ({
   iceFireDragonHud,
   onSwitchIceFireDragon,
   onTriggerIceFireMerge,
+  venomFruitHud,
+  onTriggerVenomHydra,
+  onTriggerVenomChloro,
+  onTriggerVenomRoad,
+  onTriggerVenomDemon,
   gamepadConnected = false,
 }) => {
   const [showControlsModal, setShowControlsModal] = useState(false);
@@ -652,6 +672,97 @@ export const GameHUD: React.FC<GameHUDProps> = ({
                       </span>
                     </button>
                   </>
+                )}
+              </div>
+            )}
+
+            {player.currentWeapon === WeaponType.VENOM_FRUIT && venomFruitHud && (
+              <div className="flex items-center gap-1.5 flex-wrap justify-center">
+                <button
+                  onClick={() => {
+                    if (venomFruitHud.hydraCd <= 0 && onTriggerVenomHydra) onTriggerVenomHydra();
+                  }}
+                  className={`bg-slate-950/90 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg border flex items-center gap-1 text-[9px] sm:text-[10px] font-mono font-bold transition-all shadow-lg ${
+                    venomFruitHud.hydraCd <= 0
+                      ? 'border-purple-400/70 text-purple-200 hover:bg-purple-950/60 cursor-pointer'
+                      : 'border-white/10 text-slate-400 cursor-default'
+                  }`}
+                  title="[Q / 1] Hidra — Lança 3 cabeças de dragão de veneno"
+                >
+                  <Biohazard className="w-3 h-3 text-purple-400" />
+                  <span>[Q] HIDRA</span>
+                  <span style={{ color: venomFruitHud.hydraCd <= 0 ? '#e879f9' : '#94a3b8' }}>
+                    {venomFruitHud.hydraCd <= 0 ? 'OK' : `${venomFruitHud.hydraCd.toFixed(1)}s`}
+                  </span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    if (venomFruitHud.chloroCd <= 0 && onTriggerVenomChloro) onTriggerVenomChloro();
+                  }}
+                  className={`bg-slate-950/90 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg border flex items-center gap-1 text-[9px] sm:text-[10px] font-mono font-bold transition-all shadow-lg ${
+                    venomFruitHud.chloroCd <= 0
+                      ? 'border-lime-400/70 text-lime-200 hover:bg-lime-950/60 cursor-pointer'
+                      : 'border-white/10 text-slate-400 cursor-default'
+                  }`}
+                  title="[E / 2] Bola de Cloro — Cria nuvem tóxica que sufoca e envenena"
+                >
+                  <span>[E] CLORO</span>
+                  <span style={{ color: venomFruitHud.chloroCd <= 0 ? '#a3e635' : '#94a3b8' }}>
+                    {venomFruitHud.chloroCd <= 0 ? 'OK' : `${venomFruitHud.chloroCd.toFixed(1)}s`}
+                  </span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    if (venomFruitHud.roadCd <= 0 && onTriggerVenomRoad) onTriggerVenomRoad();
+                  }}
+                  className={`bg-slate-950/90 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg border flex items-center gap-1 text-[9px] sm:text-[10px] font-mono font-bold transition-all shadow-lg ${
+                    venomFruitHud.roadCd <= 0
+                      ? 'border-fuchsia-400/70 text-fuchsia-200 hover:bg-fuchsia-950/60 cursor-pointer'
+                      : 'border-white/10 text-slate-400 cursor-default'
+                  }`}
+                  title="[C / 3] Estrada Venenosa — Dash veloz em onda de veneno"
+                >
+                  <span>[C] ESTRADA</span>
+                  <span style={{ color: venomFruitHud.roadCd <= 0 ? '#f0abfc' : '#94a3b8' }}>
+                    {venomFruitHud.roadCd <= 0 ? 'OK' : `${venomFruitHud.roadCd.toFixed(1)}s`}
+                  </span>
+                </button>
+
+                {venomFruitHud.demonActive ? (
+                  <div className="bg-rose-950/90 px-2.5 py-0.5 sm:py-1 rounded-lg border border-rose-400/80 shadow-lg flex items-center gap-1.5 text-[9px] sm:text-[10px] font-mono font-black text-rose-200">
+                    <Skull className="w-3 h-3 text-rose-300 animate-pulse" />
+                    <span>KINJITE {venomFruitHud.demonTimer.toFixed(1)}s</span>
+                    <div className="w-10 h-1.5 bg-slate-900 rounded-full overflow-hidden border border-white/15">
+                      <div
+                        className="h-full bg-gradient-to-r from-rose-500 to-fuchsia-400"
+                        style={{
+                          width: `${Math.round(
+                            Math.max(0, Math.min(1, venomFruitHud.demonTimer / Math.max(1, venomFruitHud.demonDuration))) * 100
+                          )}%`,
+                        }}
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => {
+                      if (venomFruitHud.demonCd <= 0 && onTriggerVenomDemon) onTriggerVenomDemon();
+                    }}
+                    className={`bg-slate-950/90 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg border flex items-center gap-1 text-[9px] sm:text-[10px] font-mono font-bold transition-all shadow-lg ${
+                      venomFruitHud.demonCd <= 0
+                        ? 'border-rose-500/80 text-rose-200 hover:bg-rose-950/60 cursor-pointer'
+                        : 'border-white/10 text-slate-400 cursor-default'
+                    }`}
+                    title="[Shift / 4] Transformação: Demônio do Veneno (Kinjite)"
+                  >
+                    <Skull className="w-3 h-3 text-rose-400" />
+                    <span>[SHIFT] DEMÔNIO</span>
+                    <span style={{ color: venomFruitHud.demonCd <= 0 ? '#fb7185' : '#94a3b8' }}>
+                      {venomFruitHud.demonCd <= 0 ? 'PRONTO' : `${venomFruitHud.demonCd.toFixed(1)}s`}
+                    </span>
+                  </button>
                 )}
               </div>
             )}

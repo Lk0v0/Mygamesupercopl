@@ -676,6 +676,10 @@ export function renderSceneLighting(
     playerLightColor = 'purple';
     playerLightRadius = 115;
     playerLightAlpha = 0.16;
+  } else if (player.currentWeapon === WeaponType.VENOM_FRUIT) {
+    playerLightColor = 'purple';
+    playerLightRadius = 122;
+    playerLightAlpha = 0.18;
   } else if (player.equippedSkin === 'skin_pyro_igniter') {
     playerLightColor = 'orange';
     playerLightRadius = 118;
@@ -720,7 +724,7 @@ export function renderSceneLighting(
       flashColor = 'green';
     } else if (player.currentWeapon === WeaponType.LASER_MINIGUN || player.currentWeapon === WeaponType.NAVE_REI || player.currentWeapon === WeaponType.IRON_MAN) {
       flashColor = 'red';
-    } else if (player.currentWeapon === WeaponType.MACHINE_GUN || player.currentWeapon === WeaponType.ICE_AND_FIRE_DRAGON) {
+    } else if (player.currentWeapon === WeaponType.MACHINE_GUN || player.currentWeapon === WeaponType.ICE_AND_FIRE_DRAGON || player.currentWeapon === WeaponType.VENOM_FRUIT) {
       flashColor = 'purple';
     } else if (player.currentWeapon === WeaponType.FLAMETHROWER || player.currentWeapon === WeaponType.ROCKET_LAUNCHER || player.currentWeapon === WeaponType.EAST_DRAGON) {
       flashColor = 'orange';
@@ -749,6 +753,10 @@ export function renderSceneLighting(
     if (z.isOnFire) {
       const flicker = 0.2 + Math.sin(time * 0.025 + i) * 0.06;
       drawLight(z.x, z.y, z.radius * 3.1, 'orange', flicker);
+      enemyLightsDrawn++;
+    } else if (z.isPoisoned) {
+      const pulseP = 0.17 + Math.sin(time * 0.015 + i) * 0.04;
+      drawLight(z.x, z.y, z.radius * 2.8, z.isKinjitePoison ? 'red' : 'purple', pulseP);
       enemyLightsDrawn++;
     } else if (z.isBoss) {
       const bossColor: LightColorKey = isAlienStage ? 'purple' : 'red';
@@ -789,6 +797,14 @@ export function renderSceneLighting(
       lk = 'red';
       rad = 48;
       alpha = 0.2;
+    } else if (b.isVenomWave) {
+      lk = 'red';
+      rad = 68;
+      alpha = 0.24;
+    } else if (b.isHydra || b.isChloroBall || b.isVenom) {
+      lk = 'purple';
+      rad = b.isHydra ? 72 : 52;
+      alpha = b.isHydra ? 0.25 : 0.18;
     } else if (b.isRay || b.isOrb || b.isVoidLance) {
       lk = 'cyan';
       rad = 52;

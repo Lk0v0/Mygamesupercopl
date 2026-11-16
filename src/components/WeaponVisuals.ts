@@ -855,6 +855,62 @@ export function renderPlayerWeapon(
       break;
     }
 
+    case WeaponType.VENOM_FRUIT: {
+      // === AKUMA NO MI: FRUTA DO VENENO (DOKU DOKU NO MI) ===
+      const pulse = 1 + Math.sin(time * 0.008) * 0.12;
+      const hoverX = 20;
+      const hoverY = 0;
+
+      // Toxic aura halo behind fruit
+      ctx.fillStyle = 'rgba(168, 85, 247, 0.28)';
+      ctx.beginPath();
+      ctx.arc(hoverX, hoverY, 10.5 * pulse, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Gloved hand reaching / cradling the Devil Fruit
+      ctx.fillStyle = '#312e81';
+      ctx.beginPath();
+      ctx.arc(13, 3.5, 4.2, 0, Math.PI * 2);
+      ctx.arc(13, -3.5, 4.2, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Green curly Devil Fruit stem
+      ctx.strokeStyle = '#22c55e';
+      ctx.lineWidth = 2;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(hoverX - 2, hoverY - 6);
+      ctx.quadraticCurveTo(hoverX + 1, hoverY - 11, hoverX + 4.5, hoverY - 8.5);
+      ctx.stroke();
+
+      // Purple Doku Doku no Mi fruit orb
+      ctx.fillStyle = '#6b21a8';
+      ctx.strokeStyle = '#e879f9';
+      ctx.lineWidth = 1.4;
+      ctx.beginPath();
+      ctx.arc(hoverX, hoverY, 7.2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+
+      // Akuma no Mi swirl markings
+      ctx.strokeStyle = '#f5d0fe';
+      ctx.lineWidth = 1.15;
+      ctx.beginPath();
+      ctx.arc(hoverX - 2, hoverY - 1.5, 2.2, 0.2, Math.PI * 1.6);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(hoverX + 2.2, hoverY + 1.8, 2.0, Math.PI, Math.PI * 2.5);
+      ctx.stroke();
+
+      // Animated dripping venom drop at tip
+      const dripOff = (Math.sin(time * 0.012) * 0.5 + 0.5) * 4.5;
+      ctx.fillStyle = '#c084fc';
+      ctx.beginPath();
+      ctx.arc(hoverX + 5.5 + dripOff, hoverY + 2, 1.8, 0, Math.PI * 2);
+      ctx.fill();
+      break;
+    }
+
     default:
       // Clean fallback
       ctx.fillStyle = '#1e293b';
@@ -1131,6 +1187,175 @@ export function renderBulletVisual(
     ctx.moveTo(-10, 0);
     ctx.lineTo(11, 0);
     ctx.stroke();
+
+    ctx.restore();
+    return;
+  }
+
+  // 0a2. FRUTA DO VENENO — HYDRA VENOM DRAGON HEADS ([Q] / [1])
+  if (b.isHydra) {
+    const moveAngle = (b.vx * b.vx + b.vy * b.vy) > 1 ? Math.atan2(b.vy, b.vx) : b.ownerAngle;
+    const isKinjite = b.color === '#f43f5e' || b.color === '#e11d48';
+    const bodyCol = isKinjite ? '#be123c' : '#7e22ce';
+    const edgeCol = isKinjite ? '#fb7185' : '#e879f9';
+    const wakeCol = isKinjite ? 'rgba(244, 63, 94, 0.34)' : 'rgba(168, 85, 247, 0.34)';
+
+    ctx.save();
+    ctx.translate(scrX, scrY);
+    ctx.rotate(moveAngle);
+
+    // Wavy liquid dragon neck segments trailing behind head
+    const wave = Math.sin(time * 0.025 + b.distanceTraveled * 0.06);
+    for (let s = 3; s >= 1; s--) {
+      const sx = -s * 12;
+      const sy = Math.sin(wave + s * 1.1) * (3 + s * 1.4);
+      const sr = Math.max(4, b.radius * (0.9 - s * 0.16));
+      ctx.fillStyle = wakeCol;
+      ctx.beginPath();
+      ctx.arc(sx, sy, sr * 1.45, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = bodyCol;
+      ctx.beginPath();
+      ctx.arc(sx, sy, sr, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Outer venomous aura around dragon head
+    ctx.fillStyle = wakeCol;
+    ctx.beginPath();
+    ctx.ellipse(2, 0, b.radius * 1.8, b.radius * 1.35, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Swept Hydra Dragon Horns
+    ctx.strokeStyle = edgeCol;
+    ctx.lineWidth = 2.6;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(-4, -6);
+    ctx.lineTo(-16, -13);
+    ctx.moveTo(-4, 6);
+    ctx.lineTo(-16, 13);
+    ctx.stroke();
+
+    // Sculpted Venom Serpent-Dragon Head with Fanged Snout
+    ctx.fillStyle = bodyCol;
+    ctx.strokeStyle = edgeCol;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(b.radius * 1.55, 0);
+    ctx.lineTo(b.radius * 0.4, -b.radius * 0.85);
+    ctx.lineTo(-b.radius * 0.9, -b.radius * 0.65);
+    ctx.lineTo(-b.radius * 0.65, 0);
+    ctx.lineTo(-b.radius * 0.9, b.radius * 0.65);
+    ctx.lineTo(b.radius * 0.4, b.radius * 0.85);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    // Fierce Glowing Slit Eyes & Toxic Fangs
+    ctx.fillStyle = '#fef08a';
+    ctx.beginPath();
+    ctx.arc(b.radius * 0.28, -b.radius * 0.36, 2.6, 0, Math.PI * 2);
+    ctx.arc(b.radius * 0.28, b.radius * 0.36, 2.6, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.arc(b.radius * 0.95, 0, 2.4, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.restore();
+    return;
+  }
+
+  // 0a3. FRUTA DO VENENO — CHLORO BALL ([E] / [2])
+  if (b.isChloroBall) {
+    const spin = time * 0.015;
+    ctx.save();
+    ctx.translate(scrX, scrY);
+
+    ctx.fillStyle = 'rgba(132, 204, 22, 0.32)';
+    ctx.beginPath();
+    ctx.arc(0, 0, b.radius * 1.9, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = '#6b21a8';
+    ctx.strokeStyle = '#a3e635';
+    ctx.lineWidth = 2.2;
+    ctx.beginPath();
+    ctx.arc(0, 0, b.radius, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    // Pressurized gas swirl ribbons inside sphere
+    ctx.strokeStyle = '#bef264';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(0, 0, b.radius * 0.58, spin, spin + Math.PI * 1.15);
+    ctx.stroke();
+
+    ctx.fillStyle = '#ecfccb';
+    ctx.beginPath();
+    ctx.arc(0, 0, b.radius * 0.28, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.restore();
+    return;
+  }
+
+  // 0a4. FRUTA DO VENENO — KINJITE VENOM DEMON WAVE (Transformed Primary)
+  if (b.isVenomWave) {
+    const moveAngle = (b.vx * b.vx + b.vy * b.vy) > 1 ? Math.atan2(b.vy, b.vx) : b.ownerAngle;
+    ctx.save();
+    ctx.translate(scrX, scrY);
+    ctx.rotate(moveAngle);
+    ctx.globalCompositeOperation = 'lighter';
+
+    ctx.fillStyle = 'rgba(225, 29, 72, 0.42)';
+    ctx.beginPath();
+    ctx.arc(0, 0, b.radius * 1.45, -Math.PI * 0.48, Math.PI * 0.48);
+    ctx.quadraticCurveTo(b.radius * 0.4, 0, 0, -b.radius * 1.45);
+    ctx.fill();
+
+    ctx.strokeStyle = '#fb7185';
+    ctx.lineWidth = 4.5;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.arc(-b.radius * 0.35, 0, b.radius * 1.25, -Math.PI * 0.42, Math.PI * 0.42);
+    ctx.stroke();
+
+    ctx.strokeStyle = '#fff1f2';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(-b.radius * 0.2, 0, b.radius * 1.1, -Math.PI * 0.34, Math.PI * 0.34);
+    ctx.stroke();
+
+    ctx.restore();
+    return;
+  }
+
+  // 0a5. FRUTA DO VENENO — PRIMARY VENOM ORB
+  if (b.isVenom) {
+    ctx.save();
+    ctx.translate(scrX, scrY);
+
+    ctx.fillStyle = 'rgba(168, 85, 247, 0.32)';
+    ctx.beginPath();
+    ctx.arc(0, 0, b.radius * 1.85, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = '#9333ea';
+    ctx.strokeStyle = '#e879f9';
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.arc(0, 0, b.radius, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = '#fdf4ff';
+    ctx.beginPath();
+    ctx.arc(b.radius * 0.2, -b.radius * 0.2, b.radius * 0.38, 0, Math.PI * 2);
+    ctx.fill();
 
     ctx.restore();
     return;
@@ -4894,6 +5119,228 @@ export function renderCompanionDragon(
 
   ctx.restore();
 }
+
+/**
+ * Render lingering Chloro Ball toxic gas cloud area on the floor.
+ */
+export function renderToxicChloroCloud(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  radius: number,
+  lifeRatio: number,
+  isKinjite: boolean,
+  camX: number,
+  camY: number,
+  time: number
+) {
+  const sx = x - camX;
+  const sy = y - camY;
+  const fade = Math.min(1, lifeRatio * 2.2);
+  const pulse = 1 + Math.sin(time * 0.007 + x * 0.01) * 0.06;
+
+  ctx.save();
+  ctx.translate(sx, sy);
+
+  // Outer perimeter ring
+  ctx.strokeStyle = isKinjite
+    ? `rgba(244, 63, 94, ${(0.55 * fade).toFixed(2)})`
+    : `rgba(163, 230, 53, ${(0.52 * fade).toFixed(2)})`;
+  ctx.lineWidth = 2.5;
+  ctx.setLineDash([10, 7]);
+  ctx.beginPath();
+  ctx.arc(0, 0, radius * pulse, time * 0.001, time * 0.001 + Math.PI * 2);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Layered translucent gas lobes (zero radial gradient allocs)
+  ctx.fillStyle = isKinjite
+    ? `rgba(190, 18, 60, ${(0.22 * fade).toFixed(2)})`
+    : `rgba(126, 34, 206, ${(0.2 * fade).toFixed(2)})`;
+  ctx.beginPath();
+  ctx.arc(0, 0, radius * 0.96, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = isKinjite
+    ? `rgba(244, 63, 94, ${(0.18 * fade).toFixed(2)})`
+    : `rgba(132, 204, 22, ${(0.18 * fade).toFixed(2)})`;
+  for (let i = 0; i < 4; i++) {
+    const a = time * 0.0018 + (i * Math.PI) / 2;
+    const ox = Math.cos(a) * radius * 0.34;
+    const oy = Math.sin(a) * radius * 0.34;
+    ctx.beginPath();
+    ctx.arc(ox, oy, radius * 0.48, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Rising toxic bubbles
+  ctx.fillStyle = isKinjite
+    ? `rgba(253, 164, 175, ${(0.65 * fade).toFixed(2)})`
+    : `rgba(217, 249, 157, ${(0.62 * fade).toFixed(2)})`;
+  for (let b = 0; b < 5; b++) {
+    const phase = ((time * 0.003 + b * 1.37) % 1);
+    const ang = b * 1.9 + x * 0.03;
+    const dist = radius * (0.2 + ((b * 0.17) % 0.65));
+    const bx = Math.cos(ang) * dist;
+    const by = Math.sin(ang) * dist - phase * 18;
+    const br = (1 - phase) * 5.2 + 1.5;
+    ctx.beginPath();
+    ctx.arc(bx, by, br, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  ctx.restore();
+}
+
+/**
+ * Render the towering One Piece Magellan-inspired "Venom Demon: Kinjite" transformation.
+ */
+export function renderVenomDemonForm(
+  ctx: CanvasRenderingContext2D,
+  screenX: number,
+  screenY: number,
+  angle: number,
+  radius: number,
+  isMoving: boolean,
+  time: number,
+  shield: number,
+  auraRadius: number
+) {
+  ctx.save();
+  ctx.translate(screenX, screenY);
+
+  // 1. Corrosive Hell's Judgment floor aura ring (world-space around player)
+  const pulse = 1 + Math.sin(time * 0.009) * 0.05;
+  ctx.fillStyle = 'rgba(159, 18, 57, 0.14)';
+  ctx.beginPath();
+  ctx.arc(0, 0, auraRadius * pulse, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.strokeStyle = 'rgba(244, 63, 94, 0.48)';
+  ctx.lineWidth = 2.4;
+  ctx.setLineDash([12, 8]);
+  ctx.beginPath();
+  ctx.arc(0, 0, auraRadius * pulse, time * 0.0018, time * 0.0018 + Math.PI * 2);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  ctx.rotate(angle);
+
+  const demonR = radius * 1.48;
+  const sway = Math.sin(time * 0.012) * (isMoving ? 4.5 : 2.2);
+
+  // 2. Flowing Crimson-Black Liquid Venom Cloak / Tendrils
+  ctx.fillStyle = 'rgba(136, 19, 55, 0.85)';
+  ctx.strokeStyle = '#fb7185';
+  ctx.lineWidth = 1.6;
+  ctx.beginPath();
+  ctx.moveTo(4, -demonR * 0.9);
+  ctx.quadraticCurveTo(-demonR * 1.15, -demonR * 1.2 + sway, -demonR * 1.7, -demonR * 0.55 + sway);
+  ctx.lineTo(-demonR * 1.45, 0 - sway * 0.5);
+  ctx.lineTo(-demonR * 1.7, demonR * 0.55 - sway);
+  ctx.quadraticCurveTo(-demonR * 1.15, demonR * 1.2 - sway, 4, demonR * 0.9);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  // 3. Drop shadow
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
+  ctx.beginPath();
+  ctx.arc(4, 4, demonR, 0, Math.PI * 2);
+  ctx.fill();
+
+  // 4. Twin Shoulder Serpent-Skull Venom Crests (Magellan Demon Shoulders)
+  [-1, 1].forEach((side) => {
+    const sy = side * (demonR * 0.82);
+    ctx.fillStyle = '#4c0519';
+    ctx.strokeStyle = '#f43f5e';
+    ctx.lineWidth = 1.8;
+    ctx.beginPath();
+    ctx.moveTo(10, sy);
+    ctx.lineTo(-4, sy + side * 8);
+    ctx.lineTo(-14, sy);
+    ctx.lineTo(-4, sy - side * 6);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    // Glowing shoulder dragon eye
+    ctx.fillStyle = '#fde047';
+    ctx.beginPath();
+    ctx.arc(2, sy, 2.2, 0, Math.PI * 2);
+    ctx.fill();
+  });
+
+  // 5. Towering Kinjite Liquid Body Core
+  ctx.fillStyle = '#881337';
+  ctx.strokeStyle = '#fda4af';
+  ctx.lineWidth = 2.4;
+  ctx.beginPath();
+  ctx.arc(0, 0, demonR, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.fillStyle = '#be123c';
+  ctx.beginPath();
+  ctx.arc(2, 0, demonR * 0.72, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Dripping crimson toxin crown & demon fangs
+  ctx.fillStyle = '#e11d48';
+  ctx.beginPath();
+  ctx.arc(demonR * 0.62, -6, 5.2, 0, Math.PI * 2);
+  ctx.arc(demonR * 0.62, 6, 5.2, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Curved Giant Demon Horns (curving forward-outward)
+  [-1, 1].forEach((side) => {
+    ctx.fillStyle = '#1e1b4b';
+    ctx.strokeStyle = '#fb7185';
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.moveTo(2, side * (demonR * 0.48));
+    ctx.quadraticCurveTo(14, side * (demonR * 1.15), 24, side * (demonR * 0.85));
+    ctx.quadraticCurveTo(10, side * (demonR * 0.75), -4, side * (demonR * 0.25));
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+  });
+
+  // 6. Blazing Demon Visor Eyes & Wicked Grin
+  ctx.fillStyle = '#fef08a';
+  ctx.beginPath();
+  ctx.ellipse(demonR * 0.45, -7.5, 4.5, 2.2, -0.3, 0, Math.PI * 2);
+  ctx.ellipse(demonR * 0.45, 7.5, 4.5, 2.2, 0.3, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = '#ffffff';
+  ctx.beginPath();
+  ctx.arc(demonR * 0.52, -7.5, 1.3, 0, Math.PI * 2);
+  ctx.arc(demonR * 0.52, 7.5, 1.3, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Forward extended Demon Clawed Hands dripping Kinjite venom
+  [-1, 1].forEach((side) => {
+    ctx.fillStyle = '#4c0519';
+    ctx.strokeStyle = '#fb7185';
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.arc(demonR * 0.92, side * 12, 6, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+  });
+
+  if (shield > 0) {
+    ctx.strokeStyle = 'rgba(34, 211, 238, 0.5)';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.arc(0, 0, demonR + 7, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+
+  ctx.restore();
+}
+
 
 
 

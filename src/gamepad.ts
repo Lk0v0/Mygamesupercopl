@@ -61,6 +61,9 @@ export interface GamepadInputSnapshot {
   warpHeld: boolean;
   switchPressed: boolean;
   skillPressed: boolean;
+  venomSkill1Pressed: boolean;
+  venomSkill2Pressed: boolean;
+  venomSkill3Pressed: boolean;
   reloadPressed: boolean;
   pausePressed: boolean;
 }
@@ -68,6 +71,9 @@ export interface GamepadInputSnapshot {
 export interface GamepadEdgeState {
   prevSwitch: boolean;
   prevSkill: boolean;
+  prevVenomSkill1: boolean;
+  prevVenomSkill2: boolean;
+  prevVenomSkill3: boolean;
   prevReload: boolean;
   prevPause: boolean;
 }
@@ -76,6 +82,9 @@ export function createGamepadEdgeState(): GamepadEdgeState {
   return {
     prevSwitch: false,
     prevSkill: false,
+    prevVenomSkill1: false,
+    prevVenomSkill2: false,
+    prevVenomSkill3: false,
     prevReload: false,
     prevPause: false,
   };
@@ -444,12 +453,12 @@ function readRightStick(
 
   // Dynamic fallback in AUTO mode: if primary right-stick pair is completely dead at 0
   // while another non-trigger pair in axes[2..5] is clearly being pushed, switch immediately!
-  if (axesMode === 'AUTO' && Math.hypot(rx, ry) < 0.14 && axes.length >= 6) {
-    const candidates: [number, number][] = [
-      [2, 5],
-      [3, 4],
-      [2, 3],
-    ];
+  if (axesMode === 'AUTO' && Math.hypot(rx, ry) < 0.14 && axes.length >= 4) {
+    const candidates: [number, number][] = [];
+    if (axes.length >= 6) candidates.push([2, 5]);
+    if (axes.length >= 5) candidates.push([3, 4]);
+    if (axes.length >= 4) candidates.push([2, 3]);
+
     for (const [cx, cy] of candidates) {
       if (cx === ix && cy === iy) continue;
       if (cal.triggerAxes[cx] || cal.triggerAxes[cy]) continue;
@@ -491,10 +500,16 @@ export function readActiveGamepadState(
     out.warpHeld = false;
     out.switchPressed = false;
     out.skillPressed = false;
+    out.venomSkill1Pressed = false;
+    out.venomSkill2Pressed = false;
+    out.venomSkill3Pressed = false;
     out.reloadPressed = false;
     out.pausePressed = false;
     edges.prevSwitch = false;
     edges.prevSkill = false;
+    edges.prevVenomSkill1 = false;
+    edges.prevVenomSkill2 = false;
+    edges.prevVenomSkill3 = false;
     edges.prevReload = false;
     edges.prevPause = false;
     return out;
@@ -577,10 +592,23 @@ export function readActiveGamepadState(
   out.switchPressed = switchDown && !edges.prevSwitch;
   edges.prevSwitch = switchDown;
 
-  // Mastery Skill / Mega Fusion: Y (Triangle)
+  // Mastery Skill / Mega Fusion / Venom Demon Transform: Y (Triangle)
   const skillDown = btns.north;
   out.skillPressed = skillDown && !edges.prevSkill;
   edges.prevSkill = skillDown;
+
+  // Fruta do Veneno dedicated skill taps (X = Hydra, B = Chloro Ball, L1 = Venom Road)
+  const v1Down = btns.west;
+  out.venomSkill1Pressed = v1Down && !edges.prevVenomSkill1;
+  edges.prevVenomSkill1 = v1Down;
+
+  const v2Down = btns.east;
+  out.venomSkill2Pressed = v2Down && !edges.prevVenomSkill2;
+  edges.prevVenomSkill2 = v2Down;
+
+  const v3Down = btns.l1;
+  out.venomSkill3Pressed = v3Down && !edges.prevVenomSkill3;
+  edges.prevVenomSkill3 = v3Down;
 
   // Reload (unused for infinite ammo, kept clean)
   out.reloadPressed = false;

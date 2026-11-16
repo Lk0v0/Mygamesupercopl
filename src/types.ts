@@ -38,6 +38,7 @@ export enum WeaponType {
   IRON_MAN = 'IRON_MAN',
   ICE_AND_FIRE_DRAGON = 'ICE_AND_FIRE_DRAGON',
   TROPER = 'TROPER',
+  VENOM_FRUIT = 'VENOM_FRUIT',
 }
 
 export interface DragonSegment {
@@ -216,6 +217,11 @@ export interface Zombie {
   isOnFire?: boolean;
   burnTimer?: number;
   burnDamageTimer?: number;
+  isPoisoned?: boolean;
+  poisonTimer?: number;
+  poisonDps?: number;
+  poisonTickTimer?: number;
+  isKinjitePoison?: boolean;
   lastShootTime?: number;
   shootsProjectiles?: boolean;
   isBoss?: boolean;
@@ -266,6 +272,10 @@ export interface Bullet {
   smokeTimer?: number;
   weaponType?: WeaponType;
   isIgnite?: boolean;
+  isVenom?: boolean;
+  isHydra?: boolean;
+  isChloroBall?: boolean;
+  isVenomWave?: boolean;
 }
 
 export interface Particle {
