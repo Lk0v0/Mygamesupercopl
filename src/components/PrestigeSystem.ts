@@ -46,7 +46,7 @@ export const TOKEN_UPGRADES: TokenUpgradeDef[] = [
     id: 'token_might',
     name: 'Fúria Bélica',
     subtitle: 'Poder de Fogo Global',
-    description: 'Aumenta permanentemente o dano base de todas as armas convencionais, alienígenas e naves.',
+    description: 'Aumenta permanentemente o dano base de todas as armas convencionais de combate.',
     maxLevel: 5,
     costPerLevel: 1,
     accentColor: '#ef4444',

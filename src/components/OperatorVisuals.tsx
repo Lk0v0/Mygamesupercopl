@@ -22,6 +22,10 @@ export function renderOperatorBody(
 
   const dead = deathProgress > 0;
   const pulse = 0.75 + Math.sin(time * 0.008) * 0.25;
+  const walkSway = isMoving && !dead ? Math.sin(time * 0.015) : 0;
+  if (walkSway !== 0) {
+    ctx.rotate(walkSway * 0.065);
+  }
 
   // Color palette per skin
   let coreColor = '#60a5fa';
@@ -221,6 +225,15 @@ export function renderOperatorBody(
       ctx.closePath();
       ctx.fill();
     }
+  } else {
+    // Tactical Plate-Carrier Backpack Rig (for Default & Volt skins)
+    ctx.fillStyle = dead ? '#0f172a' : '#1e293b';
+    ctx.strokeStyle = dead ? '#334155' : outerStroke;
+    ctx.lineWidth = 1.1;
+    ctx.beginPath();
+    ctx.roundRect(-radius * 1.04, -radius * 0.44, 6.5, radius * 0.88, 2);
+    ctx.fill();
+    ctx.stroke();
   }
 
   // Tactical Helmet Mount / NVG Shroud (Forehead)
@@ -310,19 +323,44 @@ export function renderOperatorBody(
   }
   ctx.restore();
 
-  // Tactical Shoulder Pauldrons
+  // Tactical Shoulder Pauldrons with walk stride offset & top bevel highlight
+  const pauldronShift = walkSway * 2.1;
   ctx.fillStyle = dead ? '#1e293b' : pauldronColor;
+  const pRad = skinId === 'skin_hazard_juggernaut' ? 4.4 : 3.5;
   ctx.beginPath();
-  ctx.arc(-radius * 0.25, -radius * 0.8, skinId === 'skin_hazard_juggernaut' ? 4.2 : 3.2, 0, Math.PI * 2);
-  ctx.arc(-radius * 0.25, radius * 0.8, skinId === 'skin_hazard_juggernaut' ? 4.2 : 3.2, 0, Math.PI * 2);
+  ctx.arc(-radius * 0.25 + pauldronShift, -radius * 0.82, pRad, 0, Math.PI * 2);
+  ctx.arc(-radius * 0.25 - pauldronShift, radius * 0.82, pRad, 0, Math.PI * 2);
   ctx.fill();
+
+  // Subtle metallic bevel rim on pauldrons
+  if (!dead) {
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.22)';
+    ctx.beginPath();
+    ctx.arc(-radius * 0.22 + pauldronShift, -radius * 0.85, pRad * 0.45, 0, Math.PI * 2);
+    ctx.arc(-radius * 0.22 - pauldronShift, radius * 0.79, pRad * 0.45, 0, Math.PI * 2);
+    ctx.fill();
+  }
 
   // Volt Cyber Shoulder Arc Coils
   if (skinId === 'skin_volt_cyber' && !dead) {
     ctx.fillStyle = '#22d3ee';
     ctx.beginPath();
-    ctx.arc(-radius * 0.25, -radius * 0.8, 1.8, 0, Math.PI * 2);
-    ctx.arc(-radius * 0.25, radius * 0.8, 1.8, 0, Math.PI * 2);
+    ctx.arc(-radius * 0.25 + pauldronShift, -radius * 0.82, 1.8, 0, Math.PI * 2);
+    ctx.arc(-radius * 0.25 - pauldronShift, radius * 0.82, 1.8, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // 3D Helmet Dome Specular Catchlight & Armor Seam Groove
+  if (!dead) {
+    ctx.strokeStyle = 'rgba(2, 6, 23, 0.35)';
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.arc(0, 0, radius * 0.64, Math.PI * 0.65, Math.PI * 1.35);
+    ctx.stroke();
+
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.22)';
+    ctx.beginPath();
+    ctx.ellipse(-radius * 0.14, -radius * 0.24, radius * 0.34, radius * 0.18, -0.45, 0, Math.PI * 2);
     ctx.fill();
   }
 

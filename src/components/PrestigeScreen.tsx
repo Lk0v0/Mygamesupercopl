@@ -86,7 +86,7 @@ export const PrestigeScreen: React.FC<PrestigeScreenProps> = ({
 
   const handleBuyUpgrade = (id: TokenUpgradeId, name: string) => {
     if (onBuyTokenUpgrade(id)) {
-      sound.playMasteryUnlock();
+      sound.playPowerup();
       notify(`${name} aprimorado permanentemente!`);
     }
   };
@@ -220,7 +220,7 @@ export const PrestigeScreen: React.FC<PrestigeScreenProps> = ({
                     </h3>
                   </div>
                   <p className="text-sm text-slate-400 leading-relaxed max-w-xl">
-                    Cada ascensão de Prestígio concede <strong className="text-fuchsia-300">+1 Token de Prestígio</strong> para investir na Loja de Tokens e eleva seus multiplicadores permanentes em <strong className="text-amber-300">+20% Dano</strong> e <strong className="text-emerald-300">+35% Créditos</strong>. Suas armas, naves e Maestrias são mantidas.
+                    Cada ascensão de Prestígio concede <strong className="text-fuchsia-300">+1 Token de Prestígio</strong> para investir na Loja de Tokens e eleva seus multiplicadores permanentes em <strong className="text-amber-300">+20% Dano</strong> e <strong className="text-emerald-300">+35% Créditos</strong>. Suas armas, upgrades e skins são mantidas.
                   </p>
 
                   {/* Cost & Progress Bar */}

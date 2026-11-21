@@ -4,23 +4,18 @@ import {
   Coins,
   X,
   Zap,
-  Activity,
-  Aperture,
   Crosshair,
-  Flame,
   Check,
   Sparkles,
   Shield,
   Heart,
   Gauge,
   PlusCircle,
-  Radio,
   CheckCircle2,
   AlertTriangle,
   Target,
   Star,
   Shirt,
-  Biohazard,
 } from 'lucide-react';
 import { sound } from '../sound';
 import { WeaponIllustration } from './WeaponGraphics';
@@ -30,11 +25,11 @@ import { OperatorAvatarPreview } from './OperatorVisuals';
 export interface WeaponStoreItem {
   type: WeaponType;
   name: string;
-  category: 'BALÍSTICA' | 'PESADA' | 'ALTA_ENERGIA';
   categoryLabel: string;
   description: string;
   specialTrait: string;
   damage: number;
+  pellets?: number;
   fireRate: number; // shots per sec
   speed: number;
   piercing: number;
@@ -45,334 +40,50 @@ export interface WeaponStoreItem {
 
 export const WEAPON_CATALOG: WeaponStoreItem[] = [
   {
-    type: WeaponType.PISTOL,
-    name: 'Pistola Tática 9mm Mk.II',
-    category: 'BALÍSTICA',
-    categoryLabel: 'Balística • Inicial',
-    description: 'Pistola tática com compensador de recuo e mira laser de precisão. Confiável e cirúrgica.',
-    specialTrait: 'Precisão cirúrgica e recuo ultra-baixo.',
-    damage: 9,
-    fireRate: 4.5,
-    speed: 600,
+    type: WeaponType.GLOCK_19,
+    name: 'Glock 19 Gen5 MOS',
+    categoryLabel: 'Pistola Tática · 9×19mm NATO',
+    description:
+      'Pistola semiautomática de polímero com ferrolho MOS, mira holográfica Trijicon RMR e lanterna tática TLR-7A. Confiável e precisa.',
+    specialTrait: 'Inicial Gratuita • Alta precisão, recuo leve e disparo rápido.',
+    damage: 15,
+    fireRate: 5.8,
+    speed: 840,
     piercing: 1,
-    price: 0, // Free default
+    price: 0,
     color: '#fbbf24',
     icon: Crosshair,
   },
   {
-    type: WeaponType.TROPER,
-    name: 'Nave Troper',
-    category: 'ALTA_ENERGIA',
-    categoryLabel: 'Mini-Nave • Orbes Leves · Sem Warp',
-    description: 'Mini-caça leve de entrada. Não possui Modo Warp nem lasers pesados — dispara pequenas bolas de energia lentamente pelo bico frontal.',
-    specialTrait: 'Compacta & Barata · Sem Warp · Orbes Pequenos Lentos',
-    damage: 8,
-    fireRate: 2.2,
-    speed: 440,
+    type: WeaponType.BENELLI_M4,
+    name: 'Benelli M4 Super 90',
+    categoryLabel: 'Escopeta Tática · Calibre 12',
+    description:
+      'Escopeta semiautomática militar com sistema a gás ARGO, trilho Picatinny, suporte lateral de cartuchos e freio de boca breacher.',
+    specialTrait: 'Dispara 7 chumbos 00 Buckshot por tiro (70 de dano total).',
+    damage: 10,
+    pellets: 7,
+    fireRate: 2.35,
+    speed: 700,
     piercing: 1,
-    price: 2500,
-    color: '#38bdf8',
-    icon: Sparkles,
-  },
-  {
-    type: WeaponType.SHOTGUN,
-    name: 'Espingarda Calibre 12 Dupla',
-    category: 'BALÍSTICA',
-    categoryLabel: 'Balística • Dispersão',
-    description: 'Dispara uma nuvem de 7 chumbos simultâneos em cone. Excelente controle de hordas de curto alcance.',
-    specialTrait: 'Dispersão sêptupla de chumbo à queima-roupa com alto empurrão.',
-    damage: 6,
-    fireRate: 1.4,
-    speed: 520,
-    piercing: 1,
-    price: 3500,
+    price: 2800,
     color: '#f87171',
     icon: Zap,
   },
   {
-    type: WeaponType.MAGNUM,
-    name: 'Revólver .44 Magnum Hunter',
-    category: 'BALÍSTICA',
-    categoryLabel: 'Balística • Alto Calibre',
-    description: 'Revólver pesado de cano longo com tambor de 6 tiros e bom poder de parada. Perfura até 2 alvos.',
-    specialTrait: 'Disparo preciso de alto calibre com perfuração dupla.',
-    damage: 24,
-    fireRate: 2.1,
-    speed: 780,
+    type: WeaponType.SCAR_L,
+    name: 'FN SCAR-L CQC',
+    categoryLabel: 'Carabina de Assalto · 5.56×45mm',
+    description:
+      'Carabina modular FDE de operações especiais com mira EOTech EXPS3 + G33, módulo laser PEQ-15 e carregador PMAG.',
+    specialTrait: '9.8 tiros/s de alta velocidade com perfuração dupla.',
+    damage: 22,
+    fireRate: 9.8,
+    speed: 980,
     piercing: 2,
-    price: 4500,
-    color: '#f59e0b',
-    icon: Target,
-  },
-  {
-    type: WeaponType.MACHINE_GUN,
-    name: 'SMG Tática Vector MP-7',
-    category: 'BALÍSTICA',
-    categoryLabel: 'Balística • Cadência Rápida',
-    description: 'Disparos contínuos e velozes com silenciador tático. Excelente para manter pressão sobre zumbis velozes.',
-    specialTrait: 'Cadência veloz de 12 disparos/segundo com projéteis infinitos.',
-    damage: 6,
-    fireRate: 12,
-    speed: 650,
-    piercing: 1,
-    price: 5500,
-    color: '#c084fc',
-    icon: Activity,
-  },
-  {
-    type: WeaponType.ASSAULT_RIFLE,
-    name: 'Fuzil de Assalto AK-47',
-    category: 'BALÍSTICA',
-    categoryLabel: 'Balística • Fuzil de Assalto',
-    description: 'Fuzil clássico 7.62x39mm confiável em qualquer alcance. Combina boa cadência com dano consistente e perfuração.',
-    specialTrait: 'Equilíbrio sólido de alcance, cadência e perfuração dupla.',
-    damage: 13,
-    fireRate: 8.5,
-    speed: 760,
-    piercing: 2,
-    price: 7500,
-    color: '#fb923c',
-    icon: Crosshair,
-  },
-  {
-    type: WeaponType.PLASMA_RIFLE,
-    name: 'Rifle de Plasma Arc-1',
-    category: 'ALTA_ENERGIA',
-    categoryLabel: 'Energia • Perfurante',
-    description: 'Esferas condensadas de plasma elétrico que cortam fileiras inteiras e emitem arcos de choque.',
-    specialTrait: 'Perfurador elétrico que atravessa 4 alvos em linha reta.',
-    damage: 26,
-    fireRate: 2.4,
-    speed: 480,
-    piercing: 4,
-    price: 10000,
+    price: 6500,
     color: '#38bdf8',
-    icon: Aperture,
-  },
-  {
-    type: WeaponType.LMG,
-    name: 'Metralhadora Leve M249 SAW',
-    category: 'PESADA',
-    categoryLabel: 'Pesada • Supressão Contínua',
-    description: 'Metralhadora alimentada por fita 5.56mm NATO com bipé tático. Mantém fogo pesado contínuo contra hordas.',
-    specialTrait: 'Rajada sustentada de 13.5 tiros/s com perfuração dupla.',
-    damage: 9,
-    fireRate: 13.5,
-    speed: 740,
-    piercing: 2,
-    price: 14000,
-    color: '#eab308',
-    icon: Activity,
-  },
-  {
-    type: WeaponType.MINIGUN,
-    name: 'Metralhadora Titan M134',
-    category: 'PESADA',
-    categoryLabel: 'Pesada • Cadência Insana',
-    description: 'Seis canos rotativos táticos com supressão contínua calibrada para controle de multidões.',
-    specialTrait: 'Parede contínua de supressão tática contra grupos compactos.',
-    damage: 4,
-    fireRate: 16,
-    speed: 700,
-    piercing: 1,
-    price: 16500,
-    color: '#10b981',
-    icon: Crosshair,
-  },
-  {
-    type: WeaponType.SNIPER,
-    name: 'Fuzil Sniper .50 BMG',
-    category: 'BALÍSTICA',
-    categoryLabel: 'Balística • Anti-Blindagem',
-    description: 'Rifle anti-material calibre .50 com luneta de longo alcance. Dispara projéteis supersônicos de alta penetração.',
-    specialTrait: '65 de dano concentrado e perfuração de até 5 alvos em linha.',
-    damage: 65,
-    fireRate: 1.05,
-    speed: 1350,
-    piercing: 5,
-    price: 20000,
-    color: '#fde047',
     icon: Target,
-  },
-  {
-    type: WeaponType.FLAMETHROWER,
-    name: 'Lança-Chamas Vulcão Napalm-X',
-    category: 'PESADA',
-    categoryLabel: 'Pesada • Incendiário',
-    description: 'Torrente de napalm fervente com penetração infinita e queimadura contínua. Incinera hordas de zumbis.',
-    specialTrait: 'Penetração total e ignição em chamas contínua.',
-    damage: 6,
-    fireRate: 32,
-    speed: 460,
-    piercing: 99,
-    price: 23500,
-    color: '#ff5500',
-    icon: Flame,
-  },
-  {
-    type: WeaponType.ROCKET_LAUNCHER,
-    name: 'Lança-Mísseis M-99 Hellfire',
-    category: 'PESADA',
-    categoryLabel: 'Pesada • Explosão em Área',
-    description: 'Mísseis pesados de detonação explosiva em área com mira computadorizada. Destrói grupos compactos.',
-    specialTrait: 'Dano em área de 95 com onda de choque explosiva.',
-    damage: 95,
-    fireRate: 1.25,
-    speed: 580,
-    piercing: 1,
-    price: 28000,
-    color: '#f97316',
-    icon: Zap,
-  },
-  {
-    type: WeaponType.RAYGUN,
-    name: 'Pulsar Alienígena Zeta-9',
-    category: 'ALTA_ENERGIA',
-    categoryLabel: 'Alien • Pulsos de Íons',
-    description: 'Arma extraterrestre recuperada de invasores. Emite anéis concêntricos de plasma com perfuração iônica.',
-    specialTrait: 'Anéis iônicos de alta energia com perfuração dupla.',
-    damage: 22,
-    fireRate: 5.2,
-    speed: 740,
-    piercing: 2,
-    price: 33500,
-    color: '#00ffcc',
-    icon: Sparkles,
-  },
-  {
-    type: WeaponType.RAY_RIFLE,
-    name: 'Fuzil Cristalino Zarkon',
-    category: 'ALTA_ENERGIA',
-    categoryLabel: 'Alien • Feixe Ionizado',
-    description: 'Fuzil de guerra alienígena com espinhos de criptonita que disparam feixes verdes de alta densidade.',
-    specialTrait: 'Perfura 3 monstros causando 30 de dano ionizado por acerto.',
-    damage: 30,
-    fireRate: 7.5,
-    speed: 880,
-    piercing: 3,
-    price: 45500,
-    color: '#39ff14',
-    icon: Aperture,
-  },
-  {
-    type: WeaponType.LASER_MINIGUN,
-    name: 'Laser Minigun Hiper-Feixe Omega',
-    category: 'ALTA_ENERGIA',
-    categoryLabel: 'Suprema • Laser Contínuo',
-    description: 'Metralhadora de 4 prismas laser rotativos disparando 26 feixes contínuos à velocidade da luz.',
-    specialTrait: '26 feixes laser por segundo com penetração tripla e alcance extremo.',
-    damage: 13,
-    fireRate: 26,
-    speed: 1050,
-    piercing: 3,
-    price: 60000,
-    color: '#ff0055',
-    icon: Radio,
-  },
-  {
-    type: WeaponType.DESTRUCTOR,
-    name: 'Nave Destructor',
-    category: 'ALTA_ENERGIA',
-    categoryLabel: 'Transformação • Nave + Blasters ±30° + Warp',
-    description: 'Transforma você na nave Destructor equipada com dois blasters que sempre miram no cursor (±30° antes de girar a nave), disparam feixe laser contínuo e ativam o Modo Warp ao segurar Shift por 3s.',
-    specialTrait: '2 Blasters no Mouse (±30°) • Laser Contínuo • Shift 3s = Modo Warp Ultra-Rápido',
-    damage: 18,
-    fireRate: 14,
-    speed: 1800,
-    piercing: 99,
-    price: 41500,
-    color: '#22d3ee',
-    icon: Zap,
-  },
-  {
-    type: WeaponType.INTERCEPTOR,
-    name: 'Nave Interceptor',
-    category: 'ALTA_ENERGIA',
-    categoryLabel: 'Transformação • Asas Longas + Orbes + Warp',
-    description: 'Transforma você na nave Interceptor de asas longas com dois blasters nas pontas que disparam orbes em cadência extrema, além de Modo Warp ao segurar Shift por 3s.',
-    specialTrait: '2 Blasters nas Asas Longas • Rajada Extrema de Orbes • Shift 3s = Modo Warp',
-    damage: 9,
-    fireRate: 20,
-    speed: 1250,
-    piercing: 2,
-    price: 50500,
-    color: '#00f5d4',
-    icon: Sparkles,
-  },
-  {
-    type: WeaponType.NAVE_REI,
-    name: 'Nave Rei',
-    category: 'ALTA_ENERGIA',
-    categoryLabel: 'Soberana • Nave Gigante + 4 Lasers + Fúria',
-    description: 'Transforma você na colossal Nave Rei com 4 blasters laser. Segurar Shift por 6s gera esferas super-rápidas com eletricidade vermelha e ativa o Modo Fúria com 4 lasers vermelhos gigantes.',
-    specialTrait: '4 Blasters Laser • Shift 6s = Modo Fúria (Eletricidade Vermelha + Lasers Gigantes)',
-    damage: 22,
-    fireRate: 16,
-    speed: 2000,
-    piercing: 99,
-    price: 76500,
-    color: '#ef4444',
-    icon: Flame,
-  },
-  {
-    type: WeaponType.EAST_DRAGON,
-    name: 'East Dragon',
-    category: 'ALTA_ENERGIA',
-    categoryLabel: 'Transformação • Dragão Oriental + Laser de Fogo',
-    description: 'Transforma você no lendário Dragão East de corpo serpenteante articulado que desliza pelo campo e dispara um feixe de laser contínuo ardente feito de fogo vivo.',
-    specialTrait: 'Dragão Serpenteante • Laser Contínuo de Fogo Vivo • Chamas & Queimadura',
-    damage: 24,
-    fireRate: 18,
-    speed: 2000,
-    piercing: 99,
-    price: 85000,
-    color: '#f97316',
-    icon: Flame,
-  },
-  {
-    type: WeaponType.IRON_MAN,
-    name: 'Homem de Ferro',
-    category: 'ALTA_ENERGIA',
-    categoryLabel: 'Armadura Stark • Repulsor + Laser',
-    description: 'Transforma você no Homem de Ferro com propulsores a jato e Reator Arc. Alterne com [Shift] ou [E] entre o Modo Repulsor (disparos de plasma perfurantes) e o Modo Laser (feixe térmico contínuo).',
-    specialTrait: '[Shift / E] Modo Repulsor (Rajadas de Plasma) ↔ Modo Laser (Feixe Contínuo)',
-    damage: 22,
-    fireRate: 9,
-    speed: 1350,
-    piercing: 3,
-    price: 95000,
-    color: '#ef4444',
-    icon: Zap,
-  },
-  {
-    type: WeaponType.ICE_AND_FIRE_DRAGON,
-    name: 'Ice and Fire Dragon',
-    category: 'ALTA_ENERGIA',
-    categoryLabel: 'Dragões Gêmeos • Fogo + Gelo + Fusão Roxo',
-    description: 'Invoca dois dragões serpenteantes (Fogo e Gelo) que seguem você em combate. Aperte [Shift] para alternar qual dragão ataca com feixe contínuo de chamas ou gelo congelante, e aperte [Q] para fundir ambos no Mega Dragão Roxo!',
-    specialTrait: '[Shift] Fogo ↔ Gelo • [Q] Fusão Mega Dragão Roxo (10s)',
-    damage: 26,
-    fireRate: 18,
-    speed: 2000,
-    piercing: 99,
-    price: 115000,
-    color: '#a855f7',
-    icon: Flame,
-  },
-  {
-    type: WeaponType.VENOM_FRUIT,
-    name: 'Fruta do Veneno',
-    category: 'ALTA_ENERGIA',
-    categoryLabel: 'Akuma no Mi • Doku Doku no Mi',
-    description: 'Fruta do Diabo do Veneno (One Piece). Ataque primário envenena hordas com ácido roxo contínuo. Domine 3 golpes letais: [Q/1] Hidra (3 dragões), [E/2] Bola de Cloro (nuvem tóxica), [C/3] Estrada Venenosa (dash) e [Shift/4] Transformação Demônio do Veneno (Kinjite)!',
-    specialTrait: '[Q] Hidra • [E] Cloro • [C] Estrada • [Shift] Demônio do Veneno',
-    damage: 15,
-    fireRate: 5.5,
-    speed: 700,
-    piercing: 2,
-    price: 135000,
-    color: '#a855f7',
-    icon: Biohazard,
   },
 ];
 
@@ -400,7 +111,7 @@ interface StoreScreenProps {
   onClose: () => void;
 }
 
-type TabType = 'ALL' | 'BALLISTIC' | 'HEAVY' | 'ENERGY' | 'SKINS' | 'UPGRADES';
+type TabType = 'ALL' | 'SKINS' | 'UPGRADES';
 
 export const StoreScreen: React.FC<StoreScreenProps> = ({
   coins,
@@ -542,17 +253,10 @@ export const StoreScreen: React.FC<StoreScreenProps> = ({
     showSuccess(`Radar de Raridade aprimorado! Mais chance de Power-Ups Raros, Épicos, Lendários e Míticos!`);
   };
 
-  // Filter weapons based on active tab
-  const filteredWeapons = WEAPON_CATALOG.filter((w) => {
-    if (activeTab === 'ALL') return true;
-    if (activeTab === 'BALLISTIC') return w.category === 'BALÍSTICA';
-    if (activeTab === 'HEAVY') return w.category === 'PESADA';
-    if (activeTab === 'ENERGY') return w.category === 'ALTA_ENERGIA';
-    return false;
-  });
+  const filteredWeapons = WEAPON_CATALOG;
 
   const equippedWeaponName =
-    WEAPON_CATALOG.find((w) => w.type === equippedWeapon)?.name || 'Pistola Tática';
+    WEAPON_CATALOG.find((w) => w.type === equippedWeapon)?.name || 'Glock 19 Gen5 MOS';
   const equippedSkinName =
     OPERATOR_SKINS.find((s) => s.id === equippedSkin)?.name || 'Recruta de Choque';
 
@@ -611,13 +315,13 @@ export const StoreScreen: React.FC<StoreScreenProps> = ({
                   onClick={() => {
                     sound.playPowerup();
                     onAddTestCoins();
-                    showSuccess('+1.000 Créditos adicionados para teste!');
+                    showSuccess('+10.000 Créditos adicionados para teste!');
                   }}
                   className="px-2 py-2 rounded-xl bg-amber-500/15 border border-amber-500/30 hover:bg-amber-500/25 text-amber-300 text-[11px] font-mono font-bold transition-colors flex items-center gap-1 cursor-pointer shrink-0"
                   title="Adicionar moedas de teste"
                 >
                   <PlusCircle className="w-3.5 h-3.5 text-amber-400" />
-                  <span className="hidden md:inline">+1K</span>
+                  <span className="hidden md:inline">+10K</span>
                 </button>
               )}
             </div>
@@ -632,38 +336,8 @@ export const StoreScreen: React.FC<StoreScreenProps> = ({
                     : 'bg-slate-900/70 border border-white/10 text-slate-300 hover:text-white hover:bg-slate-800'
                 }`}
               >
-                <span>Todas Armas</span>
+                <span>Armas</span>
                 <span className="text-[10px] font-mono opacity-80">({WEAPON_CATALOG.length})</span>
-              </button>
-              <button
-                onClick={() => { sound.playPowerup(); setActiveTab('BALLISTIC'); }}
-                className={`px-3 py-1.5 sm:py-2 rounded-xl text-[11px] sm:text-xs font-black tracking-wider uppercase transition-colors whitespace-nowrap cursor-pointer text-left ${
-                  activeTab === 'BALLISTIC'
-                    ? 'bg-cyan-500 text-slate-950 shadow-[0_0_12px_rgba(6,182,212,0.3)]'
-                    : 'bg-slate-900/70 border border-white/10 text-slate-300 hover:text-white hover:bg-slate-800'
-                }`}
-              >
-                Balísticas
-              </button>
-              <button
-                onClick={() => { sound.playPowerup(); setActiveTab('HEAVY'); }}
-                className={`px-3 py-1.5 sm:py-2 rounded-xl text-[11px] sm:text-xs font-black tracking-wider uppercase transition-colors whitespace-nowrap cursor-pointer text-left ${
-                  activeTab === 'HEAVY'
-                    ? 'bg-cyan-500 text-slate-950 shadow-[0_0_12px_rgba(6,182,212,0.3)]'
-                    : 'bg-slate-900/70 border border-white/10 text-slate-300 hover:text-white hover:bg-slate-800'
-                }`}
-              >
-                Pesadas
-              </button>
-              <button
-                onClick={() => { sound.playPowerup(); setActiveTab('ENERGY'); }}
-                className={`px-3 py-1.5 sm:py-2 rounded-xl text-[11px] sm:text-xs font-black tracking-wider uppercase transition-colors whitespace-nowrap cursor-pointer text-left ${
-                  activeTab === 'ENERGY'
-                    ? 'bg-cyan-500 text-slate-950 shadow-[0_0_12px_rgba(6,182,212,0.3)]'
-                    : 'bg-slate-900/70 border border-white/10 text-slate-300 hover:text-white hover:bg-slate-800'
-                }`}
-              >
-                Energia & Alien
               </button>
               <button
                 onClick={() => { sound.playPowerup(); setActiveTab('SKINS'); }}
@@ -768,39 +442,25 @@ export const StoreScreen: React.FC<StoreScreenProps> = ({
                       </span>
                       
                       {isEquipped ? (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-cyan-500/20 border border-cyan-400 text-cyan-300 text-[10px] font-black uppercase tracking-wider animate-pulse">
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-cyan-500/20 border border-cyan-400 text-cyan-300 text-[10px] font-black uppercase tracking-wider shrink-0">
                           <Check className="w-3 h-3 text-cyan-300 stroke-[3]" /> EQUIPADA
                         </span>
                       ) : isUnlocked ? (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-[10px] font-bold uppercase tracking-wider">
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-[10px] font-bold uppercase tracking-wider shrink-0">
                           DESBLOQUEADA
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-400 text-[10px] font-bold font-mono">
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-400 text-[10px] font-bold font-mono tabular-nums shrink-0">
                           {item.price.toLocaleString()} CRED
                         </span>
                       )}
                     </div>
 
-                    {/* Weapon Info & Icon Header */}
+                    {/* Weapon Info & Tactical SVG Preview */}
                     <div>
-                      {(item.type === WeaponType.DESTRUCTOR || item.type === WeaponType.INTERCEPTOR || item.type === WeaponType.NAVE_REI || item.type === WeaponType.EAST_DRAGON || item.type === WeaponType.IRON_MAN || item.type === WeaponType.ICE_AND_FIRE_DRAGON || item.type === WeaponType.VENOM_FRUIT) && (
-                        <div className={`mb-2 rounded-xl bg-slate-950/85 border p-1.5 flex items-center justify-center ${
-                          item.type === WeaponType.ICE_AND_FIRE_DRAGON || item.type === WeaponType.VENOM_FRUIT
-                            ? 'border-purple-500/60'
-                            : item.type === WeaponType.IRON_MAN
-                              ? 'border-amber-400/50'
-                              : item.type === WeaponType.EAST_DRAGON
-                                ? 'border-orange-500/50'
-                                : item.type === WeaponType.NAVE_REI
-                                  ? 'border-red-500/50'
-                                  : item.type === WeaponType.INTERCEPTOR
-                                    ? 'border-emerald-400/40'
-                                    : 'border-cyan-400/40'
-                        }`}>
-                          <WeaponIllustration type={item.type} className="w-full h-16 sm:h-20" />
-                        </div>
-                      )}
+                      <div className="mb-2.5 rounded-xl bg-slate-950/90 border border-white/10 p-2 flex items-center justify-center">
+                        <WeaponIllustration type={item.type} className="w-full h-20 sm:h-24" />
+                      </div>
 
                       <div className="flex items-start gap-2.5 mb-2">
                         <div 
@@ -838,16 +498,18 @@ export const StoreScreen: React.FC<StoreScreenProps> = ({
                       </div>
 
                       {/* Weapon Stats Bars */}
-                      <div className="space-y-1.5 mb-4 bg-slate-950/60 p-2.5 rounded-xl border border-white/5">
+                      <div className="space-y-1.5 mb-4 bg-slate-950/60 p-2.5 rounded-xl border border-white/5 tabular-nums">
                         {/* Damage */}
                         <div className="flex items-center justify-between text-[10px] font-mono">
                           <span className="text-slate-400">DANO BASE</span>
-                          <span className="text-white font-bold">{item.damage}</span>
+                          <span className="text-white font-bold">
+                            {item.pellets ? `${item.damage}×${item.pellets} (${item.damage * item.pellets})` : item.damage}
+                          </span>
                         </div>
                         <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
                           <div 
                             className="h-full bg-rose-500 rounded-full" 
-                            style={{ width: `${Math.min(100, (item.damage / 240) * 100)}%` }} 
+                            style={{ width: `${Math.min(100, (((item.pellets ? item.damage * item.pellets : item.damage)) / 75) * 100)}%` }} 
                           />
                         </div>
 
@@ -859,7 +521,7 @@ export const StoreScreen: React.FC<StoreScreenProps> = ({
                         <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
                           <div 
                             className="h-full bg-cyan-400 rounded-full" 
-                            style={{ width: `${Math.min(100, (item.fireRate / 35) * 100)}%` }} 
+                            style={{ width: `${Math.min(100, (item.fireRate / 12) * 100)}%` }} 
                           />
                         </div>
 
@@ -867,13 +529,13 @@ export const StoreScreen: React.FC<StoreScreenProps> = ({
                         <div className="flex items-center justify-between text-[10px] font-mono pt-1">
                           <span className="text-slate-400">PERFURAÇÃO</span>
                           <span className="text-white font-bold">
-                            {item.piercing >= 90 ? 'ILIMITADA' : `${item.piercing} Alvos`}
+                            {item.piercing} {item.piercing === 1 ? 'Alvo' : 'Alvos'}
                           </span>
                         </div>
                         <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
                           <div 
                             className="h-full bg-emerald-400 rounded-full" 
-                            style={{ width: `${item.piercing >= 90 ? 100 : Math.min(100, (item.piercing / 4) * 100)}%` }} 
+                            style={{ width: `${Math.min(100, (item.piercing / 3) * 100)}%` }} 
                           />
                         </div>
                       </div>

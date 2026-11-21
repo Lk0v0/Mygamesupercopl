@@ -2862,6 +2862,158 @@ export const sound = {
     }
   },
 
+  playDesertEagle: () => {
+    if (!soundEnabled) return;
+    try {
+      const ctx = getAudioContext();
+      if (!ctx) return;
+      const now = ctx.currentTime;
+      const buffer = getNoiseBuffer(ctx);
+      const noiseNode = ctx.createBufferSource();
+      noiseNode.buffer = buffer;
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'bandpass';
+      filter.frequency.setValueAtTime(1650, now);
+      filter.frequency.exponentialRampToValueAtTime(460, now + 0.16);
+      const noiseGain = ctx.createGain();
+      noiseGain.gain.setValueAtTime(0.36, now);
+      noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
+      noiseNode.connect(filter);
+      filter.connect(noiseGain);
+      noiseGain.connect(ctx.destination);
+
+      const osc = ctx.createOscillator();
+      const oscGain = ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(320, now);
+      osc.frequency.exponentialRampToValueAtTime(48, now + 0.15);
+      oscGain.gain.setValueAtTime(0.4, now);
+      oscGain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+      osc.connect(oscGain);
+      oscGain.connect(ctx.destination);
+
+      noiseNode.start(now);
+      osc.start(now);
+      osc.stop(now + 0.16);
+    } catch (e) {
+      console.warn('Audio play failed', e);
+    }
+  },
+
+  playTacticalCarbine: () => {
+    if (!soundEnabled) return;
+    try {
+      const ctx = getAudioContext();
+      if (!ctx) return;
+      const now = ctx.currentTime;
+      const buffer = getNoiseBuffer(ctx);
+      const noiseNode = ctx.createBufferSource();
+      noiseNode.buffer = buffer;
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'bandpass';
+      filter.frequency.value = 1850 + Math.random() * 200;
+      filter.Q.value = 1.4;
+      const noiseGain = ctx.createGain();
+      noiseGain.gain.setValueAtTime(0.18, now);
+      noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.065);
+      noiseNode.connect(filter);
+      filter.connect(noiseGain);
+      noiseGain.connect(ctx.destination);
+
+      const osc = ctx.createOscillator();
+      const oscGain = ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(240 + Math.random() * 25, now);
+      osc.frequency.exponentialRampToValueAtTime(68, now + 0.065);
+      oscGain.gain.setValueAtTime(0.2, now);
+      oscGain.gain.exponentialRampToValueAtTime(0.001, now + 0.065);
+      osc.connect(oscGain);
+      oscGain.connect(ctx.destination);
+
+      noiseNode.start(now);
+      osc.start(now);
+      osc.stop(now + 0.07);
+    } catch (e) {
+      console.warn('Audio play failed', e);
+    }
+  },
+
+  playCombatShotgun: () => {
+    if (!soundEnabled) return;
+    try {
+      const ctx = getAudioContext();
+      if (!ctx) return;
+      const now = ctx.currentTime;
+      const buffer = getNoiseBuffer(ctx);
+      const noiseNode = ctx.createBufferSource();
+      noiseNode.buffer = buffer;
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.setValueAtTime(2100, now);
+      filter.frequency.exponentialRampToValueAtTime(280, now + 0.19);
+      const noiseGain = ctx.createGain();
+      noiseGain.gain.setValueAtTime(0.38, now);
+      noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.19);
+      noiseNode.connect(filter);
+      filter.connect(noiseGain);
+      noiseGain.connect(ctx.destination);
+
+      const osc = ctx.createOscillator();
+      const oscGain = ctx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(190, now);
+      osc.frequency.exponentialRampToValueAtTime(36, now + 0.18);
+      oscGain.gain.setValueAtTime(0.34, now);
+      oscGain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+      osc.connect(oscGain);
+      oscGain.connect(ctx.destination);
+
+      noiseNode.start(now);
+      osc.start(now);
+      osc.stop(now + 0.19);
+    } catch (e) {
+      console.warn('Audio play failed', e);
+    }
+  },
+
+  playDmr: () => {
+    if (!soundEnabled) return;
+    try {
+      const ctx = getAudioContext();
+      if (!ctx) return;
+      const now = ctx.currentTime;
+      const buffer = getNoiseBuffer(ctx);
+      const noiseNode = ctx.createBufferSource();
+      noiseNode.buffer = buffer;
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'bandpass';
+      filter.frequency.setValueAtTime(2200, now);
+      filter.frequency.exponentialRampToValueAtTime(360, now + 0.17);
+      const noiseGain = ctx.createGain();
+      noiseGain.gain.setValueAtTime(0.34, now);
+      noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.17);
+      noiseNode.connect(filter);
+      filter.connect(noiseGain);
+      noiseGain.connect(ctx.destination);
+
+      const osc = ctx.createOscillator();
+      const oscGain = ctx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(290, now);
+      osc.frequency.exponentialRampToValueAtTime(42, now + 0.16);
+      oscGain.gain.setValueAtTime(0.34, now);
+      oscGain.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
+      osc.connect(oscGain);
+      oscGain.connect(ctx.destination);
+
+      noiseNode.start(now);
+      osc.start(now);
+      osc.stop(now + 0.17);
+    } catch (e) {
+      console.warn('Audio play failed', e);
+    }
+  },
+
   playInterceptorBlaster: () => {
     if (!soundEnabled) return;
     try {
@@ -3839,85 +3991,36 @@ export const sound = {
     }
   },
 
-  playIceFireDragonSwitch: (active: 'FIRE' | 'ICE') => {
+  playVenomBite: (empowered = false) => {
     if (!soundEnabled) return;
     try {
       const ctx = getAudioContext();
       if (!ctx) return;
       const now = ctx.currentTime;
 
-      if (active === 'FIRE') {
-        // Warm surging flame dragon switch
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(160, now);
-        osc.frequency.exponentialRampToValueAtTime(420, now + 0.14);
-        osc.frequency.exponentialRampToValueAtTime(220, now + 0.24);
-        gain.gain.setValueAtTime(0.16, now);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.start(now);
-        osc.stop(now + 0.26);
-      } else {
-        // Crystalline glacial ice dragon switch
-        const freqs = [880, 1320, 1760];
-        freqs.forEach((f, i) => {
-          const osc = ctx.createOscillator();
-          const gain = ctx.createGain();
-          const t = now + i * 0.03;
-          osc.type = 'sine';
-          osc.frequency.setValueAtTime(f, t);
-          osc.frequency.exponentialRampToValueAtTime(f * 1.15, t + 0.12);
-          gain.gain.setValueAtTime(0.12, t);
-          gain.gain.exponentialRampToValueAtTime(0.001, t + 0.14);
-          osc.connect(gain);
-          gain.connect(ctx.destination);
-          osc.start(t);
-          osc.stop(t + 0.15);
-        });
-      }
-    } catch (e) {
-      console.warn('Audio play failed', e);
-    }
-  },
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(empowered ? 240 : 290, now);
+      osc.frequency.exponentialRampToValueAtTime(empowered ? 58 : 74, now + 0.14);
+      gain.gain.setValueAtTime(0.24, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.17);
 
-  playMegaDragonFusion: () => {
-    if (!soundEnabled) return;
-    try {
-      const ctx = getAudioContext();
-      if (!ctx) return;
-      const now = ctx.currentTime;
-
-      // Deep resonant cosmic purple dragon roar + ascending harmonic triad
-      const sub = ctx.createOscillator();
-      const subGain = ctx.createGain();
-      sub.type = 'sawtooth';
-      sub.frequency.setValueAtTime(120, now);
-      sub.frequency.exponentialRampToValueAtTime(48, now + 0.85);
-      subGain.gain.setValueAtTime(0.32, now);
-      subGain.gain.exponentialRampToValueAtTime(0.001, now + 0.88);
-      sub.connect(subGain);
-      subGain.connect(ctx.destination);
-      sub.start(now);
-      sub.stop(now + 0.9);
-
-      const chord = [293.66, 440.0, 587.33, 880.0];
-      chord.forEach((f, i) => {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        const t = now + i * 0.045;
-        osc.type = 'triangle';
-        osc.frequency.setValueAtTime(f, t);
-        osc.frequency.exponentialRampToValueAtTime(f * 1.12, t + 0.45);
-        gain.gain.setValueAtTime(0.14, t);
-        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.start(t);
-        osc.stop(t + 0.52);
-      });
+      const snap = ctx.createOscillator();
+      const snapGain = ctx.createGain();
+      snap.type = 'triangle';
+      snap.frequency.setValueAtTime(empowered ? 620 : 720, now);
+      snap.frequency.exponentialRampToValueAtTime(140, now + 0.06);
+      snapGain.gain.setValueAtTime(0.2, now);
+      snapGain.gain.exponentialRampToValueAtTime(0.001, now + 0.065);
+      snap.connect(snapGain);
+      snapGain.connect(ctx.destination);
+      snap.start(now);
+      snap.stop(now + 0.07);
     } catch (e) {
       console.warn('Audio play failed', e);
     }
@@ -4085,5 +4188,401 @@ export const sound = {
       console.warn('Audio play failed', e);
     }
   },
+
+  playWaterSplash: (heavy: boolean = false) => {
+    if (!soundEnabled) return;
+    try {
+      const ctx = getAudioContext();
+      if (!ctx) return;
+      const now = ctx.currentTime;
+      const dur = heavy ? 0.34 : 0.18;
+
+      const buffer = getNoiseBuffer(ctx);
+      const noise = ctx.createBufferSource();
+      noise.buffer = buffer;
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'bandpass';
+      filter.Q.value = 1.4;
+      filter.frequency.setValueAtTime(heavy ? 1200 : 1550, now);
+      filter.frequency.exponentialRampToValueAtTime(320, now + dur);
+
+      const nGain = ctx.createGain();
+      nGain.gain.setValueAtTime(heavy ? 0.24 : 0.12, now);
+      nGain.gain.exponentialRampToValueAtTime(0.001, now + dur);
+
+      noise.connect(filter);
+      filter.connect(nGain);
+      nGain.connect(ctx.destination);
+      noise.start(now);
+
+      if (heavy) {
+        const thud = ctx.createOscillator();
+        const tGain = ctx.createGain();
+        thud.type = 'sine';
+        thud.frequency.setValueAtTime(145, now);
+        thud.frequency.exponentialRampToValueAtTime(42, now + 0.22);
+        tGain.gain.setValueAtTime(0.22, now);
+        tGain.gain.exponentialRampToValueAtTime(0.001, now + 0.24);
+        thud.connect(tGain);
+        tGain.connect(ctx.destination);
+        thud.start(now);
+        thud.stop(now + 0.25);
+      }
+    } catch (e) {
+      console.warn('Audio play failed', e);
+    }
+  },
+
+  playSwimStroke: () => {
+    if (!soundEnabled) return;
+    try {
+      const ctx = getAudioContext();
+      if (!ctx) return;
+      const now = ctx.currentTime;
+      const buffer = getNoiseBuffer(ctx);
+      const noise = ctx.createBufferSource();
+      noise.buffer = buffer;
+
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.setValueAtTime(680, now);
+      filter.frequency.exponentialRampToValueAtTime(260, now + 0.16);
+
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.001, now);
+      gain.gain.linearRampToValueAtTime(0.09, now + 0.04);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+
+      noise.connect(filter);
+      filter.connect(gain);
+      gain.connect(ctx.destination);
+      noise.start(now);
+    } catch (e) {
+      console.warn('Audio play failed', e);
+    }
+  },
+
+  playFootstep: (surface: 'concrete' | 'sand' | 'grass' | 'water' = 'concrete') => {
+    if (!soundEnabled) return;
+    try {
+      const ctx = getAudioContext();
+      if (!ctx) return;
+      const now = ctx.currentTime;
+      const buffer = getNoiseBuffer(ctx);
+      const noise = ctx.createBufferSource();
+      noise.buffer = buffer;
+
+      const filter = ctx.createBiquadFilter();
+      const gain = ctx.createGain();
+      const pitchJitter = 0.92 + Math.random() * 0.16;
+
+      if (surface === 'water') {
+        filter.type = 'bandpass';
+        filter.Q.value = 1.6;
+        filter.frequency.setValueAtTime(1150 * pitchJitter, now);
+        filter.frequency.exponentialRampToValueAtTime(380, now + 0.11);
+        gain.gain.setValueAtTime(0.055, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+      } else if (surface === 'sand') {
+        filter.type = 'bandpass';
+        filter.Q.value = 0.9;
+        filter.frequency.setValueAtTime(2100 * pitchJitter, now);
+        gain.gain.setValueAtTime(0.038, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.085);
+      } else if (surface === 'grass') {
+        filter.type = 'bandpass';
+        filter.Q.value = 1.2;
+        filter.frequency.setValueAtTime(1650 * pitchJitter, now);
+        gain.gain.setValueAtTime(0.036, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.075);
+      } else {
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(420 * pitchJitter, now);
+        gain.gain.setValueAtTime(0.048, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.065);
+      }
+
+      noise.connect(filter);
+      filter.connect(gain);
+      gain.connect(ctx.destination);
+      noise.start(now);
+    } catch (e) {
+      console.warn('Audio play failed', e);
+    }
+  },
+
+  playCasingClink: () => {
+    if (!soundEnabled) return;
+    try {
+      const ctx = getAudioContext();
+      if (!ctx) return;
+      const now = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'triangle';
+      const baseFreq = 3200 + Math.random() * 900;
+      osc.frequency.setValueAtTime(baseFreq, now);
+      osc.frequency.exponentialRampToValueAtTime(baseFreq * 1.18, now + 0.035);
+      gain.gain.setValueAtTime(0.022, now);
+      gain.gain.exponentialRampToValueAtTime(0.0008, now + 0.045);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.05);
+    } catch (e) {
+      console.warn('Audio play failed', e);
+    }
+  },
+
+  playAlienWarpSpawn: () => {
+    if (!soundEnabled) return;
+    try {
+      const ctx = getAudioContext();
+      if (!ctx) return;
+      const now = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      const sub = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sawtooth';
+      sub.type = 'sine';
+      osc.frequency.setValueAtTime(160, now);
+      osc.frequency.exponentialRampToValueAtTime(760, now + 0.22);
+      osc.frequency.exponentialRampToValueAtTime(280, now + 0.42);
+      sub.frequency.setValueAtTime(95, now);
+      sub.frequency.exponentialRampToValueAtTime(48, now + 0.42);
+      gain.gain.setValueAtTime(0.001, now);
+      gain.gain.linearRampToValueAtTime(0.14, now + 0.06);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
+      osc.connect(gain);
+      sub.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      sub.start(now);
+      osc.stop(now + 0.46);
+      sub.stop(now + 0.46);
+    } catch (e) {
+      console.warn('Audio play failed', e);
+    }
+  },
+
+  playAlienHeavyCannon: () => {
+    if (!soundEnabled) return;
+    try {
+      const ctx = getAudioContext();
+      if (!ctx) return;
+      const now = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(440, now);
+      osc.frequency.exponentialRampToValueAtTime(72, now + 0.19);
+      gain.gain.setValueAtTime(0.14, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.21);
+    } catch (e) {
+      console.warn('Audio play failed', e);
+    }
+  },
+
+  playAlienPsychicNova: () => {
+    if (!soundEnabled) return;
+    try {
+      const ctx = getAudioContext();
+      if (!ctx) return;
+      const now = ctx.currentTime;
+      const osc1 = ctx.createOscillator();
+      const osc2 = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc1.type = 'sine';
+      osc2.type = 'triangle';
+      osc1.frequency.setValueAtTime(620, now);
+      osc1.frequency.exponentialRampToValueAtTime(140, now + 0.36);
+      osc2.frequency.setValueAtTime(930, now);
+      osc2.frequency.exponentialRampToValueAtTime(210, now + 0.36);
+      gain.gain.setValueAtTime(0.16, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.38);
+      osc1.connect(gain);
+      osc2.connect(gain);
+      gain.connect(ctx.destination);
+      osc1.start(now);
+      osc2.start(now);
+      osc1.stop(now + 0.39);
+      osc2.stop(now + 0.39);
+    } catch (e) {
+      console.warn('Audio play failed', e);
+    }
+  },
+
+  playGlock19: () => {
+    if (!soundEnabled) return;
+    try {
+      const ctx = getAudioContext();
+      if (!ctx) return;
+      const now = ctx.currentTime;
+      const buffer = getNoiseBuffer(ctx);
+
+      // 9x19mm high-pressure muzzle crack
+      const crack = ctx.createBufferSource();
+      crack.buffer = buffer;
+      const crackFilter = ctx.createBiquadFilter();
+      crackFilter.type = 'bandpass';
+      crackFilter.frequency.setValueAtTime(2400, now);
+      crackFilter.Q.value = 1.1;
+      const crackGain = ctx.createGain();
+      crackGain.gain.setValueAtTime(0.24, now);
+      crackGain.gain.exponentialRampToValueAtTime(0.001, now + 0.065);
+      crack.connect(crackFilter);
+      crackFilter.connect(crackGain);
+      crackGain.connect(ctx.destination);
+
+      // Polymer frame thump + crisp steel slide cycle transient
+      const thump = ctx.createOscillator();
+      const thumpGain = ctx.createGain();
+      thump.type = 'triangle';
+      thump.frequency.setValueAtTime(260, now);
+      thump.frequency.exponentialRampToValueAtTime(52, now + 0.065);
+      thumpGain.gain.setValueAtTime(0.22, now);
+      thumpGain.gain.exponentialRampToValueAtTime(0.001, now + 0.068);
+      thump.connect(thumpGain);
+      thumpGain.connect(ctx.destination);
+
+      const slideSnap = ctx.createOscillator();
+      const slideGain = ctx.createGain();
+      slideSnap.type = 'square';
+      slideSnap.frequency.setValueAtTime(3400, now + 0.012);
+      slideSnap.frequency.exponentialRampToValueAtTime(1250, now + 0.036);
+      slideGain.gain.setValueAtTime(0.045, now + 0.012);
+      slideGain.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
+      slideSnap.connect(slideGain);
+      slideGain.connect(ctx.destination);
+
+      crack.start(now);
+      crack.stop(now + 0.07);
+      thump.start(now);
+      thump.stop(now + 0.072);
+      slideSnap.start(now + 0.012);
+      slideSnap.stop(now + 0.042);
+    } catch (e) {
+      console.warn('Audio play failed', e);
+    }
+  },
+
+  playBenelliM4: () => {
+    if (!soundEnabled) return;
+    try {
+      const ctx = getAudioContext();
+      if (!ctx) return;
+      const now = ctx.currentTime;
+      const buffer = getNoiseBuffer(ctx);
+
+      // 12-Gauge heavy chest punch
+      const boom = ctx.createOscillator();
+      const boomGain = ctx.createGain();
+      boom.type = 'sine';
+      boom.frequency.setValueAtTime(145, now);
+      boom.frequency.exponentialRampToValueAtTime(34, now + 0.14);
+      boomGain.gain.setValueAtTime(0.36, now);
+      boomGain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+      boom.connect(boomGain);
+      boomGain.connect(ctx.destination);
+
+      // Broad buckshot blast roar
+      const blast = ctx.createBufferSource();
+      blast.buffer = buffer;
+      const blastFilter = ctx.createBiquadFilter();
+      blastFilter.type = 'lowpass';
+      blastFilter.frequency.setValueAtTime(2200, now);
+      blastFilter.frequency.exponentialRampToValueAtTime(380, now + 0.14);
+      const blastGain = ctx.createGain();
+      blastGain.gain.setValueAtTime(0.32, now);
+      blastGain.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
+      blast.connect(blastFilter);
+      blastFilter.connect(blastGain);
+      blastGain.connect(ctx.destination);
+
+      // ARGO gas-piston bolt cycling clack
+      const bolt = ctx.createOscillator();
+      const boltGain = ctx.createGain();
+      bolt.type = 'triangle';
+      bolt.frequency.setValueAtTime(1950, now + 0.045);
+      bolt.frequency.exponentialRampToValueAtTime(620, now + 0.085);
+      boltGain.gain.setValueAtTime(0.06, now + 0.045);
+      boltGain.gain.exponentialRampToValueAtTime(0.001, now + 0.09);
+      bolt.connect(boltGain);
+      boltGain.connect(ctx.destination);
+
+      boom.start(now);
+      boom.stop(now + 0.16);
+      blast.start(now);
+      blast.stop(now + 0.14);
+      bolt.start(now + 0.045);
+      bolt.stop(now + 0.095);
+    } catch (e) {
+      console.warn('Audio play failed', e);
+    }
+  },
+
+  playScarL: () => {
+    if (!soundEnabled) return;
+    try {
+      const ctx = getAudioContext();
+      if (!ctx) return;
+      const now = ctx.currentTime;
+      const buffer = getNoiseBuffer(ctx);
+
+      // 5.56x45mm supersonic whip + muzzle brake bark
+      const snap = ctx.createBufferSource();
+      snap.buffer = buffer;
+      const snapFilter = ctx.createBiquadFilter();
+      snapFilter.type = 'bandpass';
+      snapFilter.frequency.setValueAtTime(2850, now);
+      snapFilter.Q.value = 0.85;
+      const snapGain = ctx.createGain();
+      snapGain.gain.setValueAtTime(0.26, now);
+      snapGain.gain.exponentialRampToValueAtTime(0.001, now + 0.082);
+      snap.connect(snapFilter);
+      snapFilter.connect(snapGain);
+      snapGain.connect(ctx.destination);
+
+      // Tight rifle chamber punch
+      const punch = ctx.createOscillator();
+      const punchGain = ctx.createGain();
+      punch.type = 'sawtooth';
+      punch.frequency.setValueAtTime(210, now);
+      punch.frequency.exponentialRampToValueAtTime(48, now + 0.075);
+      const punchFilter = ctx.createBiquadFilter();
+      punchFilter.type = 'lowpass';
+      punchFilter.frequency.value = 900;
+      punchGain.gain.setValueAtTime(0.18, now);
+      punchGain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+      punch.connect(punchFilter);
+      punchFilter.connect(punchGain);
+      punchGain.connect(ctx.destination);
+
+      // Short-stroke gas-piston bolt carrier metallic ring
+      const carrier = ctx.createOscillator();
+      const carrierGain = ctx.createGain();
+      carrier.type = 'triangle';
+      carrier.frequency.setValueAtTime(2600, now + 0.008);
+      carrier.frequency.exponentialRampToValueAtTime(980, now + 0.032);
+      carrierGain.gain.setValueAtTime(0.04, now + 0.008);
+      carrierGain.gain.exponentialRampToValueAtTime(0.001, now + 0.036);
+      carrier.connect(carrierGain);
+      carrierGain.connect(ctx.destination);
+
+      snap.start(now);
+      snap.stop(now + 0.085);
+      punch.start(now);
+      punch.stop(now + 0.085);
+      carrier.start(now + 0.008);
+      carrier.stop(now + 0.038);
+    } catch (e) {
+      console.warn('Audio play failed', e);
+    }
+  },
 };
+
 

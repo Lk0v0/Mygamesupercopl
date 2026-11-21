@@ -9,57 +9,30 @@ export enum GameState {
   LEVEL_UP = 'LEVEL_UP',
   GAME_OVER = 'GAME_OVER',
   PAUSED = 'PAUSED',
-  INVENTORY_MENU = 'INVENTORY_MENU',
-  INVENTORY_GAME = 'INVENTORY_GAME',
   STORE = 'STORE',
   PRESTIGE = 'PRESTIGE',
-  MASTERY = 'MASTERY',
 }
+
+export type GraphicsQuality = 'ULTRA_LOW' | 'LOW' | 'MEDIUM' | 'HIGH';
 
 export enum WeaponType {
-  PISTOL = 'PISTOL',
-  MAGNUM = 'MAGNUM',
-  SHOTGUN = 'SHOTGUN',
-  MACHINE_GUN = 'MACHINE_GUN',
-  ASSAULT_RIFLE = 'ASSAULT_RIFLE',
-  LMG = 'LMG',
-  SNIPER = 'SNIPER',
-  PLASMA_RIFLE = 'PLASMA_RIFLE',
-  MINIGUN = 'MINIGUN',
-  ROCKET_LAUNCHER = 'ROCKET_LAUNCHER',
-  FLAMETHROWER = 'FLAMETHROWER',
-  RAYGUN = 'RAYGUN',
-  RAY_RIFLE = 'RAY_RIFLE',
-  LASER_MINIGUN = 'LASER_MINIGUN',
-  DESTRUCTOR = 'DESTRUCTOR',
-  INTERCEPTOR = 'INTERCEPTOR',
-  NAVE_REI = 'NAVE_REI',
-  EAST_DRAGON = 'EAST_DRAGON',
-  IRON_MAN = 'IRON_MAN',
-  ICE_AND_FIRE_DRAGON = 'ICE_AND_FIRE_DRAGON',
-  TROPER = 'TROPER',
-  VENOM_FRUIT = 'VENOM_FRUIT',
-}
-
-export interface DragonSegment {
-  x: number;
-  y: number;
-  angle: number;
+  GLOCK_19 = 'GLOCK_19',
+  BENELLI_M4 = 'BENELLI_M4',
+  SCAR_L = 'SCAR_L',
 }
 
 export interface WeaponStats {
   type: WeaponType;
   name: string;
   damage: number;
-  fireRate: number; // bullets per second
+  fireRate: number; // shots per second
   ammoCapacity: number;
   currentAmmo: number;
   bulletSpeed: number;
   spread: number; // in radians
   piercing: number; // how many enemies a bullet can pass through
-  burstCount?: number; // for burst firing if any
+  burstCount?: number;
   color: string;
-  pentes?: number; // number of spare clips/pentes
   unlocked?: boolean;
 }
 
@@ -78,13 +51,11 @@ export interface Player {
   kills: number;
   currentWeapon: WeaponType;
   weapons: Record<WeaponType, WeaponStats>;
-  shield: number; // temporary shield
+  shield: number;
   maxShield: number;
   lastShotTime: number;
   vx?: number;
   vy?: number;
-  hotbar?: (WeaponType | null)[];
-  inventory?: (WeaponType | null)[];
   unlockedWeapons?: WeaponType[];
   equippedSkin?: string;
   unlockedSkins?: string[];
@@ -106,14 +77,6 @@ export interface Player {
   shieldShockLevel?: number;
   knockbackMult?: number;
   acquiredUpgrades?: Record<string, number>;
-}
-
-export interface ThrusterTrailPoint {
-  x: number;
-  y: number;
-  life: number;
-  maxLife: number;
-  warp?: boolean;
 }
 
 export interface VoidDroneState {
@@ -172,11 +135,9 @@ export interface OperatorSkin {
 
 export enum GameMode {
   ZOMBIE = 'ZOMBIE',
-  ALIEN = 'ALIEN',
 }
 
 export enum ZombieType {
-  // Zombie Mode Enemies
   NORMAL = 'NORMAL',
   RUNNER = 'RUNNER',
   TANK = 'TANK',
@@ -184,15 +145,6 @@ export enum ZombieType {
   BOSS = 'BOSS', // Onda 5: Tirano Necrótico Alfa
   BOSS_BUTCHER = 'BOSS_BUTCHER', // Onda 10: Golias Açougueiro Pestilento
   BOSS_NECROTITAN = 'BOSS_NECROTITAN', // Onda 15+: Necro-Titã Supremo
-
-  // Alien Mode Enemies
-  ALIEN_SCOUT = 'ALIEN_SCOUT',
-  ALIEN_DRONE = 'ALIEN_DRONE',
-  ALIEN_SHOOTER = 'ALIEN_SHOOTER',
-  ALIEN_COLOSSUS = 'ALIEN_COLOSSUS',
-  ALIEN_OVERLORD = 'ALIEN_OVERLORD', // Onda 5: Lorde Overlord Psíquico
-  ALIEN_DREADNOUGHT = 'ALIEN_DREADNOUGHT', // Onda 10: Dreadnought Nave-Mãe
-  ALIEN_LEVIATHAN = 'ALIEN_LEVIATHAN', // Onda 15+: Leviatã Cósmico Void
 }
 
 export interface Zombie {
@@ -229,6 +181,8 @@ export interface Zombie {
   bossTitle?: string;
   specialAttackTimer?: number;
   subPhase?: number;
+  aiSeed?: number;
+  dashTimer?: number;
   isDead?: boolean;
 }
 
@@ -255,75 +209,73 @@ export interface Bullet {
   distanceTraveled: number;
   maxDistance: number;
   ownerAngle: number;
-  isRocket?: boolean;
-  isFlame?: boolean;
-  isRay?: boolean;
-  isLaser?: boolean;
   isEnemy?: boolean;
-  isCosmic?: boolean;
-  isMissile?: boolean;
-  isBomb?: boolean;
+  isRay?: boolean;
   isVoidLance?: boolean;
   isShrapnel?: boolean;
-  isOrb?: boolean;
-  homingStrength?: number;
-  flameSize?: number;
-  flameMaxRadius?: number;
-  smokeTimer?: number;
-  weaponType?: WeaponType;
   isIgnite?: boolean;
-  isVenom?: boolean;
-  isHydra?: boolean;
-  isChloroBall?: boolean;
-  isVenomWave?: boolean;
+  homingStrength?: number;
+  weaponType?: WeaponType;
 }
 
 export interface Particle {
   id: string;
   x: number;
   y: number;
+  prevX?: number;
+  prevY?: number;
   vx: number;
   vy: number;
+  drag?: number;
   radius: number;
   color: string;
   alpha: number;
   decay: number;
-  type: 'BLOOD' | 'SPARK' | 'CASING' | 'MUZZLE' | 'LEVEL_UP' | 'PLASMA_RING' | 'ENERGY_ARC' | 'SMOKE' | 'MUZZLE_FLARE' | 'FLAME' | 'FIRE_RING' | 'EXPLOSION' | 'RAY_RING' | 'ALIEN_PLASMA' | 'TOXIC_ACID' | 'ALIEN_BLOOD' | 'MYTHIC_NOVA';
+  type:
+    | 'BLOOD'
+    | 'TOXIC_ACID'
+    | 'MUZZLE'
+    | 'MUZZLE_FLARE'
+    | 'SPARK'
+    | 'FLAME'
+    | 'SMOKE'
+    | 'EXPLOSION'
+    | 'BLAST_DEBRIS'
+    | 'SHOCKWAVE_HEAT'
+    | 'CASING'
+    | 'LEVEL_UP'
+    | 'PLASMA_RING'
+    | 'FIRE_RING'
+    | 'RAY_RING'
+    | 'MYTHIC_NOVA'
+    | 'ENERGY_ARC'
+    | 'WATER_RING'
+    | 'WATER_SPLASH';
   rotation?: number;
   rotSpeed?: number;
   growthSpeed?: number;
   points?: { x: number; y: number }[];
+  z?: number;
+  vz?: number;
 }
 
 export interface BloodSplat {
   x: number;
   y: number;
   radius: number;
+  targetRadius?: number;
   alpha: number;
   color: string;
   angle?: number;
   stretch?: number;
+  isLiquid?: boolean;
+  variant?: number;
 }
 
 export enum DropType {
   HEALTH = 'HEALTH',
   AMMO = 'AMMO',
   SHIELD = 'SHIELD',
-  WEAPON_MAGNUM = 'WEAPON_MAGNUM',
-  WEAPON_SHOTGUN = 'WEAPON_SHOTGUN',
-  WEAPON_MACHINE_GUN = 'WEAPON_MACHINE_GUN',
-  WEAPON_ASSAULT_RIFLE = 'WEAPON_ASSAULT_RIFLE',
-  WEAPON_LMG = 'WEAPON_LMG',
-  WEAPON_SNIPER = 'WEAPON_SNIPER',
-  WEAPON_PLASMA_RIFLE = 'WEAPON_PLASMA_RIFLE',
-  WEAPON_MINIGUN = 'WEAPON_MINIGUN',
-  WEAPON_ROCKET_LAUNCHER = 'WEAPON_ROCKET_LAUNCHER',
-  WEAPON_FLAMETHROWER = 'WEAPON_FLAMETHROWER',
-  WEAPON_RAYGUN = 'WEAPON_RAYGUN',
-  WEAPON_RAY_RIFLE = 'WEAPON_RAY_RIFLE',
-  WEAPON_LASER_MINIGUN = 'WEAPON_LASER_MINIGUN',
-  PISTOL_CLIP = 'PISTOL_CLIP',
-  ESCAPE_KEY = 'ESCAPE_KEY',
 }
 
 export interface ItemDrop {
@@ -338,8 +290,8 @@ export interface ItemDrop {
 }
 
 export interface JoystickInput {
-  x: number; // -1 to 1
-  y: number; // -1 to 1
+  x: number;
+  y: number;
   active: boolean;
 }
 
@@ -361,29 +313,3 @@ export type TokenUpgradeId =
   | 'token_vitality'
   | 'token_haste'
   | 'token_crit_xp';
-
-export type ShipTypeKey = 'TROPER' | 'DESTRUCTOR' | 'INTERCEPTOR' | 'NAVE_REI';
-
-export type MasteryNodeKind = 'PASSIVA' | 'HABILIDADE';
-
-export interface MasteryNodeDefinition {
-  id: string;
-  ship: ShipTypeKey;
-  title: string;
-  kind: MasteryNodeKind;
-  tier: 1 | 2 | 3 | 4;
-  branch: 'center' | 'left' | 'right';
-  requires: string[];
-  cost: number;
-  shortBonus: string;
-  description: string;
-  cooldownSec?: number;
-}
-
-export interface ShipMasteryProgress {
-  xp: number;
-  unlockedNodes: string[];
-}
-
-export type AllShipMasteryState = Record<ShipTypeKey, ShipMasteryProgress>;
-

@@ -109,10 +109,10 @@ export const Joystick: React.FC<JoystickProps> = ({
 
   // Style selectors matching the "Sleek Interface" design spec with mobile scaling
   const outerStyle = isTargeting
-    ? `w-28 h-28 md:w-36 md:h-36 rounded-full bg-rose-950/20 backdrop-blur-xl border-4 border-rose-500/30 flex items-center justify-center relative shadow-2xl transition-all duration-300 ${
+    ? `w-28 h-28 md:w-36 md:h-36 rounded-full bg-rose-950/60 border-4 border-rose-500/35 flex items-center justify-center relative shadow-2xl transition-all duration-300 ${
         isDragging ? 'shadow-[0_0_35px_rgba(244,63,94,0.3)] border-rose-400/50' : ''
       }`
-    : `w-28 h-28 md:w-36 md:h-36 rounded-full bg-slate-900/40 backdrop-blur-xl border-4 border-white/10 flex items-center justify-center relative shadow-2xl transition-all duration-300 ${
+    : `w-28 h-28 md:w-36 md:h-36 rounded-full bg-slate-900/75 border-4 border-white/15 flex items-center justify-center relative shadow-2xl transition-all duration-300 ${
         isDragging ? 'shadow-[0_0_35px_rgba(255,255,255,0.1)] border-white/20' : ''
       }`;
 

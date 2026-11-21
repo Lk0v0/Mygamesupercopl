@@ -1,483 +1,333 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
-import { MobileControls } from './components/MobileControls';
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+import React, { useEffect, useRef, useState, useCallback } from 'react';
+import {
+  ActiveBossInfo,
+  BloodSplat,
+  Bullet,
+  DropType,
+  DyingState,
+  GameState,
+  GraphicsQuality,
+  ItemDrop,
+  JoystickInput,
+  Particle,
+  Player,
+  TokenUpgradeId,
+  UpgradeOption,
+  VoidDroneState,
+  WeaponStats,
+  WeaponType,
+  Zombie,
+  ZombieType,
+} from './types';
 import { GameHUD } from './components/GameHUD';
 import { UpgradeScreen } from './components/UpgradeScreen';
 import { StoreScreen } from './components/StoreScreen';
-import {
-  ActiveBossInfo,
-  GameMode,
-  GameState,
-  Player,
-  Zombie,
-  ZombieType,
-  Bullet,
-  Particle,
-  BloodSplat,
-  ItemDrop,
-  DropType,
-  JoystickInput,
-  UpgradeOption,
-  WeaponType,
-  WeaponStats,
-  DyingState,
-  ThrusterTrailPoint,
-  VoidDroneState,
-  AllShipMasteryState,
-  ShipTypeKey,
-  TokenUpgradeId,
-  DragonSegment,
-} from './types';
-import { sound, isSoundEnabled, toggleSound } from './sound';
-import {
-  renderPlayerWeapon,
-  renderBulletVisual,
-  renderFlamethrowerStream,
-  FlameStreamPoint,
-  getDestructorBlastersWorld,
-  getInterceptorBlastersWorld,
-  getReiBlastersWorld,
-  ReiBlasterMount,
-  renderDestructorShip,
-  renderInterceptorShip,
-  renderReiShip,
-  renderTroperShip,
-  renderDestructorTwinBeams,
-  renderReiQuadBeams,
-  renderSingleExtraLaserBeam,
-  renderDestructorThrusterTrails,
-  renderMythicSolarAura,
-  renderMythicSingularityBlades,
-  renderMythicVoidDrones,
-  renderEastDragon,
-  renderEastDragonFireBeam,
-  renderIronManSuit,
-  renderIronManLaserBeam,
-  renderIronManFlightTrail,
-  renderCompanionDragon,
-  renderDragonElementalBeam,
-  renderToxicChloroCloud,
-  renderVenomDemonForm,
-} from './components/WeaponVisuals';
-import { rollLevelUpOptions } from './components/UpgradeSystem';
-import { renderOperatorBody } from './components/OperatorVisuals';
-import { OPERATOR_SKINS, getOperatorSkinById } from './components/OperatorSkins';
-import { ModeSelectModal } from './components/ModeSelectModal';
 import { PrestigeScreen } from './components/PrestigeScreen';
-import { MasteryScreen } from './components/MasteryScreen';
+import { MobileControls } from './components/MobileControls';
+import { OfflineIndicator } from './components/PWAInstallBanner';
+import { sound, toggleSound, isSoundEnabled } from './sound';
+import { rollLevelUpOptions } from './components/UpgradeSystem';
+import { getOperatorSkinById } from './components/OperatorSkins';
 import {
-  MAX_PRESTIGE,
-  getPrestigeCost,
-  getPrestigeBonuses,
-  TOKEN_UPGRADES,
   DEFAULT_TOKEN_UPGRADES,
+  getPrestigeBonuses,
+  getPrestigeCost,
+  MAX_PRESTIGE,
 } from './components/PrestigeSystem';
 import {
-  SHIP_META,
-  SHIP_MASTERY_NODES,
-  DEFAULT_SHIP_MASTERY,
-  TRAIN_MASTERY_CREDIT_COST,
-  TRAIN_MASTERY_XP_GAIN,
-  hasMasteryNode,
-  canUnlockMasteryNode,
-} from './components/MasterySystem';
+  DAY_NIGHT_CYCLE_SECONDS,
+  DayPhaseId,
+  GroundFootprint,
+  SceneFlashLight,
+  SpentCasing,
+  getDayNightState,
+  renderGamepadAimReticle,
+} from './components/EnvironmentLighting';
 import {
-  GamepadInputSnapshot,
+  FOREST_SIZE,
+  checkForestBulletHit,
+  resolveForestEntityCollision,
+} from './components/ForestWorld';
+import {
+  getEnterableHouses,
+  isPointInsideHouse,
+  steerZombieAroundBuildings,
+} from './components/BuildingsWorld';
+import {
+  ISLAND_CENTER,
+  getCoastlineRadius,
+  getIslandPier,
+  getOceanCurrentDrift,
+  getTerrainSurfaceKind,
+  getWaterDepth,
+  getWaterSpeedMultiplier,
+  isPointOnPier,
+} from './components/IslandTerrain';
+import { ForestDiorama3DRenderer } from './components/ForestWorld3D';
+import {
   createGamepadEdgeState,
   readActiveGamepadState,
   useGamepadConnection,
   useGamepadMenuNavigation,
 } from './gamepad';
-import {
-  SceneFlashLight,
-  renderArenaGround,
-  renderAtmosphericDust,
-  renderGamepadAimReticle,
-  renderGroundCastShadows,
-  renderRealisticSmokeParticle,
-  renderRealisticSplats,
-  renderSceneLighting,
-} from './components/EnvironmentLighting';
 
-const ARENA_SIZE = 2400; // Total width and height of the arena bounds
-const SPAWN_MARGIN = 100; // How far outside the screen zombies should spawn
+const ARENA_SIZE = FOREST_SIZE;
 
-// Default starting stats for weapons with INFINITE AMMO
+interface FloatingText {
+  id: string;
+  x: number;
+  y: number;
+  text: string;
+  color: string;
+  alpha: number;
+  vy: number;
+  scale: number;
+}
+
+const WEAPON_HOTBAR_ORDER: WeaponType[] = [
+  WeaponType.GLOCK_19,
+  WeaponType.BENELLI_M4,
+  WeaponType.SCAR_L,
+];
+
 const INITIAL_WEAPONS: Record<WeaponType, WeaponStats> = {
-  [WeaponType.PISTOL]: {
-    type: WeaponType.PISTOL,
-    name: 'Pistola Tática 9mm Mk.II',
-    damage: 9,
-    fireRate: 4.5, // bullets per second
+  [WeaponType.GLOCK_19]: {
+    type: WeaponType.GLOCK_19,
+    name: 'Glock 19 Gen5 MOS',
+    damage: 15,
+    fireRate: 5.8,
     ammoCapacity: Infinity,
     currentAmmo: Infinity,
-    bulletSpeed: 600,
-    spread: 0.02,
+    bulletSpeed: 840,
+    spread: 0.022,
     piercing: 1,
-    color: '#fbbf24', // Golden Amber
+    color: '#fbbf24',
     unlocked: true,
   },
-  [WeaponType.TROPER]: {
-    type: WeaponType.TROPER,
-    name: 'Nave Troper',
-    damage: 8,
-    fireRate: 2.2, // slow small energy orbs
+  [WeaponType.BENELLI_M4]: {
+    type: WeaponType.BENELLI_M4,
+    name: 'Benelli M4 Super 90',
+    damage: 10,
+    fireRate: 2.35,
     ammoCapacity: Infinity,
     currentAmmo: Infinity,
-    bulletSpeed: 440,
-    spread: 0.02,
+    bulletSpeed: 700,
+    spread: 0.16,
     piercing: 1,
+    color: '#f87171',
+    unlocked: false,
+  },
+  [WeaponType.SCAR_L]: {
+    type: WeaponType.SCAR_L,
+    name: 'FN SCAR-L CQC',
+    damage: 22,
+    fireRate: 9.8,
+    ammoCapacity: Infinity,
+    currentAmmo: Infinity,
+    bulletSpeed: 980,
+    spread: 0.03,
+    piercing: 2,
     color: '#38bdf8',
-    unlocked: false,
-  },
-  [WeaponType.SHOTGUN]: {
-    type: WeaponType.SHOTGUN,
-    name: 'Espingarda Calibre 12 Dupla',
-    damage: 6, // x 7 pellets = 42 damage up close
-    fireRate: 1.4,
-    ammoCapacity: Infinity,
-    currentAmmo: Infinity,
-    bulletSpeed: 520,
-    spread: 0.28, // wide spread
-    piercing: 1,
-    color: '#f87171', // Crimson Red
-    unlocked: false,
-  },
-  [WeaponType.MACHINE_GUN]: {
-    type: WeaponType.MACHINE_GUN,
-    name: 'SMG Tática Vector MP-7',
-    damage: 6,
-    fireRate: 12,
-    ammoCapacity: Infinity,
-    currentAmmo: Infinity,
-    bulletSpeed: 650,
-    spread: 0.08,
-    piercing: 1,
-    color: '#c084fc', // Neon Violet
-    unlocked: false,
-  },
-  [WeaponType.PLASMA_RIFLE]: {
-    type: WeaponType.PLASMA_RIFLE,
-    name: 'Rifle de Plasma Arc-1',
-    damage: 26,
-    fireRate: 2.4,
-    ammoCapacity: Infinity,
-    currentAmmo: Infinity,
-    bulletSpeed: 480,
-    spread: 0.015, // sniper accuracy
-    piercing: 4, // pierces 4 enemies!
-    color: '#38bdf8', // Cyan Ion
-    unlocked: false,
-  },
-  [WeaponType.MINIGUN]: {
-    type: WeaponType.MINIGUN,
-    name: 'Metralhadora Titan M134',
-    damage: 4,
-    fireRate: 16,
-    ammoCapacity: Infinity,
-    currentAmmo: Infinity,
-    bulletSpeed: 700,
-    spread: 0.20,
-    piercing: 1,
-    color: '#10b981', // Emerald Depleted Uranium
-    unlocked: false,
-  },
-  [WeaponType.ROCKET_LAUNCHER]: {
-    type: WeaponType.ROCKET_LAUNCHER,
-    name: 'Lança-Mísseis M-99 Hellfire',
-    damage: 95,
-    fireRate: 1.25,
-    ammoCapacity: Infinity,
-    currentAmmo: Infinity,
-    bulletSpeed: 580,
-    spread: 0.015,
-    piercing: 1, // explosive missile
-    color: '#f97316', // Fiery Rocket Orange
-    unlocked: false,
-  },
-  [WeaponType.FLAMETHROWER]: {
-    type: WeaponType.FLAMETHROWER,
-    name: 'Lança-Chamas Vulcão Napalm-X',
-    damage: 6,
-    fireRate: 32,
-    ammoCapacity: Infinity,
-    currentAmmo: Infinity,
-    bulletSpeed: 460,
-    spread: 0.32,
-    piercing: 99, // infinite penetration
-    color: '#ff5500', // Incandescent Fire
-    unlocked: false,
-  },
-  [WeaponType.RAYGUN]: {
-    type: WeaponType.RAYGUN,
-    name: 'Pulsar Alienígena Zeta-9',
-    damage: 22,
-    fireRate: 5.2,
-    ammoCapacity: Infinity,
-    currentAmmo: Infinity,
-    bulletSpeed: 740,
-    spread: 0.025,
-    piercing: 2,
-    color: '#00ffcc', // Alien Cyan
-    unlocked: false,
-  },
-  [WeaponType.RAY_RIFLE]: {
-    type: WeaponType.RAY_RIFLE,
-    name: 'Fuzil Cristalino Zarkon',
-    damage: 30,
-    fireRate: 7.5,
-    ammoCapacity: Infinity,
-    currentAmmo: Infinity,
-    bulletSpeed: 880,
-    spread: 0.018,
-    piercing: 3,
-    color: '#39ff14', // Electric Lime
-    unlocked: false,
-  },
-  [WeaponType.LASER_MINIGUN]: {
-    type: WeaponType.LASER_MINIGUN,
-    name: 'Laser Minigun Hiper-Feixe Omega',
-    damage: 13,
-    fireRate: 26.0,
-    ammoCapacity: Infinity,
-    currentAmmo: Infinity,
-    bulletSpeed: 1050,
-    spread: 0.02,
-    piercing: 3,
-    color: '#ff0055', // Neon Laser Magenta
-    unlocked: false,
-  },
-  [WeaponType.MAGNUM]: {
-    type: WeaponType.MAGNUM,
-    name: 'Revólver .44 Magnum Hunter',
-    damage: 24,
-    fireRate: 2.1,
-    ammoCapacity: Infinity,
-    currentAmmo: Infinity,
-    bulletSpeed: 780,
-    spread: 0.015,
-    piercing: 2,
-    color: '#f59e0b',
-    unlocked: false,
-  },
-  [WeaponType.ASSAULT_RIFLE]: {
-    type: WeaponType.ASSAULT_RIFLE,
-    name: 'Fuzil de Assalto AK-47',
-    damage: 13,
-    fireRate: 8.5,
-    ammoCapacity: Infinity,
-    currentAmmo: Infinity,
-    bulletSpeed: 760,
-    spread: 0.045,
-    piercing: 2,
-    color: '#fb923c',
-    unlocked: false,
-  },
-  [WeaponType.LMG]: {
-    type: WeaponType.LMG,
-    name: 'Metralhadora Leve M249 SAW',
-    damage: 9,
-    fireRate: 13.5,
-    ammoCapacity: Infinity,
-    currentAmmo: Infinity,
-    bulletSpeed: 740,
-    spread: 0.09,
-    piercing: 2,
-    color: '#eab308',
-    unlocked: false,
-  },
-  [WeaponType.SNIPER]: {
-    type: WeaponType.SNIPER,
-    name: 'Fuzil Sniper .50 BMG',
-    damage: 65,
-    fireRate: 1.05,
-    ammoCapacity: Infinity,
-    currentAmmo: Infinity,
-    bulletSpeed: 1350,
-    spread: 0.005,
-    piercing: 5,
-    color: '#fde047',
-    unlocked: false,
-  },
-  [WeaponType.DESTRUCTOR]: {
-    type: WeaponType.DESTRUCTOR,
-    name: 'Nave Destructor',
-    damage: 18,
-    fireRate: 14,
-    ammoCapacity: Infinity,
-    currentAmmo: Infinity,
-    bulletSpeed: 1800,
-    spread: 0,
-    piercing: 99,
-    color: '#22d3ee',
-    unlocked: false,
-  },
-  [WeaponType.INTERCEPTOR]: {
-    type: WeaponType.INTERCEPTOR,
-    name: 'Nave Interceptor',
-    damage: 9,
-    fireRate: 20,
-    ammoCapacity: Infinity,
-    currentAmmo: Infinity,
-    bulletSpeed: 1250,
-    spread: 0.025,
-    piercing: 2,
-    color: '#00f5d4',
-    unlocked: false,
-  },
-  [WeaponType.NAVE_REI]: {
-    type: WeaponType.NAVE_REI,
-    name: 'Nave Rei',
-    damage: 22,
-    fireRate: 16,
-    ammoCapacity: Infinity,
-    currentAmmo: Infinity,
-    bulletSpeed: 2000,
-    spread: 0,
-    piercing: 99,
-    color: '#ef4444',
-    unlocked: false,
-  },
-  [WeaponType.EAST_DRAGON]: {
-    type: WeaponType.EAST_DRAGON,
-    name: 'East Dragon',
-    damage: 24,
-    fireRate: 18,
-    ammoCapacity: Infinity,
-    currentAmmo: Infinity,
-    bulletSpeed: 2000,
-    spread: 0,
-    piercing: 99,
-    color: '#f97316',
-    unlocked: false,
-  },
-  [WeaponType.IRON_MAN]: {
-    type: WeaponType.IRON_MAN,
-    name: 'Homem de Ferro',
-    damage: 22,
-    fireRate: 9,
-    ammoCapacity: Infinity,
-    currentAmmo: Infinity,
-    bulletSpeed: 1350,
-    spread: 0.02,
-    piercing: 3,
-    color: '#ef4444',
-    unlocked: false,
-  },
-  [WeaponType.ICE_AND_FIRE_DRAGON]: {
-    type: WeaponType.ICE_AND_FIRE_DRAGON,
-    name: 'Ice and Fire Dragon',
-    damage: 26,
-    fireRate: 18,
-    ammoCapacity: Infinity,
-    currentAmmo: Infinity,
-    bulletSpeed: 2000,
-    spread: 0,
-    piercing: 99,
-    color: '#a855f7',
-    unlocked: false,
-  },
-  [WeaponType.VENOM_FRUIT]: {
-    type: WeaponType.VENOM_FRUIT,
-    name: 'Fruta do Veneno',
-    damage: 15,
-    fireRate: 5.5,
-    ammoCapacity: Infinity,
-    currentAmmo: Infinity,
-    bulletSpeed: 700,
-    spread: 0.04,
-    piercing: 2,
-    color: '#a855f7',
     unlocked: false,
   },
 };
 
-export default function App() {
-  const [gameState, setGameState] = useState<GameState>(GameState.MENU);
-  const gameStateRef = useRef<GameState>(gameState);
-  gameStateRef.current = gameState;
-  const [currentMode, setCurrentMode] = useState<GameMode>(GameMode.ZOMBIE);
-  const modeRef = useRef<GameMode>(GameMode.ZOMBIE);
-  const [showModeModal, setShowModeModal] = useState<boolean>(false);
-  const [highScoreZombie, setHighScoreZombie] = useState<number>(0);
-  const [highScoreAlien, setHighScoreAlien] = useState<number>(0);
-  const [wave, setWave] = useState(0);
-  const waveRef = useRef<number>(wave);
-  waveRef.current = wave;
-  const [zombiesRemaining, setZombiesRemaining] = useState(0);
-  const [highScore, setHighScore] = useState(0);
-  const [soundActive, setSoundActive] = useState(isSoundEnabled());
-  const [levelUpOptions, setLevelUpOptions] = useState<UpgradeOption[]>([]);
-  const [rerollsLeft, setRerollsLeft] = useState<number>(1);
-  
-  // Single equipped weapon & unlocked arsenal system (Infinite Ammo)
-  const [unlockedWeapons, setUnlockedWeapons] = useState<WeaponType[]>([WeaponType.PISTOL]);
-  const [equippedWeapon, setEquippedWeapon] = useState<WeaponType>(WeaponType.PISTOL);
-  const [unlockedSkins, setUnlockedSkins] = useState<string[]>(['skin_default']);
-  const [equippedSkin, setEquippedSkin] = useState<string>('skin_default');
-  const skinEffectTimerRef = useRef({ voltZap: 0, cryoChill: 0 });
+function sanitizeWeapons(list: unknown): WeaponType[] {
+  const valid = new Set<WeaponType>();
+  valid.add(WeaponType.GLOCK_19);
+  if (Array.isArray(list)) {
+    for (const item of list) {
+      if (typeof item === 'string' && INITIAL_WEAPONS[item as WeaponType]) {
+        valid.add(item as WeaponType);
+      }
+    }
+  }
+  return WEAPON_HOTBAR_ORDER.filter((wt) => valid.has(wt));
+}
 
 
-  // Slow-motion dramatic death collapse ref
-  const dyingRef = useRef<DyingState | null>(null);
 
-  // Heartbeat pulse ref for visceral low health feedback
-  const lastHeartbeatRef = useRef<number>(0);
-  
-  const [coins, setCoins] = useState<number>(0);
-  const [activeBoss, setActiveBoss] = useState<ActiveBossInfo | null>(null);
-  const lastBossHudSyncRef = useRef<{ id: string | null; hp: number; ts: number }>({
-    id: null,
-    hp: -1,
-    ts: 0,
-  });
-  const [maxShieldLevel, setMaxShieldLevel] = useState<number>(0);
-  const [maxHealthLevel, setMaxHealthLevel] = useState<number>(0);
-  const [speedLevel, setSpeedLevel] = useState<number>(0);
-  const [damageLevel, setDamageLevel] = useState<number>(0);
-  const [luckLevel, setLuckLevel] = useState<number>(0);
+function renderVisionConeOverlay(
+  ctx: CanvasRenderingContext2D,
+  screenPx: number,
+  screenPy: number,
+  aimAngle: number,
+  width: number,
+  height: number
+) {
+  const coneRadius = Math.max(width, height) * 0.95;
+  const halfAngle = 0.68;
 
-  // Prestige, Tokens & Ship Mastery Systems
-  const [prestigeLevel, setPrestigeLevel] = useState<number>(0);
-  const prestigeRef = useRef<number>(0);
-  const [tokens, setTokens] = useState<number>(0);
-  const [tokenUpgrades, setTokenUpgrades] = useState<Record<TokenUpgradeId, number>>({ ...DEFAULT_TOKEN_UPGRADES });
-  const tokenUpgradesRef = useRef<Record<TokenUpgradeId, number>>({ ...DEFAULT_TOKEN_UPGRADES });
-  const [shipMastery, setShipMastery] = useState<AllShipMasteryState>(
-    JSON.parse(JSON.stringify(DEFAULT_SHIP_MASTERY))
-  );
-  const shipMasteryRef = useRef<AllShipMasteryState>(
-    JSON.parse(JSON.stringify(DEFAULT_SHIP_MASTERY))
-  );
-  const masterySkillCooldownRef = useRef<number>(0);
-  const masteryCombatTimersRef = useRef({
-    orbitalBurnTimer: 0,
-    reiStormTimer: 0,
-    orbBurstCount: 0,
-  });
-  const [masterySkillHud, setMasterySkillHud] = useState({
-    available: false,
-    name: '',
-    cooldown: 0,
-    maxCooldown: 8,
-    shipColor: '#22d3ee',
-  });
+  ctx.save();
+  // Darken outside of tactical flashlight cone using evenodd clip fill
+  ctx.fillStyle = 'rgba(2, 6, 23, 0.78)';
+  ctx.beginPath();
+  ctx.rect(0, 0, width, height);
+  ctx.moveTo(screenPx, screenPy);
+  ctx.arc(screenPx, screenPy, coneRadius, aimAngle - halfAngle, aimAngle + halfAngle);
+  ctx.closePath();
+  ctx.fill('evenodd');
 
-  // DOM Refs
+  // Subtle close peripheral awareness halo
+  const nearGrad = ctx.createRadialGradient(screenPx, screenPy, 20, screenPx, screenPy, 110);
+  nearGrad.addColorStop(0, 'rgba(56, 189, 248, 0.08)');
+  nearGrad.addColorStop(1, 'rgba(2, 6, 23, 0)');
+  ctx.globalCompositeOperation = 'lighter';
+  ctx.fillStyle = nearGrad;
+  ctx.beginPath();
+  ctx.arc(screenPx, screenPy, 110, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
+export function App() {
+  const threeMountRef = useRef<HTMLDivElement | null>(null);
+  const threeRendererRef = useRef<ForestDiorama3DRenderer | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const containerRef = useRef<HTMLDivElement | null>(null);
+  const [gameState, setGameState] = useState<GameState>(GameState.MENU);
+  const gameStateRef = useRef<GameState>(GameState.MENU);
+  const previousScreenRef = useRef<GameState>(GameState.MENU);
 
-  // Input states (Joysticks)
-  const leftJoystick = useRef<JoystickInput>({ x: 0, y: 0, active: false });
-  const rightJoystick = useRef<JoystickInput>({ x: 0, y: 0, active: false });
+  // Vision cone optional tactical setting (toggleable in Pause Menu)
+  const [visionConeEnabled, setVisionConeEnabled] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('zombie_shooter_vision_cone') === 'true';
+    } catch {
+      return false;
+    }
+  });
+  const visionConeEnabledRef = useRef(visionConeEnabled);
+  useEffect(() => {
+    visionConeEnabledRef.current = visionConeEnabled;
+    try {
+      localStorage.setItem('zombie_shooter_vision_cone', visionConeEnabled ? 'true' : 'false');
+    } catch {}
+  }, [visionConeEnabled]);
 
-  // Desktop & Gamepad Inputs
-  const keysPressed = useRef<Record<string, boolean>>({});
-  const mousePos = useRef({ x: 0, y: 0 });
-  const hasMouseMovedRef = useRef(false);
-  const isMouseDown = useRef(false);
-  const mobileWarpHoldingRef = useRef(false);
-  const gamepadEdgesRef = useRef(createGamepadEdgeState());
-  const gamepadSnapshotRef = useRef<GamepadInputSnapshot>({
+  const handleToggleVisionCone = useCallback(() => {
+    setVisionConeEnabled((prev) => !prev);
+  }, []);
+
+  const [graphicsQuality, setGraphicsQuality] = useState<GraphicsQuality>(() => {
+    try {
+      const saved = localStorage.getItem('zombie_shooter_graphics_quality') as GraphicsQuality | null;
+      if (saved === 'ULTRA_LOW' || saved === 'LOW' || saved === 'MEDIUM' || saved === 'HIGH') {
+        return saved;
+      }
+    } catch {}
+    return 'MEDIUM';
+  });
+  const graphicsQualityRef = useRef<GraphicsQuality>(graphicsQuality);
+  const staticFrameRenderedRef = useRef<boolean>(false);
+
+  const handleChangeGraphicsQuality = useCallback((quality: GraphicsQuality) => {
+    graphicsQualityRef.current = quality;
+    setGraphicsQuality(quality);
+    try {
+      localStorage.setItem('zombie_shooter_graphics_quality', quality);
+    } catch {}
+    threeRendererRef.current?.setGraphicsPreset(quality);
+    staticFrameRenderedRef.current = false;
+  }, []);
+
+  const [highScoreZombie, setHighScoreZombie] = useState<number>(() => {
+    const zVal = parseInt(localStorage.getItem('zombie_shooter_highscore_zombie') || '0', 10) || 0;
+    const legacy = parseInt(localStorage.getItem('zombie_shooter_highscore') || '0', 10) || 0;
+    return Math.max(zVal, legacy);
+  });
+
+  const [unlockedWeapons, setUnlockedWeapons] = useState<WeaponType[]>(() => {
+    try {
+      const saved = localStorage.getItem('zombie_shooter_unlocked_weapons');
+      if (saved) {
+        return sanitizeWeapons(JSON.parse(saved));
+      }
+    } catch {}
+    return [WeaponType.GLOCK_19];
+  });
+
+  const [equippedWeapon, setEquippedWeapon] = useState<WeaponType>(() => {
+    const saved = localStorage.getItem('zombie_shooter_equipped_weapon') as WeaponType | null;
+    if (saved && INITIAL_WEAPONS[saved]) return saved;
+    return WeaponType.GLOCK_19;
+  });
+
+  const [unlockedSkins, setUnlockedSkins] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('zombie_shooter_unlocked_skins');
+      const parsed = saved ? (JSON.parse(saved) as string[]) : ['skin_default'];
+      return parsed.includes('skin_default') ? parsed : ['skin_default', ...parsed];
+    } catch {
+      return ['skin_default'];
+    }
+  });
+
+  const [equippedSkin, setEquippedSkin] = useState<string>(() => {
+    return localStorage.getItem('zombie_shooter_equipped_skin') || 'skin_default';
+  });
+
+  const [coins, setCoins] = useState<number>(() => {
+    return parseInt(localStorage.getItem('zombie_shooter_coins') || '0', 10) || 0;
+  });
+
+  const [maxShieldLevel, setMaxShieldLevel] = useState<number>(() => {
+    return parseInt(localStorage.getItem('zombie_shooter_shield_level') || '0', 10) || 0;
+  });
+
+  const [maxHealthLevel, setMaxHealthLevel] = useState<number>(() => {
+    return parseInt(localStorage.getItem('zombie_shooter_health_level') || '0', 10) || 0;
+  });
+
+  const [speedLevel, setSpeedLevel] = useState<number>(() => {
+    return parseInt(localStorage.getItem('zombie_shooter_speed_level') || '0', 10) || 0;
+  });
+
+  const [damageLevel, setDamageLevel] = useState<number>(() => {
+    return parseInt(localStorage.getItem('zombie_shooter_damage_level') || '0', 10) || 0;
+  });
+
+  const [luckLevel, setLuckLevel] = useState<number>(() => {
+    return parseInt(localStorage.getItem('zombie_shooter_luck_level') || '0', 10) || 0;
+  });
+
+  const [prestigeLevel, setPrestigeLevel] = useState<number>(() => {
+    const saved = parseInt(localStorage.getItem('zombie_shooter_prestige') || '0', 10) || 0;
+    return Math.max(0, Math.min(MAX_PRESTIGE, saved));
+  });
+
+  const [tokens, setTokens] = useState<number>(() => {
+    return Math.max(0, parseInt(localStorage.getItem('zombie_shooter_tokens') || '0', 10) || 0);
+  });
+
+  const [tokenUpgrades, setTokenUpgrades] = useState<Record<TokenUpgradeId, number>>(() => {
+    try {
+      const saved = localStorage.getItem('zombie_shooter_token_upgrades');
+      if (saved) return { ...DEFAULT_TOKEN_UPGRADES, ...JSON.parse(saved) };
+    } catch {}
+    return { ...DEFAULT_TOKEN_UPGRADES };
+  });
+
+  const [soundEnabled, setSoundEnabled] = useState(isSoundEnabled());
+  const [wave, setWave] = useState(1);
+  const [zombiesRemaining, setZombiesRemaining] = useState(0);
+  const [activeBoss, setActiveBoss] = useState<ActiveBossInfo | null>(null);
+  const [upgradeOptions, setUpgradeOptions] = useState<UpgradeOption[]>([]);
+  const [dayNightHud, setDayNightHud] = useState<{
+    phase: DayPhaseId;
+    phaseLabel: string;
+    clockText: string;
+  }>(() => {
+    const init = getDayNightState(24);
+    return { phase: init.phase, phaseLabel: init.phaseLabel, clockText: init.clockText };
+  });
+
+  const { connected: gamepadConnected } = useGamepadConnection();
+  const gamepadStateRef = useRef<ReturnType<typeof readActiveGamepadState>>({
     connected: false,
     id: '',
     detectedProfile: 'STANDARD',
@@ -497,1553 +347,125 @@ export default function App() {
     reloadPressed: false,
     pausePressed: false,
   });
-  const gamepadState = useGamepadConnection();
+  const gamepadEdgeRef = useRef(createGamepadEdgeState());
 
-  // Ship State shared by Destructor, Interceptor & Nave Rei (±30° gimbal blasters, smooth turning, Warp/Fury)
-  const destructorStateRef = useRef({
-    leftBlasterAngle: 0,
-    rightBlasterAngle: 0,
-    leftMuzzleX: ARENA_SIZE / 2,
-    leftMuzzleY: ARENA_SIZE / 2,
-    rightMuzzleX: ARENA_SIZE / 2,
-    rightMuzzleY: ARENA_SIZE / 2,
-    reiBlasters: [] as ReiBlasterMount[],
-    isFiring: false,
-    laserChargeProgress: 0,
-    beamTickTimer: 0,
-    beamSoundTimer: 0,
-    warpChargeTimer: 0,
-    warpActive: false,
-    warpTimer: 0,
-    warpSoundTimer: 0,
-    orbitAngle: 0,
-    hudSyncTimer: 0,
-    angularVel: 0,
-    leftTrail: [] as ThrusterTrailPoint[],
-    rightTrail: [] as ThrusterTrailPoint[],
-  });
-  const DRAGON_SEGMENT_COUNT = 18;
-  const DRAGON_SEGMENT_SPACING = 11.5;
-  const createInitialDragonSegments = (hx: number, hy: number): DragonSegment[] =>
-    Array.from({ length: DRAGON_SEGMENT_COUNT }, (_, idx) => ({
-      x: hx - (idx + 1) * DRAGON_SEGMENT_SPACING,
-      y: hy,
-      angle: 0,
-    }));
-  const eastDragonStateRef = useRef({
-    segments: createInitialDragonSegments(ARENA_SIZE / 2, ARENA_SIZE / 2),
-    isFiring: false,
-    beamExtension: 0,
-    muzzleX: ARENA_SIZE / 2 + 26,
-    muzzleY: ARENA_SIZE / 2,
-    beamEndX: ARENA_SIZE / 2 + 980,
-    beamEndY: ARENA_SIZE / 2,
-    beamTickTimer: 0,
-    beamSoundTimer: 0,
-    emberTimer: 0,
-  });
-  const ironManStateRef = useRef({
-    mode: 'REPULSOR' as 'REPULSOR' | 'LASER',
-    isFiring: false,
-    laserChargeProgress: 0,
-    beamTickTimer: 0,
-    beamSoundTimer: 0,
-    repulsorTimer: 0,
-    handToggle: 0,
-    muzzleX: ARENA_SIZE / 2 + 20,
-    muzzleY: ARENA_SIZE / 2,
-    beamEndX: ARENA_SIZE / 2 + 950,
-    beamEndY: ARENA_SIZE / 2,
-    trail: [] as ThrusterTrailPoint[],
-  });
-  const [ironManModeHud, setIronManModeHud] = useState<'REPULSOR' | 'LASER'>('REPULSOR');
-  const ICE_FIRE_MERGE_DURATION = 10.0;
-  const ICE_FIRE_MERGE_COOLDOWN = 10.0;
-  const createCompanionDragonSegments = (
-    hx: number,
-    hy: number,
-    count: number,
-    spacing: number
-  ): DragonSegment[] =>
-    Array.from({ length: count }, (_, idx) => ({
-      x: hx - (idx + 1) * spacing,
-      y: hy,
-      angle: 0,
-    }));
-  const iceFireDragonStateRef = useRef({
-    activeDragon: 'FIRE' as 'FIRE' | 'ICE',
-    merged: false,
-    mergeTimer: 0,
-    mergeCooldown: 0,
-    fireHead: { x: ARENA_SIZE / 2 + 24, y: ARENA_SIZE / 2 - 34, angle: 0 },
-    fireSegments: createCompanionDragonSegments(ARENA_SIZE / 2 + 24, ARENA_SIZE / 2 - 34, 14, 10),
-    iceHead: { x: ARENA_SIZE / 2 - 24, y: ARENA_SIZE / 2 + 42, angle: 0 },
-    iceSegments: createCompanionDragonSegments(ARENA_SIZE / 2 - 24, ARENA_SIZE / 2 + 42, 14, 10),
-    megaHead: { x: ARENA_SIZE / 2 + 44, y: ARENA_SIZE / 2, angle: 0 },
-    megaSegments: createCompanionDragonSegments(ARENA_SIZE / 2 + 44, ARENA_SIZE / 2, 20, 15.5),
-    isFiring: false,
-    beamExtension: 0,
-    muzzleX: ARENA_SIZE / 2 + 48,
-    muzzleY: ARENA_SIZE / 2 - 34,
-    beamEndX: ARENA_SIZE / 2 + 1000,
-    beamEndY: ARENA_SIZE / 2 - 34,
-    beamTickTimer: 0,
-    beamSoundTimer: 0,
-    emberTimer: 0,
-    hudSyncTimer: 0,
-  });
-  const [iceFireDragonHud, setIceFireDragonHud] = useState({
-    activeDragon: 'FIRE' as 'FIRE' | 'ICE',
-    merged: false,
-    mergeTimer: 0,
-    mergeDuration: ICE_FIRE_MERGE_DURATION,
-    cooldown: 0,
-    maxCooldown: ICE_FIRE_MERGE_COOLDOWN,
-  });
-  const [destructorWarpHud, setDestructorWarpHud] = useState({
-    chargeProgress: 0,
-    active: false,
-    remainingRatio: 0,
-    remainingSeconds: 0,
-    chargeDuration: 3.0,
-  });
+  // Persistent state mirrors in refs for tight 60fps loop
+  const coinsRef = useRef(coins);
+  const unlockedWeaponsRef = useRef(unlockedWeapons);
+  const equippedWeaponRef = useRef(equippedWeapon);
+  const unlockedSkinsRef = useRef(unlockedSkins);
+  const equippedSkinRef = useRef(equippedSkin);
+  const shieldLevelRef = useRef(maxShieldLevel);
+  const healthLevelRef = useRef(maxHealthLevel);
+  const speedLevelRef = useRef(speedLevel);
+  const damageLevelRef = useRef(damageLevel);
+  const luckLevelRef = useRef(luckLevel);
+  const prestigeLevelRef = useRef(prestigeLevel);
+  const tokenUpgradesRef = useRef(tokenUpgrades);
+  const highScoreZombieRef = useRef(highScoreZombie);
 
-  // Fruta do Veneno (Doku Doku no Mi — 3 Skills + Venom Demon Kinjite Transformation)
-  const VENOM_HYDRA_CD = 5.5;
-  const VENOM_CHLORO_CD = 7.5;
-  const VENOM_ROAD_CD = 6.5;
-  const VENOM_DEMON_CD = 22.0;
-  const VENOM_DEMON_DURATION = 12.0;
+  useEffect(() => { coinsRef.current = coins; }, [coins]);
+  useEffect(() => { unlockedWeaponsRef.current = unlockedWeapons; }, [unlockedWeapons]);
+  useEffect(() => { equippedWeaponRef.current = equippedWeapon; }, [equippedWeapon]);
+  useEffect(() => { unlockedSkinsRef.current = unlockedSkins; }, [unlockedSkins]);
+  useEffect(() => { equippedSkinRef.current = equippedSkin; }, [equippedSkin]);
+  useEffect(() => { shieldLevelRef.current = maxShieldLevel; }, [maxShieldLevel]);
+  useEffect(() => { healthLevelRef.current = maxHealthLevel; }, [maxHealthLevel]);
+  useEffect(() => { speedLevelRef.current = speedLevel; }, [speedLevel]);
+  useEffect(() => { damageLevelRef.current = damageLevel; }, [damageLevel]);
+  useEffect(() => { luckLevelRef.current = luckLevel; }, [luckLevel]);
+  useEffect(() => { prestigeLevelRef.current = prestigeLevel; }, [prestigeLevel]);
+  useEffect(() => { tokenUpgradesRef.current = tokenUpgrades; }, [tokenUpgrades]);
+  useEffect(() => { highScoreZombieRef.current = highScoreZombie; }, [highScoreZombie]);
 
-  interface VenomCloudArea {
-    x: number;
-    y: number;
-    radius: number;
-    timer: number;
-    maxTimer: number;
-    tickTimer: number;
-    damage: number;
-    isKinjite: boolean;
-  }
+  // Mutable simulation refs
+  const createInitialPlayer = useCallback((): Player => {
+    const skin = getOperatorSkinById(equippedSkinRef.current);
+    const vitalityLvl = tokenUpgradesRef.current.token_vitality || 0;
+    const mightLvl = tokenUpgradesRef.current.token_might || 0;
+    const hasteLvl = tokenUpgradesRef.current.token_haste || 0;
+    const critXpLvl = tokenUpgradesRef.current.token_crit_xp || 0;
+    const wealthLvl = tokenUpgradesRef.current.token_wealth || 0;
+    const prestigeBonuses = getPrestigeBonuses(prestigeLevelRef.current);
 
-  const venomFruitStateRef = useRef({
-    hydraCd: 0,
-    chloroCd: 0,
-    roadCd: 0,
-    demonCd: 0,
-    demonActive: false,
-    demonTimer: 0,
-    dashTimer: 0,
-    dashVx: 0,
-    dashVy: 0,
-    dashHitIds: {} as Record<string, boolean>,
-    auraTickTimer: 0,
-    hudSyncTimer: 0,
-    clouds: [] as VenomCloudArea[],
-  });
-  const [venomFruitHud, setVenomFruitHud] = useState({
-    hydraCd: 0,
-    chloroCd: 0,
-    roadCd: 0,
-    demonCd: 0,
-    demonActive: false,
-    demonTimer: 0,
-    demonDuration: VENOM_DEMON_DURATION,
-  });
+    let bonusHp = healthLevelRef.current * 15 + vitalityLvl * 40;
+    let bonusShield = shieldLevelRef.current * 20 + vitalityLvl * 25;
+    let speedMult = (1 + speedLevelRef.current * 0.08) * (1 + hasteLvl * 0.06);
+    let damageMult =
+      (1 + damageLevelRef.current * 0.1) *
+      (1 + mightLvl * 0.18) *
+      prestigeBonuses.damageMult;
+    let fireRateMult = 1 + hasteLvl * 0.07;
 
-  // Active Mythic & Legendary runtime combat tracking
-  const mythicCombatRef = useRef({
-    orbitalAngle: 0,
-    orbitalHitCooldowns: {} as Record<string, number>,
-    novaShotCounter: 0,
-    solarBurnTimer: 0,
-    gravityPulseTimer: 0,
-    chainLightningCooldowns: {} as Record<string, number>,
-    destructorSplitCounter: 0,
-    voidDrones: [
-      { x: ARENA_SIZE / 2, y: ARENA_SIZE / 2, angle: 0, fireTimer: 0.2 },
-      { x: ARENA_SIZE / 2, y: ARENA_SIZE / 2, angle: 0, fireTimer: 0.4 },
-      { x: ARENA_SIZE / 2, y: ARENA_SIZE / 2, angle: 0, fireTimer: 0.6 },
-    ] as VoidDroneState[],
-  });
-
-  // Core Game Entities (stored in refs for high-performance access in the frame loop)
-  const playerRef = useRef<Player>({
-    x: ARENA_SIZE / 2,
-    y: ARENA_SIZE / 2,
-    radius: 18,
-    angle: 0,
-    speed: 180, // pixels per second
-    hp: 100,
-    maxHp: 100,
-    xp: 0,
-    xpNeeded: 100,
-    level: 1,
-    score: 0,
-    kills: 0,
-    currentWeapon: WeaponType.PISTOL,
-    weapons: JSON.parse(JSON.stringify(INITIAL_WEAPONS)),
-    shield: 0,
-    maxShield: 0,
-    lastShotTime: 0,
-    vx: 0,
-    vy: 0,
-    hotbar: [WeaponType.PISTOL, null, null],
-    inventory: [null, null, null, null, null, null, null, null],
-    equippedSkin: 'skin_default',
-    unlockedSkins: ['skin_default'],
-  });
-
-  const zombiesRef = useRef<Zombie[]>([]);
-  const bulletsRef = useRef<Bullet[]>([]);
-  const particlesRef = useRef<Particle[]>([]);
-  const bloodSplatsRef = useRef<BloodSplat[]>([]);
-  const itemDropsRef = useRef<ItemDrop[]>([]);
-  const flameStreamRef = useRef<FlameStreamPoint[]>([]);
-  const flashLightsRef = useRef<SceneFlashLight[]>([]);
-  const lastDrawDtRef = useRef<number>(0.016);
-
-  // Wave manager ref
-  const waveActiveRef = useRef(false);
-  const waveSpawnTimerRef = useRef<number | null>(null);
-
-  // Camera coordinates (follows player smoothly)
-  const cameraRef = useRef({ x: ARENA_SIZE / 2, y: ARENA_SIZE / 2 });
-  const screenShakeRef = useRef(0);
-  const muzzleFlashIntensityRef = useRef(0);
-  const gunRecoilRef = useRef(0);
-  const dynamicSpreadRef = useRef(0);
-
-  // To update React HUD efficiently without forcing re-renders on every animation frame,
-  // we push player state to a React state occasionally (or sync on specific events)
-  const [hudPlayer, setHudPlayer] = useState<Player>({ ...playerRef.current });
-
-  // Load high score, unlocked arsenal, and upgrades data
-  useEffect(() => {
-    // Load active game mode
-    const savedMode = localStorage.getItem('zombie_shooter_active_mode') as GameMode | null;
-    if (savedMode === GameMode.ALIEN || savedMode === GameMode.ZOMBIE) {
-      setCurrentMode(savedMode);
-      modeRef.current = savedMode;
+    if (skin.id === 'skin_ghost_recon') speedMult *= 1.06;
+    if (skin.id === 'skin_hazard_juggernaut') bonusHp += 30;
+    if (skin.id === 'skin_cryo_warden') bonusShield += 35;
+    if (skin.id === 'skin_volt_cyber') fireRateMult *= 1.1;
+    if (skin.id === 'skin_solar_valkyrie') {
+      damageMult *= 1.12;
+      bonusHp += 25;
+      bonusShield += 25;
     }
 
-    // Load high scores per mode
-    const savedGeneral = localStorage.getItem('zombie_shooter_highscore');
-    const savedZombie = localStorage.getItem('zombie_shooter_highscore_zombie');
-    const savedAlien = localStorage.getItem('zombie_shooter_highscore_alien');
-
-    const zombieScore = savedZombie ? parseInt(savedZombie, 10) : savedGeneral ? parseInt(savedGeneral, 10) : 0;
-    const alienScore = savedAlien ? parseInt(savedAlien, 10) : 0;
-
-    setHighScoreZombie(zombieScore);
-    setHighScoreAlien(alienScore);
-    const activeScore = (savedMode === GameMode.ALIEN ? alienScore : zombieScore) || (savedGeneral ? parseInt(savedGeneral, 10) : 0);
-    setHighScore(activeScore);
-    
-    // Load or migrate unlocked weapons
-    const savedUnlocked = localStorage.getItem('zombie_shooter_unlocked_weapons');
-    let initialUnlocked: WeaponType[] = [WeaponType.PISTOL];
-    if (savedUnlocked) {
-      try {
-        const parsed = JSON.parse(savedUnlocked);
-        if (Array.isArray(parsed)) {
-          initialUnlocked = parsed.filter((wt: WeaponType) => INITIAL_WEAPONS[wt] !== undefined);
-        }
-      } catch (e) {
-        initialUnlocked = [WeaponType.PISTOL];
-      }
-    }
-    if (!initialUnlocked.includes(WeaponType.PISTOL)) {
-      initialUnlocked.push(WeaponType.PISTOL);
-    }
-    setUnlockedWeapons(initialUnlocked);
-
-    // Load equipped weapon
-    const savedEquipped = localStorage.getItem('zombie_shooter_equipped_weapon') as WeaponType | null;
-    if (savedEquipped && INITIAL_WEAPONS[savedEquipped] && initialUnlocked.includes(savedEquipped)) {
-      setEquippedWeapon(savedEquipped);
-      playerRef.current.currentWeapon = savedEquipped;
-    } else {
-      setEquippedWeapon(WeaponType.PISTOL);
-      playerRef.current.currentWeapon = WeaponType.PISTOL;
-      localStorage.setItem('zombie_shooter_equipped_weapon', WeaponType.PISTOL);
-    }
-
-    // Load unlocked & equipped operator skins
-    const savedUnlockedSkins = localStorage.getItem('zombie_shooter_unlocked_skins');
-    let initialSkins: string[] = ['skin_default'];
-    if (savedUnlockedSkins) {
-      try {
-        const parsed = JSON.parse(savedUnlockedSkins);
-        if (Array.isArray(parsed)) {
-          initialSkins = parsed.filter((sid: string) => OPERATOR_SKINS.some((s) => s.id === sid));
-        }
-      } catch {
-        initialSkins = ['skin_default'];
-      }
-    }
-    if (!initialSkins.includes('skin_default')) {
-      initialSkins.unshift('skin_default');
-    }
-    setUnlockedSkins(initialSkins);
-    playerRef.current.unlockedSkins = initialSkins;
-
-    const savedSkin = localStorage.getItem('zombie_shooter_equipped_skin');
-    if (savedSkin && initialSkins.includes(savedSkin)) {
-      setEquippedSkin(savedSkin);
-      playerRef.current.equippedSkin = savedSkin;
-    } else {
-      setEquippedSkin('skin_default');
-      playerRef.current.equippedSkin = 'skin_default';
-      localStorage.setItem('zombie_shooter_equipped_skin', 'skin_default');
-    }
-
-    const savedCoins = localStorage.getItem('zombie_shooter_coins');
-    if (savedCoins) {
-      setCoins(parseInt(savedCoins, 10));
-    } else {
-      setCoins(1000);
-      localStorage.setItem('zombie_shooter_coins', '1000');
-    }
-
-    const savedShieldLvl = localStorage.getItem('zombie_shooter_shield_level');
-    if (savedShieldLvl) {
-      setMaxShieldLevel(parseInt(savedShieldLvl, 10));
-    }
-    const savedHealthLvl = localStorage.getItem('zombie_shooter_health_level');
-    if (savedHealthLvl) {
-      setMaxHealthLevel(parseInt(savedHealthLvl, 10));
-    }
-    const savedSpeedLvl = localStorage.getItem('zombie_shooter_speed_level');
-    if (savedSpeedLvl) {
-      setSpeedLevel(parseInt(savedSpeedLvl, 10));
-    }
-    const savedDamageLvl = localStorage.getItem('zombie_shooter_damage_level');
-    if (savedDamageLvl) {
-      setDamageLevel(parseInt(savedDamageLvl, 10));
-    }
-    const savedLuckLvl = localStorage.getItem('zombie_shooter_luck_level');
-    if (savedLuckLvl) {
-      setLuckLevel(parseInt(savedLuckLvl, 10));
-    }
-
-    const savedPrestige = localStorage.getItem('zombie_shooter_prestige');
-    if (savedPrestige) {
-      const pVal = Math.max(0, Math.min(MAX_PRESTIGE, parseInt(savedPrestige, 10) || 0));
-      setPrestigeLevel(pVal);
-      prestigeRef.current = pVal;
-    }
-
-    const savedTokens = localStorage.getItem('zombie_shooter_tokens');
-    if (savedTokens) {
-      setTokens(Math.max(0, parseInt(savedTokens, 10) || 0));
-    }
-
-    const savedTokenUpg = localStorage.getItem('zombie_shooter_token_upgrades');
-    if (savedTokenUpg) {
-      try {
-        const parsed = JSON.parse(savedTokenUpg);
-        const merged = { ...DEFAULT_TOKEN_UPGRADES, ...parsed };
-        setTokenUpgrades(merged);
-        tokenUpgradesRef.current = merged;
-      } catch (e) {
-        // fallback defaults
-      }
-    }
-
-    const savedMastery = localStorage.getItem('zombie_shooter_ship_mastery');
-    if (savedMastery) {
-      try {
-        const parsed = JSON.parse(savedMastery);
-        const merged: AllShipMasteryState = {
-          TROPER: parsed.TROPER || { xp: 0, unlockedNodes: [] },
-          DESTRUCTOR: parsed.DESTRUCTOR || { xp: 0, unlockedNodes: [] },
-          INTERCEPTOR: parsed.INTERCEPTOR || { xp: 0, unlockedNodes: [] },
-          NAVE_REI: parsed.NAVE_REI || { xp: 0, unlockedNodes: [] },
-        };
-        setShipMastery(merged);
-        shipMasteryRef.current = merged;
-      } catch (e) {
-        // fallback defaults
-      }
-    }
-
-  }, []);
-
-  const updateCoins = (amount: number) => {
-    setCoins((prev) => {
-      const next = Math.max(0, prev + amount);
-      localStorage.setItem('zombie_shooter_coins', next.toString());
-      return next;
-    });
-  };
-
-  const handleAddTestCoins = () => {
-    updateCoins(1000);
-  };
-
-  // Weapon purchase: unlocks weapon and equips it immediately
-  const handleBuyWeapon = (weaponType: WeaponType, price: number): boolean => {
-    updateCoins(-price);
-
-    setUnlockedWeapons((prev) => {
-      const updated = prev.includes(weaponType) ? prev : [...prev, weaponType];
-      localStorage.setItem('zombie_shooter_unlocked_weapons', JSON.stringify(updated));
-      return updated;
-    });
-
-    // Auto-equip purchased weapon
-    handleEquipWeapon(weaponType);
-    return true;
-  };
-
-  // Equip weapon directly
-  const handleEquipWeapon = (weaponType: WeaponType) => {
-    setEquippedWeapon(weaponType);
-    localStorage.setItem('zombie_shooter_equipped_weapon', weaponType);
-    playerRef.current.currentWeapon = weaponType;
-    if (playerRef.current.weapons[weaponType]) {
-      playerRef.current.weapons[weaponType].unlocked = true;
-    }
-    if (weaponType === WeaponType.ICE_AND_FIRE_DRAGON) {
-      const px = playerRef.current.x;
-      const py = playerRef.current.y;
-      const ifd = iceFireDragonStateRef.current;
-      ifd.fireHead = { x: px + 24, y: py - 34, angle: playerRef.current.angle };
-      ifd.fireSegments = createCompanionDragonSegments(px + 24, py - 34, 14, 10);
-      ifd.iceHead = { x: px - 24, y: py + 42, angle: playerRef.current.angle };
-      ifd.iceSegments = createCompanionDragonSegments(px - 24, py + 42, 14, 10);
-      ifd.megaHead = { x: px + 44, y: py, angle: playerRef.current.angle };
-      ifd.megaSegments = createCompanionDragonSegments(px + 44, py, 20, 15.5);
-    }
-    syncHudPlayer();
-    sound.playPowerup();
-  };
-
-  const handleBuySkin = (skinId: string, price: number): boolean => {
-    if (coins < price) return false;
-    updateCoins(-price);
-    setUnlockedSkins((prev) => {
-      const updated = prev.includes(skinId) ? prev : [...prev, skinId];
-      localStorage.setItem('zombie_shooter_unlocked_skins', JSON.stringify(updated));
-      playerRef.current.unlockedSkins = updated;
-      return updated;
-    });
-    handleEquipSkin(skinId);
-    return true;
-  };
-
-  const handleEquipSkin = (skinId: string) => {
-    setEquippedSkin(skinId);
-    localStorage.setItem('zombie_shooter_equipped_skin', skinId);
-    playerRef.current.equippedSkin = skinId;
-    syncHudPlayer();
-    sound.playPowerup();
-  };
-
-  const handleBuyShieldUpgrade = () => {
-    const cost = (maxShieldLevel + 1) * 250;
-    updateCoins(-cost);
-    setMaxShieldLevel((prev) => {
-      const next = prev + 1;
-      localStorage.setItem('zombie_shooter_shield_level', next.toString());
-      return next;
-    });
-  };
-
-  const handleBuyHealthUpgrade = () => {
-    const cost = (maxHealthLevel + 1) * 200;
-    updateCoins(-cost);
-    setMaxHealthLevel((prev) => {
-      const next = prev + 1;
-      localStorage.setItem('zombie_shooter_health_level', next.toString());
-      return next;
-    });
-  };
-
-  const handleBuySpeedUpgrade = () => {
-    const cost = (speedLevel + 1) * 250;
-    updateCoins(-cost);
-    setSpeedLevel((prev) => {
-      const next = Math.min(5, prev + 1);
-      localStorage.setItem('zombie_shooter_speed_level', next.toString());
-      return next;
-    });
-  };
-
-  const handleBuyDamageUpgrade = () => {
-    const cost = (damageLevel + 1) * 350;
-    updateCoins(-cost);
-    setDamageLevel((prev) => {
-      const next = Math.min(5, prev + 1);
-      localStorage.setItem('zombie_shooter_damage_level', next.toString());
-      return next;
-    });
-  };
-
-  const handleBuyLuckUpgrade = () => {
-    const cost = (luckLevel + 1) * 300;
-    updateCoins(-cost);
-    setLuckLevel((prev) => {
-      const next = Math.min(5, prev + 1);
-      localStorage.setItem('zombie_shooter_luck_level', next.toString());
-      return next;
-    });
-  };
-
-  const handleOpenStore = () => {
-    setGameState(GameState.STORE);
-  };
-
-  const handleCloseStore = () => {
-    setGameState(GameState.MENU);
-  };
-
-  const handleOpenPrestige = () => {
-    setGameState(GameState.PRESTIGE);
-  };
-
-  const handleOpenMastery = () => {
-    setGameState(GameState.MASTERY);
-  };
-
-  const handleAscendPrestige = (): boolean => {
-    if (prestigeLevel >= MAX_PRESTIGE) return false;
-    const cost = getPrestigeCost(prestigeLevel);
-    if (coins < cost) return false;
-    updateCoins(-cost);
-    const nextP = prestigeLevel + 1;
-    setPrestigeLevel(nextP);
-    prestigeRef.current = nextP;
-    localStorage.setItem('zombie_shooter_prestige', nextP.toString());
-    setTokens((prev) => {
-      const nextT = prev + 1;
-      localStorage.setItem('zombie_shooter_tokens', nextT.toString());
-      return nextT;
-    });
-    return true;
-  };
-
-  const handleBuyTokenUpgrade = (id: TokenUpgradeId): boolean => {
-    const def = TOKEN_UPGRADES.find((u) => u.id === id);
-    if (!def) return false;
-    const curLvl = tokenUpgrades[id] || 0;
-    if (curLvl >= def.maxLevel || tokens < def.costPerLevel) return false;
-
-    setTokens((prev) => {
-      const nextT = Math.max(0, prev - def.costPerLevel);
-      localStorage.setItem('zombie_shooter_tokens', nextT.toString());
-      return nextT;
-    });
-    setTokenUpgrades((prev) => {
-      const next = { ...prev, [id]: (prev[id] || 0) + 1 };
-      tokenUpgradesRef.current = next;
-      localStorage.setItem('zombie_shooter_token_upgrades', JSON.stringify(next));
-      return next;
-    });
-    return true;
-  };
-
-  const handleRespecTokens = () => {
-    const spent = (Object.values(tokenUpgrades) as number[]).reduce(
-      (acc: number, v: number) => acc + (Number(v) || 0),
-      0
-    );
-    if (spent <= 0) return;
-    setTokens((prev) => {
-      const nextT = prev + spent;
-      localStorage.setItem('zombie_shooter_tokens', nextT.toString());
-      return nextT;
-    });
-    const resetUpg = { ...DEFAULT_TOKEN_UPGRADES };
-    setTokenUpgrades(resetUpg);
-    tokenUpgradesRef.current = resetUpg;
-    localStorage.setItem('zombie_shooter_token_upgrades', JSON.stringify(resetUpg));
-  };
-
-  const addShipMasteryXp = useCallback((ship: ShipTypeKey, xpGain: number) => {
-    if (xpGain <= 0) return;
-    setShipMastery((prev) => {
-      const cur = prev[ship] || { xp: 0, unlockedNodes: [] };
-      const next: AllShipMasteryState = {
-        ...prev,
-        [ship]: { ...cur, xp: cur.xp + xpGain },
-      };
-      shipMasteryRef.current = next;
-      localStorage.setItem('zombie_shooter_ship_mastery', JSON.stringify(next));
-      return next;
-    });
-  }, []);
-
-  const handleUnlockMasteryNode = (ship: ShipTypeKey, nodeId: string): boolean => {
-    const node = SHIP_MASTERY_NODES[ship]?.find((n) => n.id === nodeId);
-    if (!node) return false;
-    if (!canUnlockMasteryNode(shipMastery, ship, node)) return false;
-
-    setShipMastery((prev) => {
-      const cur = prev[ship] || { xp: 0, unlockedNodes: [] };
-      const next: AllShipMasteryState = {
-        ...prev,
-        [ship]: {
-          ...cur,
-          unlockedNodes: [...cur.unlockedNodes, nodeId],
-        },
-      };
-      shipMasteryRef.current = next;
-      localStorage.setItem('zombie_shooter_ship_mastery', JSON.stringify(next));
-      return next;
-    });
-    return true;
-  };
-
-  const handleResetMasteryTree = (ship: ShipTypeKey) => {
-    setShipMastery((prev) => {
-      const cur = prev[ship] || { xp: 0, unlockedNodes: [] };
-      const next: AllShipMasteryState = {
-        ...prev,
-        [ship]: { ...cur, unlockedNodes: [] },
-      };
-      shipMasteryRef.current = next;
-      localStorage.setItem('zombie_shooter_ship_mastery', JSON.stringify(next));
-      return next;
-    });
-  };
-
-  const handleTrainShipMastery = (ship: ShipTypeKey): boolean => {
-    if (coins < TRAIN_MASTERY_CREDIT_COST) return false;
-    updateCoins(-TRAIN_MASTERY_CREDIT_COST);
-    addShipMasteryXp(ship, TRAIN_MASTERY_XP_GAIN);
-    return true;
-  };
-
-  const syncMasterySkillHud = useCallback((wt: WeaponType, cd: number) => {
-    const shipKey: ShipTypeKey | null =
-      wt === WeaponType.TROPER
-        ? 'TROPER'
-        : wt === WeaponType.DESTRUCTOR
-          ? 'DESTRUCTOR'
-          : wt === WeaponType.INTERCEPTOR
-            ? 'INTERCEPTOR'
-            : wt === WeaponType.NAVE_REI
-              ? 'NAVE_REI'
-              : null;
-    if (!shipKey) {
-      setMasterySkillHud((prev) => (prev.available ? { ...prev, available: false } : prev));
-      return;
-    }
-    const skillNodeId =
-      shipKey === 'TROPER'
-        ? 'trop_nova_skill'
-        : shipKey === 'DESTRUCTOR'
-          ? 'dest_pulse_skill'
-          : shipKey === 'INTERCEPTOR'
-            ? 'int_supersonic_skill'
-            : 'rei_judgement_skill';
-    const unlocked = hasMasteryNode(shipMasteryRef.current, shipKey, skillNodeId);
-    const meta = SHIP_META[shipKey];
-    setMasterySkillHud({
-      available: unlocked,
-      name: meta.activeSkillName,
-      cooldown: Math.max(0, cd),
-      maxCooldown: meta.activeSkillCooldown,
-      shipColor: meta.accentColor,
-    });
-  }, []);
-
-  const triggerShipMasterySkill = useCallback(() => {
-    if (gameState !== GameState.PLAYING || dyingRef.current?.active) return;
-    if (masterySkillCooldownRef.current > 0) return;
-
-    const p = playerRef.current;
-    const shipKey: ShipTypeKey | null =
-      p.currentWeapon === WeaponType.TROPER
-        ? 'TROPER'
-        : p.currentWeapon === WeaponType.DESTRUCTOR
-          ? 'DESTRUCTOR'
-          : p.currentWeapon === WeaponType.INTERCEPTOR
-            ? 'INTERCEPTOR'
-            : p.currentWeapon === WeaponType.NAVE_REI
-              ? 'NAVE_REI'
-              : null;
-    if (!shipKey) return;
-
-    const skillNodeId =
-      shipKey === 'TROPER'
-        ? 'trop_nova_skill'
-        : shipKey === 'DESTRUCTOR'
-          ? 'dest_pulse_skill'
-          : shipKey === 'INTERCEPTOR'
-            ? 'int_supersonic_skill'
-            : 'rei_judgement_skill';
-
-    if (!hasMasteryNode(shipMasteryRef.current, shipKey, skillNodeId)) return;
-
-    const meta = SHIP_META[shipKey];
-    masterySkillCooldownRef.current = meta.activeSkillCooldown;
-    sound.playMasterySkill(shipKey);
-    screenShakeRef.current = Math.min(28, screenShakeRef.current + (shipKey === 'TROPER' ? 7 : 14));
-
-    if (shipKey === 'TROPER') {
-      // Pulso de Orbes: 8 small radial sky-blue orbs + +18 shield (or +12 HP)
-      const tw = p.weapons[WeaponType.TROPER] || INITIAL_WEAPONS[WeaponType.TROPER];
-      const pulseOrbDmg = Math.max(16, Math.round(tw.damage * 2.2));
-      for (let i = 0; i < 8; i++) {
-        const a = (i * Math.PI * 2) / 8 + p.angle;
-        bulletsRef.current.push({
-          id: `trop-skill-orb-${Date.now()}-${i}-${Math.random()}`,
-          x: p.x + Math.cos(a) * 18,
-          y: p.y + Math.sin(a) * 18,
-          vx: Math.cos(a) * 620,
-          vy: Math.sin(a) * 620,
-          radius: 4.0,
-          damage: pulseOrbDmg,
-          piercingRemaining: 3,
-          color: '#38bdf8',
-          distanceTraveled: 0,
-          maxDistance: 640,
-          ownerAngle: a,
-          isOrb: true,
-          homingStrength: 2.0,
-          weaponType: WeaponType.TROPER,
-        });
-      }
-      if (p.maxShield > 0) {
-        p.shield = Math.min(p.maxShield, p.shield + 18);
-      } else {
-        p.hp = Math.min(p.maxHp, p.hp + 12);
-      }
-      particlesRef.current.push({
-        id: `trop-skill-ring-${Date.now()}`,
-        type: 'RAY_RING',
-        x: p.x,
-        y: p.y,
-        vx: 0,
-        vy: 0,
-        radius: 16,
-        growthSpeed: 400,
-        color: '#38bdf8',
-        alpha: 0.9,
-        decay: 0.06,
-      });
-    } else if (shipKey === 'DESTRUCTOR') {
-      // Pulso de Sobrecarga: 260px EMP blast + heavy damage + 1.6s stun
-      const dw = p.weapons[WeaponType.DESTRUCTOR] || INITIAL_WEAPONS[WeaponType.DESTRUCTOR];
-      const pulseDmg = Math.max(55, Math.round(dw.damage * 3.8));
-      particlesRef.current.push({
-        id: `dest-emp-${Date.now()}`,
-        type: 'PLASMA_RING',
-        x: p.x,
-        y: p.y,
-        vx: 0,
-        vy: 0,
-        radius: 26,
-        growthSpeed: 620,
-        color: '#22d3ee',
-        alpha: 1,
-        decay: 0.045,
-      });
-      for (let zi = 0; zi < zombiesRef.current.length; zi++) {
-        const z = zombiesRef.current[zi];
-        if (z.hp <= 0) continue;
-        const dist = Math.hypot(z.x - p.x, z.y - p.y);
-        if (dist <= 275 + z.radius) {
-          z.hp -= pulseDmg;
-          const pa = Math.atan2(z.y - p.y, z.x - p.x);
-          z.knockbackX += Math.cos(pa) * 480;
-          z.knockbackY += Math.sin(pa) * 480;
-          z.isStunned = true;
-          z.stunTimer = Math.max(z.stunTimer, 1.6);
-        }
-      }
-    } else if (shipKey === 'INTERCEPTOR') {
-      // Rajada Supersônica: 14 piercing 360° orbs + +35 shield (or +20 HP)
-      const iw = p.weapons[WeaponType.INTERCEPTOR] || INITIAL_WEAPONS[WeaponType.INTERCEPTOR];
-      const orbDmg = Math.max(22, Math.round(iw.damage * 2.5));
-      for (let i = 0; i < 14; i++) {
-        const a = (i * Math.PI * 2) / 14 + p.angle;
-        bulletsRef.current.push({
-          id: `int-skill-orb-${Date.now()}-${i}-${Math.random()}`,
-          x: p.x + Math.cos(a) * 24,
-          y: p.y + Math.sin(a) * 24,
-          vx: Math.cos(a) * 1150,
-          vy: Math.sin(a) * 1150,
-          radius: 7,
-          damage: orbDmg,
-          piercingRemaining: 5,
-          color: '#00f5d4',
-          distanceTraveled: 0,
-          maxDistance: 860,
-          ownerAngle: a,
-          isOrb: true,
-          homingStrength: 3.0,
-        });
-      }
-      if (p.maxShield > 0) {
-        p.shield = Math.min(p.maxShield, p.shield + 35);
-      } else {
-        p.hp = Math.min(p.maxHp, p.hp + 20);
-      }
-      particlesRef.current.push({
-        id: `int-skill-ring-${Date.now()}`,
-        type: 'RAY_RING',
-        x: p.x,
-        y: p.y,
-        vx: 0,
-        vy: 0,
-        radius: 22,
-        growthSpeed: 540,
-        color: '#00f5d4',
-        alpha: 0.95,
-        decay: 0.055,
-      });
-    } else {
-      // Julgamento Real: 8 crimson lightning strikes on closest enemies within 450px
-      const rw = p.weapons[WeaponType.NAVE_REI] || INITIAL_WEAPONS[WeaponType.NAVE_REI];
-      const strikeDmg = Math.max(75, Math.round(rw.damage * 4.2));
-      const candidates = zombiesRef.current
-        .filter((z) => z.hp > 0 && Math.hypot(z.x - p.x, z.y - p.y) <= 460)
-        .sort((a, b) => Math.hypot(a.x - p.x, a.y - p.y) - Math.hypot(b.x - p.x, b.y - p.y))
-        .slice(0, 8);
-
-      for (let si = 0; si < candidates.length; si++) {
-        const tgt = candidates[si];
-        tgt.hp -= strikeDmg;
-        tgt.isStunned = true;
-        tgt.stunTimer = Math.max(tgt.stunTimer, 0.9);
-        const arcPts: { x: number; y: number }[] = [];
-        for (let s = 1; s <= 4; s++) {
-          const frac = s / 4;
-          const jitter = s === 4 ? 0 : 18;
-          arcPts.push({
-            x: p.x + (tgt.x - p.x) * frac + (Math.random() - 0.5) * jitter,
-            y: p.y + (tgt.y - p.y) * frac + (Math.random() - 0.5) * jitter,
-          });
-        }
-        particlesRef.current.push({
-          id: `rei-judge-${Date.now()}-${si}-${Math.random()}`,
-          type: 'ENERGY_ARC',
-          x: p.x,
-          y: p.y,
-          vx: 0,
-          vy: 0,
-          radius: 3.2,
-          color: '#ef4444',
-          alpha: 1,
-          decay: 0.12,
-          points: arcPts,
-        });
-        particlesRef.current.push({
-          id: `rei-jring-${Date.now()}-${si}-${Math.random()}`,
-          type: 'FIRE_RING',
-          x: tgt.x,
-          y: tgt.y,
-          vx: 0,
-          vy: 0,
-          radius: 10,
-          growthSpeed: 320,
-          color: '#ef4444',
-          alpha: 0.95,
-          decay: 0.06,
-        });
-      }
-    }
-
-    syncMasterySkillHud(p.currentWeapon, masterySkillCooldownRef.current);
-  }, [gameState, syncMasterySkillHud]);
-
-  const triggerShipMasterySkillRef = useRef(triggerShipMasterySkill);
-  triggerShipMasterySkillRef.current = triggerShipMasterySkill;
-
-  const toggleIronManMode = useCallback(() => {
-    if (gameState !== GameState.PLAYING || dyingRef.current?.active) return;
-    const p = playerRef.current;
-    if (p.currentWeapon !== WeaponType.IRON_MAN) return;
-
-    const im = ironManStateRef.current;
-    const nextMode: 'REPULSOR' | 'LASER' = im.mode === 'REPULSOR' ? 'LASER' : 'REPULSOR';
-    im.mode = nextMode;
-    im.laserChargeProgress = 0;
-    im.beamTickTimer = 0.04;
-    im.repulsorTimer = 0.1;
-    setIronManModeHud(nextMode);
-    sound.playIronManModeSwitch(nextMode);
-
-    particlesRef.current.push({
-      id: `im-switch-${Date.now()}-${Math.random()}`,
-      type: 'PLASMA_RING',
-      x: p.x,
-      y: p.y,
-      vx: 0,
-      vy: 0,
-      radius: 16,
-      growthSpeed: 320,
-      color: nextMode === 'LASER' ? '#ef4444' : '#38bdf8',
-      alpha: 0.95,
-      decay: 0.06,
-    });
-  }, [gameState]);
-
-  const toggleIronManModeRef = useRef(toggleIronManMode);
-  toggleIronManModeRef.current = toggleIronManMode;
-
-  const switchIceFireDragon = useCallback(() => {
-    if (gameState !== GameState.PLAYING || dyingRef.current?.active) return;
-    const p = playerRef.current;
-    if (p.currentWeapon !== WeaponType.ICE_AND_FIRE_DRAGON) return;
-
-    const ifd = iceFireDragonStateRef.current;
-    if (ifd.merged) return;
-
-    const nextDragon: 'FIRE' | 'ICE' = ifd.activeDragon === 'FIRE' ? 'ICE' : 'FIRE';
-    ifd.activeDragon = nextDragon;
-    ifd.beamTickTimer = 0.04;
-    ifd.beamExtension = Math.min(ifd.beamExtension, 0.15);
-
-    const activeHead = nextDragon === 'FIRE' ? ifd.fireHead : ifd.iceHead;
-    setIceFireDragonHud({
-      activeDragon: nextDragon,
-      merged: false,
-      mergeTimer: 0,
-      mergeDuration: ICE_FIRE_MERGE_DURATION,
-      cooldown: ifd.mergeCooldown,
-      maxCooldown: ICE_FIRE_MERGE_COOLDOWN,
-    });
-    sound.playIceFireDragonSwitch(nextDragon);
-
-    particlesRef.current.push({
-      id: `ifd-switch-${Date.now()}-${Math.random()}`,
-      type: 'PLASMA_RING',
-      x: activeHead.x,
-      y: activeHead.y,
-      vx: 0,
-      vy: 0,
-      radius: 14,
-      growthSpeed: 280,
-      color: nextDragon === 'FIRE' ? '#f97316' : '#38bdf8',
-      alpha: 0.95,
-      decay: 0.06,
-    });
-  }, [gameState]);
-
-  const switchIceFireDragonRef = useRef(switchIceFireDragon);
-  switchIceFireDragonRef.current = switchIceFireDragon;
-
-  const triggerIceFireMerge = useCallback(() => {
-    if (gameState !== GameState.PLAYING || dyingRef.current?.active) return;
-    const p = playerRef.current;
-    if (p.currentWeapon !== WeaponType.ICE_AND_FIRE_DRAGON) return;
-
-    const ifd = iceFireDragonStateRef.current;
-    if (ifd.merged || ifd.mergeCooldown > 0) return;
-
-    ifd.merged = true;
-    ifd.mergeTimer = ICE_FIRE_MERGE_DURATION;
-    ifd.beamExtension = 0.04;
-    ifd.beamTickTimer = 0.04;
-    ifd.beamSoundTimer = 0.08;
-
-    const midX = (ifd.fireHead.x + ifd.iceHead.x) * 0.5;
-    const midY = (ifd.fireHead.y + ifd.iceHead.y) * 0.5;
-    ifd.megaHead.x = midX;
-    ifd.megaHead.y = midY;
-    ifd.megaHead.angle = p.angle;
-    ifd.megaSegments = createCompanionDragonSegments(midX, midY, 20, 15.5);
-
-    sound.playMegaDragonFusion();
-    screenShakeRef.current = Math.min(24, screenShakeRef.current + 14);
-
-    // Dual-element convergence shockwaves into Mega Purple Dragon
-    [
-      { x: ifd.fireHead.x, y: ifd.fireHead.y, color: '#f97316' },
-      { x: ifd.iceHead.x, y: ifd.iceHead.y, color: '#38bdf8' },
-      { x: midX, y: midY, color: '#a855f7' },
-    ].forEach((pt, idx) => {
-      particlesRef.current.push({
-        id: `ifd-merge-ring-${Date.now()}-${idx}-${Math.random()}`,
-        type: 'PLASMA_RING',
-        x: pt.x,
-        y: pt.y,
-        vx: 0,
-        vy: 0,
-        radius: idx === 2 ? 22 : 14,
-        growthSpeed: idx === 2 ? 460 : 300,
-        color: pt.color,
-        alpha: 1,
-        decay: 0.045,
-      });
-    });
-
-    for (let k = 0; k < 22; k++) {
-      const sa = (Math.PI * 2 * k) / 22;
-      const sp = 95 + Math.random() * 190;
-      particlesRef.current.push({
-        id: `ifd-merge-sp-${Date.now()}-${k}-${Math.random()}`,
-        type: 'SPARK',
-        x: midX,
-        y: midY,
-        vx: Math.cos(sa) * sp,
-        vy: Math.sin(sa) * sp,
-        radius: 2.6 + Math.random() * 2.5,
-        color: k % 3 === 0 ? '#e879f9' : k % 3 === 1 ? '#f97316' : '#38bdf8',
-        alpha: 1,
-        decay: 0.045,
-      });
-    }
-
-    setIceFireDragonHud({
-      activeDragon: ifd.activeDragon,
-      merged: true,
-      mergeTimer: ICE_FIRE_MERGE_DURATION,
-      mergeDuration: ICE_FIRE_MERGE_DURATION,
-      cooldown: 0,
-      maxCooldown: ICE_FIRE_MERGE_COOLDOWN,
-    });
-  }, [gameState]);
-
-  const triggerIceFireMergeRef = useRef(triggerIceFireMerge);
-  triggerIceFireMergeRef.current = triggerIceFireMerge;
-
-  // Update HUD player data periodically or on certain events
-  const syncHudPlayer = useCallback(() => {
-    setHudPlayer({
-      ...playerRef.current,
-      weapons: { ...playerRef.current.weapons },
-    });
-  }, []);
-
-  const syncVenomHudImmediate = useCallback(() => {
-    const vf = venomFruitStateRef.current;
-    setVenomFruitHud({
-      hydraCd: Math.max(0, vf.hydraCd),
-      chloroCd: Math.max(0, vf.chloroCd),
-      roadCd: Math.max(0, vf.roadCd),
-      demonCd: Math.max(0, vf.demonCd),
-      demonActive: vf.demonActive,
-      demonTimer: Math.max(0, vf.demonTimer),
-      demonDuration: VENOM_DEMON_DURATION,
-    });
-  }, []);
-
-  const triggerVenomHydra = useCallback(() => {
-    if (gameState !== GameState.PLAYING || dyingRef.current?.active) return;
-    const p = playerRef.current;
-    if (p.currentWeapon !== WeaponType.VENOM_FRUIT) return;
-    const vf = venomFruitStateRef.current;
-    if (vf.hydraCd > 0) return;
-
-    vf.hydraCd = VENOM_HYDRA_CD;
-    const vw = p.weapons[WeaponType.VENOM_FRUIT] || INITIAL_WEAPONS[WeaponType.VENOM_FRUIT];
-    const hydraDmg = Math.round(vw.damage * (vf.demonActive ? 4.2 : 3.0));
-    const headCol = vf.demonActive ? '#f43f5e' : '#a855f7';
-
-    sound.playVenomHydra();
-    screenShakeRef.current = Math.min(24, screenShakeRef.current + 10);
-
-    [-0.22, 0, 0.22].forEach((offset, idx) => {
-      const ang = p.angle + offset;
-      const sx = p.x + Math.cos(ang) * (p.radius + 16);
-      const sy = p.y + Math.sin(ang) * (p.radius + 16);
-      bulletsRef.current.push({
-        id: `venom-hydra-${Date.now()}-${idx}-${Math.random()}`,
-        x: sx,
-        y: sy,
-        vx: Math.cos(ang) * 820,
-        vy: Math.sin(ang) * 820,
-        radius: 17,
-        damage: hydraDmg,
-        piercingRemaining: 18,
-        color: headCol,
-        distanceTraveled: 0,
-        maxDistance: 720,
-        ownerAngle: ang,
-        isHydra: true,
-        isVenom: true,
-        weaponType: WeaponType.VENOM_FRUIT,
-      });
-    });
-
-    particlesRef.current.push({
-      id: `hydra-ring-${Date.now()}-${Math.random()}`,
-      type: 'PLASMA_RING',
-      x: p.x + Math.cos(p.angle) * 20,
-      y: p.y + Math.sin(p.angle) * 20,
-      vx: 0,
-      vy: 0,
-      radius: 14,
-      growthSpeed: 320,
-      color: headCol,
-      alpha: 0.9,
-      decay: 0.06,
-    });
-    syncVenomHudImmediate();
-  }, [gameState, syncVenomHudImmediate]);
-
-  const triggerVenomHydraRef = useRef(triggerVenomHydra);
-  triggerVenomHydraRef.current = triggerVenomHydra;
-
-  const triggerVenomChloro = useCallback(() => {
-    if (gameState !== GameState.PLAYING || dyingRef.current?.active) return;
-    const p = playerRef.current;
-    if (p.currentWeapon !== WeaponType.VENOM_FRUIT) return;
-    const vf = venomFruitStateRef.current;
-    if (vf.chloroCd > 0) return;
-
-    vf.chloroCd = VENOM_CHLORO_CD;
-    const vw = p.weapons[WeaponType.VENOM_FRUIT] || INITIAL_WEAPONS[WeaponType.VENOM_FRUIT];
-    sound.playChloroBall();
-
-    const sx = p.x + Math.cos(p.angle) * (p.radius + 14);
-    const sy = p.y + Math.sin(p.angle) * (p.radius + 14);
-    bulletsRef.current.push({
-      id: `venom-chloro-${Date.now()}-${Math.random()}`,
-      x: sx,
-      y: sy,
-      vx: Math.cos(p.angle) * 620,
-      vy: Math.sin(p.angle) * 620,
-      radius: 12,
-      damage: Math.round(vw.damage * (vf.demonActive ? 1.85 : 1.35)),
-      piercingRemaining: 1,
-      color: vf.demonActive ? '#f43f5e' : '#a3e635',
-      distanceTraveled: 0,
-      maxDistance: 360,
-      ownerAngle: p.angle,
-      isChloroBall: true,
-      isVenom: true,
-      weaponType: WeaponType.VENOM_FRUIT,
-    });
-    syncVenomHudImmediate();
-  }, [gameState, syncVenomHudImmediate]);
-
-  const triggerVenomChloroRef = useRef(triggerVenomChloro);
-  triggerVenomChloroRef.current = triggerVenomChloro;
-
-  const triggerVenomRoad = useCallback(() => {
-    if (gameState !== GameState.PLAYING || dyingRef.current?.active) return;
-    const p = playerRef.current;
-    if (p.currentWeapon !== WeaponType.VENOM_FRUIT) return;
-    const vf = venomFruitStateRef.current;
-    if (vf.roadCd > 0) return;
-
-    vf.roadCd = VENOM_ROAD_CD;
-    vf.dashTimer = 0.36;
-    vf.dashHitIds = {};
-
-    let dirX = 0;
-    let dirY = 0;
-    if (leftJoystick.current.active) {
-      dirX = leftJoystick.current.x;
-      dirY = leftJoystick.current.y;
-    } else {
-      if (keysPressed.current['w'] || keysPressed.current['arrowup']) dirY -= 1;
-      if (keysPressed.current['s'] || keysPressed.current['arrowdown']) dirY += 1;
-      if (keysPressed.current['a'] || keysPressed.current['arrowleft']) dirX -= 1;
-      if (keysPressed.current['d'] || keysPressed.current['arrowright']) dirX += 1;
-    }
-    const len = Math.hypot(dirX, dirY);
-    const dashAngle = len > 0.15 ? Math.atan2(dirY, dirX) : p.angle;
-    const dashSpeed = vf.demonActive ? 1100 : 960;
-    vf.dashVx = Math.cos(dashAngle) * dashSpeed;
-    vf.dashVy = Math.sin(dashAngle) * dashSpeed;
-
-    sound.playVenomRoad();
-    screenShakeRef.current = Math.min(20, screenShakeRef.current + 8);
-    particlesRef.current.push({
-      id: `venom-road-ring-${Date.now()}-${Math.random()}`,
-      type: 'PLASMA_RING',
-      x: p.x,
-      y: p.y,
-      vx: 0,
-      vy: 0,
-      radius: 16,
-      growthSpeed: 360,
-      color: vf.demonActive ? '#f43f5e' : '#c084fc',
-      alpha: 0.95,
-      decay: 0.06,
-    });
-    syncVenomHudImmediate();
-  }, [gameState, syncVenomHudImmediate]);
-
-  const triggerVenomRoadRef = useRef(triggerVenomRoad);
-  triggerVenomRoadRef.current = triggerVenomRoad;
-
-  const triggerVenomDemon = useCallback(() => {
-    if (gameState !== GameState.PLAYING || dyingRef.current?.active) return;
-    const p = playerRef.current;
-    if (p.currentWeapon !== WeaponType.VENOM_FRUIT) return;
-    const vf = venomFruitStateRef.current;
-    if (vf.demonActive || vf.demonCd > 0) return;
-
-    vf.demonActive = true;
-    vf.demonTimer = VENOM_DEMON_DURATION;
-    vf.auraTickTimer = 0.05;
-
-    // Instant Vitality & Shield Surge upon Kinjite transformation
-    p.hp = Math.min(p.maxHp, p.hp + 25);
-    if (p.maxShield > 0) {
-      p.shield = Math.min(p.maxShield, p.shield + 25);
-    }
-
-    sound.playVenomDemonTransform();
-    screenShakeRef.current = Math.min(28, screenShakeRef.current + 16);
-
-    ['#be123c', '#a855f7', '#fb7185'].forEach((col, idx) => {
-      particlesRef.current.push({
-        id: `vdemon-ring-${Date.now()}-${idx}-${Math.random()}`,
-        type: 'PLASMA_RING',
-        x: p.x,
-        y: p.y,
-        vx: 0,
-        vy: 0,
-        radius: 18 + idx * 8,
-        growthSpeed: 380 + idx * 90,
-        color: col,
-        alpha: 1,
-        decay: 0.04,
-      });
-    });
-
-    for (let k = 0; k < 24; k++) {
-      const a = (Math.PI * 2 * k) / 24;
-      const spd = 110 + Math.random() * 190;
-      particlesRef.current.push({
-        id: `vdemon-sp-${Date.now()}-${k}-${Math.random()}`,
-        type: 'SPARK',
-        x: p.x,
-        y: p.y,
-        vx: Math.cos(a) * spd,
-        vy: Math.sin(a) * spd,
-        radius: 3 + Math.random() * 2.5,
-        color: k % 2 === 0 ? '#f43f5e' : '#c084fc',
-        alpha: 1,
-        decay: 0.045,
-      });
-    }
-
-    syncHudPlayer();
-    syncVenomHudImmediate();
-  }, [gameState, syncHudPlayer, syncVenomHudImmediate]);
-
-  const triggerVenomDemonRef = useRef(triggerVenomDemon);
-  triggerVenomDemonRef.current = triggerVenomDemon;
-
-  // Set up high score updates per mode
-  const updateHighScore = (score: number) => {
-    const activeMode = modeRef.current;
-    if (activeMode === GameMode.ALIEN) {
-      if (score > highScoreAlien) {
-        setHighScoreAlien(score);
-        localStorage.setItem('zombie_shooter_highscore_alien', score.toString());
-      }
-    } else {
-      if (score > highScoreZombie) {
-        setHighScoreZombie(score);
-        localStorage.setItem('zombie_shooter_highscore_zombie', score.toString());
-      }
-    }
-    if (score > highScore) {
-      setHighScore(score);
-      localStorage.setItem('zombie_shooter_highscore', score.toString());
-    }
-  };
-
-  const handleSelectMode = (mode: GameMode) => {
-    setCurrentMode(mode);
-    modeRef.current = mode;
-    localStorage.setItem('zombie_shooter_active_mode', mode);
-    setHighScore(mode === GameMode.ALIEN ? highScoreAlien : highScoreZombie);
-  };
-
-  const handleSelectModeAndPlay = (mode: GameMode) => {
-    handleSelectMode(mode);
-    setShowModeModal(false);
-    handleStartGame();
-  };
-
-  // Sound toggle handler
-  const handleToggleSound = () => {
-    const active = toggleSound();
-    setSoundActive(active);
-  };
-
-  // Keyboard and mouse event listeners
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      const key = e.key.toLowerCase();
-      keysPressed.current[key] = true;
-      
-      // Prevent browser scrolling with Space or Arrow keys inside the game
-      if ([' ', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'].includes(e.key)) {
-        e.preventDefault();
-      }
-
-      if (e.key === 'p' || e.key === 'P' || e.key === 'Escape') {
-        if (gameState === GameState.PLAYING) {
-          setGameState(GameState.PAUSED);
-        } else if (gameState === GameState.PAUSED) {
-          setGameState(GameState.PLAYING);
-        }
-      }
-
-      if (e.key === 'r' || e.key === 'R') {
-        if (gameState === GameState.PLAYING) {
-          reloadActiveWeapon();
-        }
-      }
-
-      if ((e.key === 'q' || e.key === 'Q' || key === '1') && !e.repeat) {
-        if (gameState === GameState.PLAYING) {
-          if (playerRef.current.currentWeapon === WeaponType.VENOM_FRUIT) {
-            triggerVenomHydraRef.current();
-          } else if (key === 'q') {
-            if (playerRef.current.currentWeapon === WeaponType.ICE_AND_FIRE_DRAGON) {
-              triggerIceFireMergeRef.current();
-            } else {
-              triggerShipMasterySkillRef.current();
-            }
-          }
-        }
-      }
-
-      if ((key === 'e' || key === '2') && !e.repeat) {
-        if (gameState === GameState.PLAYING) {
-          if (playerRef.current.currentWeapon === WeaponType.VENOM_FRUIT) {
-            triggerVenomChloroRef.current();
-          } else if (key === 'e' && playerRef.current.currentWeapon === WeaponType.IRON_MAN) {
-            toggleIronManModeRef.current();
-          }
-        }
-      }
-
-      if ((key === 'c' || key === '3') && !e.repeat) {
-        if (gameState === GameState.PLAYING && playerRef.current.currentWeapon === WeaponType.VENOM_FRUIT) {
-          triggerVenomRoadRef.current();
-        }
-      }
-
-      if ((key === 'shift' || key === '4') && !e.repeat) {
-        if (gameState === GameState.PLAYING) {
-          if (playerRef.current.currentWeapon === WeaponType.VENOM_FRUIT) {
-            triggerVenomDemonRef.current();
-          } else if (key === 'shift') {
-            if (playerRef.current.currentWeapon === WeaponType.IRON_MAN) {
-              toggleIronManModeRef.current();
-            } else if (playerRef.current.currentWeapon === WeaponType.ICE_AND_FIRE_DRAGON) {
-              switchIceFireDragonRef.current();
-            }
-          }
-        }
-      }
+    const totalHp = 100 + bonusHp;
+    const clonedWeapons: Record<WeaponType, WeaponStats> = {
+      [WeaponType.GLOCK_19]: {
+        ...INITIAL_WEAPONS[WeaponType.GLOCK_19],
+        damage: Math.round(INITIAL_WEAPONS[WeaponType.GLOCK_19].damage * damageMult),
+        fireRate: Number((INITIAL_WEAPONS[WeaponType.GLOCK_19].fireRate * fireRateMult).toFixed(2)),
+        unlocked: unlockedWeaponsRef.current.includes(WeaponType.GLOCK_19),
+      },
+      [WeaponType.BENELLI_M4]: {
+        ...INITIAL_WEAPONS[WeaponType.BENELLI_M4],
+        damage: Math.round(INITIAL_WEAPONS[WeaponType.BENELLI_M4].damage * damageMult),
+        fireRate: Number((INITIAL_WEAPONS[WeaponType.BENELLI_M4].fireRate * fireRateMult).toFixed(2)),
+        unlocked: unlockedWeaponsRef.current.includes(WeaponType.BENELLI_M4),
+      },
+      [WeaponType.SCAR_L]: {
+        ...INITIAL_WEAPONS[WeaponType.SCAR_L],
+        damage: Math.round(INITIAL_WEAPONS[WeaponType.SCAR_L].damage * damageMult),
+        fireRate: Number((INITIAL_WEAPONS[WeaponType.SCAR_L].fireRate * fireRateMult).toFixed(2)),
+        unlocked: unlockedWeaponsRef.current.includes(WeaponType.SCAR_L),
+      },
     };
 
-    const handleKeyUp = (e: KeyboardEvent) => {
-      const key = e.key.toLowerCase();
-      keysPressed.current[key] = false;
-    };
+    const startWeapon = unlockedWeaponsRef.current.includes(equippedWeaponRef.current)
+      ? equippedWeaponRef.current
+      : WeaponType.GLOCK_19;
 
-    const handleMouseMove = (e: MouseEvent) => {
-      if (!canvasRef.current) return;
-      const rect = canvasRef.current.getBoundingClientRect();
-      
-      // Mouse position relative to the canvas coordinate space
-      const scaleX = canvasRef.current.width / rect.width;
-      const scaleY = canvasRef.current.height / rect.height;
-
-      mousePos.current = {
-        x: (e.clientX - rect.left) * scaleX,
-        y: (e.clientY - rect.top) * scaleY,
-      };
-      hasMouseMovedRef.current = true;
-    };
-
-    const handleMouseDown = (e: MouseEvent) => {
-      if (gameState === GameState.PLAYING) {
-        isMouseDown.current = true;
-      }
-    };
-
-    const handleMouseUp = () => {
-      isMouseDown.current = false;
-    };
-
-    const handleWindowBlur = () => {
-      keysPressed.current = {};
-      isMouseDown.current = false;
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('keyup', handleKeyUp);
-    window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('mousedown', handleMouseDown);
-    window.addEventListener('mouseup', handleMouseUp);
-    window.addEventListener('blur', handleWindowBlur);
-
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('keyup', handleKeyUp);
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mousedown', handleMouseDown);
-      window.removeEventListener('mouseup', handleMouseUp);
-      window.removeEventListener('blur', handleWindowBlur);
-    };
-  }, [gameState]);
-
-  const handleGamepadBack = useCallback(() => {
-    if (showModeModal) {
-      setShowModeModal(false);
-    } else if (
-      gameState === GameState.STORE ||
-      gameState === GameState.PRESTIGE ||
-      gameState === GameState.MASTERY
-    ) {
-      setGameState(GameState.MENU);
-    } else if (gameState === GameState.PAUSED) {
-      setGameState(GameState.PLAYING);
-    }
-  }, [gameState, showModeModal]);
-
-  useGamepadMenuNavigation(
-    gameState !== GameState.PLAYING || showModeModal,
-    handleGamepadBack
-  );
-
-  // Handle mobile joystick changes
-  const handleLeftJoystick = useCallback((input: JoystickInput) => {
-    leftJoystick.current = input;
-  }, []);
-
-  const handleRightJoystick = useCallback((input: JoystickInput) => {
-    rightJoystick.current = input;
-  }, []);
-
-  // Handle mobile Warp / Fúria hold button actions
-  const handleWarpStart = useCallback(() => {
-    mobileWarpHoldingRef.current = true;
-  }, []);
-
-  const handleWarpEnd = useCallback(() => {
-    mobileWarpHoldingRef.current = false;
-  }, []);
-
-  // Reset/Restart Game
-  const initGame = () => {
-    // Re-center player and initialize weapons with infinite ammo
-    const weapons = JSON.parse(JSON.stringify(INITIAL_WEAPONS));
-
-    const prestigeBonus = getPrestigeBonuses(prestigeRef.current);
-    const tUp = tokenUpgradesRef.current;
-    const tokenDamageMult = 1 + (tUp.token_might || 0) * 0.18;
-    const tokenWealthMult = 1 + (tUp.token_wealth || 0) * 0.35;
-    const tokenHpBonus = (tUp.token_vitality || 0) * 40;
-    const tokenShieldBonus = (tUp.token_vitality || 0) * 25;
-    const tokenFireRateMult = 1 + (tUp.token_haste || 0) * 0.07;
-    const tokenSpeedMult = 1 + (tUp.token_haste || 0) * 0.06;
-    const tokenCritBonus = (tUp.token_crit_xp || 0) * 0.05;
-
-    const sm = shipMasteryRef.current;
-
-    // Apply damage level + Prestige + Token Might + Token Haste bonuses
-    const damageMult = (1 + damageLevel * 0.10) * prestigeBonus.damageMult * tokenDamageMult;
-    Object.values(weapons).forEach((w: any) => {
-      let wDmgMult = damageMult;
-      let wRateMult = tokenFireRateMult;
-
-      if (w.type === WeaponType.TROPER) {
-        if (hasMasteryNode(sm, 'TROPER', 'trop_core')) {
-          wDmgMult *= 1.2;
-        }
-        if (hasMasteryNode(sm, 'TROPER', 'trop_barrel')) {
-          wRateMult *= 1.25;
-          w.piercing += 1;
-        }
-      }
-      if (w.type === WeaponType.DESTRUCTOR && hasMasteryNode(sm, 'DESTRUCTOR', 'dest_core')) {
-        wDmgMult *= 1.2;
-      }
-      if (w.type === WeaponType.INTERCEPTOR && hasMasteryNode(sm, 'INTERCEPTOR', 'int_aero')) {
-        wRateMult *= 1.2;
-      }
-      if (w.type === WeaponType.NAVE_REI && hasMasteryNode(sm, 'NAVE_REI', 'rei_armor')) {
-        wDmgMult *= 1.2;
-      }
-
-      w.damage = Math.max(1, Math.round(w.damage * wDmgMult));
-      w.fireRate = Number((w.fireRate * wRateMult).toFixed(2));
-      if (unlockedWeapons.includes(w.type)) {
-        w.unlocked = true;
-      }
-      w.currentAmmo = Infinity;
-      w.ammoCapacity = Infinity;
-    });
-
-    const activeWeapon = unlockedWeapons.includes(equippedWeapon) ? equippedWeapon : WeaponType.PISTOL;
-    if (weapons[activeWeapon]) {
-      weapons[activeWeapon].unlocked = true;
-    }
-
-    const tropCoreSpeedMult =
-      activeWeapon === WeaponType.TROPER && hasMasteryNode(sm, 'TROPER', 'trop_core')
-        ? 1.15
-        : 1.0;
-    const intAeroSpeedMult =
-      activeWeapon === WeaponType.INTERCEPTOR && hasMasteryNode(sm, 'INTERCEPTOR', 'int_aero')
-        ? 1.15
-        : 1.0;
-    const reiArmorShieldBonus =
-      activeWeapon === WeaponType.NAVE_REI && hasMasteryNode(sm, 'NAVE_REI', 'rei_armor')
-        ? 60
-        : 0;
-
-    const activeSkin = unlockedSkins.includes(equippedSkin) ? equippedSkin : 'skin_default';
-    const skinSpeedMult = activeSkin === 'skin_ghost_recon' ? 1.06 : 1.0;
-    const skinHpBonus =
-      activeSkin === 'skin_hazard_juggernaut' ? 30 : activeSkin === 'skin_solar_valkyrie' ? 25 : 0;
-    const skinShieldBonus =
-      activeSkin === 'skin_cryo_warden' ? 35 : activeSkin === 'skin_solar_valkyrie' ? 25 : 0;
-    const skinDmgMult = activeSkin === 'skin_solar_valkyrie' ? 1.12 : 1.0;
-    const skinRateMult = activeSkin === 'skin_volt_cyber' ? 1.10 : 1.0;
-
-    if (skinDmgMult !== 1.0 || skinRateMult !== 1.0) {
-      Object.values(weapons).forEach((w: any) => {
-        w.damage = Math.max(1, Math.round(w.damage * skinDmgMult));
-        w.fireRate = Number((w.fireRate * skinRateMult).toFixed(2));
-      });
-    }
-
-    const totalMaxHp = 100 + maxHealthLevel * 15 + tokenHpBonus + skinHpBonus;
-    const totalMaxShield = maxShieldLevel * 20 + tokenShieldBonus + reiArmorShieldBonus + skinShieldBonus;
-
-    playerRef.current = {
+    return {
       x: ARENA_SIZE / 2,
       y: ARENA_SIZE / 2,
-      radius: 18,
+      radius: 17,
       angle: 0,
-      speed: 180 * (1 + speedLevel * 0.08) * tokenSpeedMult * tropCoreSpeedMult * intAeroSpeedMult * skinSpeedMult,
-      hp: totalMaxHp,
-      maxHp: totalMaxHp,
+      speed: Math.round(235 * speedMult),
+      hp: totalHp,
+      maxHp: totalHp,
       xp: 0,
       xpNeeded: 100,
       level: 1,
       score: 0,
       kills: 0,
-      currentWeapon: activeWeapon,
-      weapons: weapons,
-      shield: totalMaxShield,
-      maxShield: totalMaxShield,
+      currentWeapon: startWeapon,
+      weapons: clonedWeapons,
+      shield: bonusShield,
+      maxShield: bonusShield,
       lastShotTime: 0,
       vx: 0,
       vy: 0,
-      unlockedWeapons: [...unlockedWeapons],
-      equippedSkin: activeSkin,
-      unlockedSkins: [...unlockedSkins],
+      unlockedWeapons: [...unlockedWeaponsRef.current],
+      equippedSkin: equippedSkinRef.current,
+      unlockedSkins: [...unlockedSkinsRef.current],
       coinsEarned: 0,
       vampirism: 0,
-      bonusCoinsMult: prestigeBonus.coinsMult * tokenWealthMult,
-      critChance: tokenCritBonus,
-      critMultiplier: 2,
+      bonusCoinsMult: prestigeBonuses.coinsMult * (1 + wealthLvl * 0.35),
+      critChance: critXpLvl * 0.05,
+      critMultiplier: 2.0,
       regenHpRate: 0,
+      rerollsAvailable: 2,
+      mythicSingularity: 0,
       chainLightningLevel: 0,
       gravityPulseLevel: 0,
-      mythicSingularity: 0,
       mythicSolarAura: 0,
       mythicSplitShot: 0,
       dodgeChance: 0,
@@ -2053,503 +475,784 @@ export default function App() {
       knockbackMult: 1,
       acquiredUpgrades: {},
     };
-    skinEffectTimerRef.current = { voltZap: 0, cryoChill: 0 };
+  }, []);
 
-    masterySkillCooldownRef.current = 0;
-    masteryCombatTimersRef.current = {
-      orbitalBurnTimer: 0,
-      reiStormTimer: 0,
-      orbBurstCount: 0,
-    };
-    syncMasterySkillHud(activeWeapon, 0);
+  const playerRef = useRef<Player>(createInitialPlayer());
+  const [hudPlayer, setHudPlayer] = useState<Player>(() => playerRef.current);
 
-    // Reset dying state
-    dyingRef.current = null;
+  const zombiesRef = useRef<Zombie[]>([]);
+  const bulletsRef = useRef<Bullet[]>([]);
+  const particlesRef = useRef<Particle[]>([]);
+  const splatsRef = useRef<BloodSplat[]>([]);
+  const dropsRef = useRef<ItemDrop[]>([]);
+  const flashLightsRef = useRef<SceneFlashLight[]>([]);
+  const floatingTextsRef = useRef<FloatingText[]>([]);
+  const footprintsRef = useRef<GroundFootprint[]>([]);
+  const wetBloodStepsRef = useRef<number>(0);
+  const spentCasingsRef = useRef<SpentCasing[]>([]);
+  const voidDronesRef = useRef<VoidDroneState[]>([]);
+  const zombieHitFlashRef = useRef<Map<string, number>>(new Map());
+  const wasPlayerInWaterRef = useRef<boolean>(false);
+  const wasOnPierRef = useRef<boolean>(false);
+  const splashCooldownRef = useRef<number>(0);
+  const swimWakeTimerRef = useRef<number>(0);
 
-    // Clear list of arrays
+  const waveRef = useRef<number>(1);
+  const zombiesToSpawnRef = useRef<number>(8);
+  const spawnTimerRef = useRef<number>(0);
+  const waveTransitionTimerRef = useRef<number>(0);
+  const dayCycleTimeRef = useRef<number>(24); // Start in bright morning sunlight; 180s full cycle
+
+  // Camera & realistic kinematics state
+  const cameraRef = useRef({
+    x: ARENA_SIZE / 2 - (typeof window !== 'undefined' ? window.innerWidth / 2 : 500),
+    y: ARENA_SIZE / 2 - (typeof window !== 'undefined' ? window.innerHeight / 2 : 400),
+    shake: 0,
+    trauma: 0,
+    zoom: 1,
+    zoomVel: 0,
+    zoomImpulse: 0,
+    roll: 0,
+    rollVel: 0,
+    springX: 0,
+    springY: 0,
+    springVx: 0,
+    springVy: 0,
+    stepVx: 0,
+    stepVy: 0,
+    recoilVx: 0,
+    recoilVy: 0,
+    walkPhase: 0,
+    prevStepSign: 1,
+    stepCadenceSoundTimer: 0,
+    swayTime: 0,
+  });
+
+  const keysRef = useRef<Record<string, boolean>>({});
+  const mouseRef = useRef({ x: 0, y: 0, isDown: false });
+  const leftJoystickRef = useRef<JoystickInput>({ x: 0, y: 0, active: false });
+  const rightJoystickRef = useRef<JoystickInput>({ x: 0, y: 0, active: false });
+
+  // Timers & combat state
+  const muzzleFlashRef = useRef(0);
+  const weaponRecoilRef = useRef(0);
+  const weaponBloomRef = useRef(0);
+  const playerDamageFlashRef = useRef(0);
+  const lastDamageTimeRef = useRef(0);
+  const shieldRechargeTimerRef = useRef(0);
+  const heartbeatTimerRef = useRef(0);
+  const skinEffectTimerRef = useRef(0);
+  const skinOrbitalTimerRef = useRef(0);
+  const gravityPulseTimerRef = useRef(0);
+  const mythicShotCountRef = useRef(0);
+  const mythicOrbitAngleRef = useRef(0);
+  const mythicSolarDamageTimerRef = useRef(0);
+  const hudSyncTimerRef = useRef(0);
+
+  const dyingStateRef = useRef<DyingState>({
+    active: false,
+    timer: 0,
+    total: 2.25,
+    fatalAngle: 0,
+    startX: 0,
+    startY: 0,
+    recoilX: 0,
+    recoilY: 0,
+    flatlinePlayed: false,
+    bodyFallPlayed: false,
+    bloodPoolRadius: 0,
+    droppedWeapon: {
+      type: WeaponType.GLOCK_19,
+      x: 0,
+      y: 0,
+      vx: 0,
+      vy: 0,
+      angle: 0,
+      rotSpeed: 0,
+    },
+  });
+
+  const updateCoins = useCallback((amount: number) => {
+    setCoins((prev) => {
+      const next = Math.max(0, prev + Math.round(amount));
+      localStorage.setItem('zombie_shooter_coins', next.toString());
+      return next;
+    });
+  }, []);
+
+  const syncHud = useCallback(() => {
+    const p = playerRef.current;
+    setHudPlayer({ ...p, weapons: { ...p.weapons } });
+    const boss = zombiesRef.current.find((z) => z.isBoss && z.hp > 0);
+    if (boss) {
+      setActiveBoss({
+        id: boss.id,
+        name: boss.bossName || 'Chefe Mutante',
+        title: boss.bossTitle || 'Ameaça Alfa',
+        hp: Math.max(0, Math.ceil(boss.hp)),
+        maxHp: boss.maxHp,
+        type: boss.type,
+        color: boss.color,
+      });
+    } else {
+      setActiveBoss(null);
+    }
+    setZombiesRemaining(zombiesRef.current.length + zombiesToSpawnRef.current);
+    const dn = getDayNightState(dayCycleTimeRef.current);
+    setDayNightHud((prev) =>
+      prev.clockText === dn.clockText && prev.phase === dn.phase
+        ? prev
+        : { phase: dn.phase, phaseLabel: dn.phaseLabel, clockText: dn.clockText }
+    );
+  }, []);
+
+  const switchWeapon = useCallback(
+    (targetWeapon: WeaponType) => {
+      const p = playerRef.current;
+      if (!unlockedWeaponsRef.current.includes(targetWeapon)) return;
+      if (p.currentWeapon === targetWeapon && equippedWeaponRef.current === targetWeapon) return;
+      p.currentWeapon = targetWeapon;
+      setEquippedWeapon(targetWeapon);
+      localStorage.setItem('zombie_shooter_equipped_weapon', targetWeapon);
+      weaponBloomRef.current = 0;
+      weaponRecoilRef.current = 0;
+      sound.playReload();
+      syncHud();
+    },
+    [syncHud]
+  );
+
+  const setAppState = useCallback((next: GameState) => {
+    gameStateRef.current = next;
+    staticFrameRenderedRef.current = false;
+    setGameState(next);
+  }, []);
+
+  // ==========================================
+  // GAME LIFECYCLE CONTROLS
+  // ==========================================
+  const startGame = useCallback(() => {
+    const freshPlayer = createInitialPlayer();
+    playerRef.current = freshPlayer;
+
     zombiesRef.current = [];
     bulletsRef.current = [];
     particlesRef.current = [];
-    bloodSplatsRef.current = [];
-    itemDropsRef.current = [];
-    flameStreamRef.current = [];
+    splatsRef.current = [];
+    dropsRef.current = [];
     flashLightsRef.current = [];
+    floatingTextsRef.current = [];
+    footprintsRef.current = [];
+    wetBloodStepsRef.current = 0;
+    spentCasingsRef.current = [];
+    voidDronesRef.current = [];
+    zombieHitFlashRef.current.clear();
+    wasPlayerInWaterRef.current = false;
+    wasOnPierRef.current = false;
+    splashCooldownRef.current = 0;
+    swimWakeTimerRef.current = 0;
 
-    // Reset wave
-    setWave(0);
-    setZombiesRemaining(0);
-    setActiveBoss(null);
-    waveActiveRef.current = false;
-    if (waveSpawnTimerRef.current) {
-      clearTimeout(waveSpawnTimerRef.current);
-      waveSpawnTimerRef.current = null;
+    waveRef.current = 1;
+    setWave(1);
+    zombiesToSpawnRef.current = 8;
+    spawnTimerRef.current = 0.25;
+    waveTransitionTimerRef.current = 0;
+    dayCycleTimeRef.current = 24;
+
+    muzzleFlashRef.current = 0;
+    weaponRecoilRef.current = 0;
+    weaponBloomRef.current = 0;
+    playerDamageFlashRef.current = 0;
+    mythicShotCountRef.current = 0;
+    dyingStateRef.current.active = false;
+
+    const canvas = canvasRef.current;
+    const w = canvas ? canvas.width : window.innerWidth;
+    const h = canvas ? canvas.height : window.innerHeight;
+    cameraRef.current = {
+      x: freshPlayer.x - w / 2,
+      y: freshPlayer.y - h / 2,
+      shake: 0,
+      trauma: 0,
+      zoom: 1,
+      zoomVel: 0,
+      zoomImpulse: 0,
+      roll: 0,
+      rollVel: 0,
+      springX: 0,
+      springY: 0,
+      springVx: 0,
+      springVy: 0,
+      stepVx: 0,
+      stepVy: 0,
+      recoilVx: 0,
+      recoilVy: 0,
+      walkPhase: 0,
+      prevStepSign: 1,
+      stepCadenceSoundTimer: 0,
+      swayTime: 0,
+    };
+
+    syncHud();
+    setAppState(GameState.PLAYING);
+  }, [createInitialPlayer, setAppState, syncHud]);
+
+  const handlePauseToggle = useCallback(() => {
+    if (gameStateRef.current === GameState.PLAYING && !dyingStateRef.current.active) {
+      setAppState(GameState.PAUSED);
+    } else if (gameStateRef.current === GameState.PAUSED) {
+      setAppState(GameState.PLAYING);
     }
+  }, [setAppState]);
 
-    cameraRef.current = { x: ARENA_SIZE / 2, y: ARENA_SIZE / 2 };
+  const handleGoToMenu = useCallback(() => {
+    dyingStateRef.current.active = false;
+    setAppState(GameState.MENU);
+  }, [setAppState]);
 
-    // Reset Ship state (Destructor / Interceptor / Nave Rei)
-    destructorStateRef.current = {
-      leftBlasterAngle: 0,
-      rightBlasterAngle: 0,
-      leftMuzzleX: ARENA_SIZE / 2,
-      leftMuzzleY: ARENA_SIZE / 2,
-      rightMuzzleX: ARENA_SIZE / 2,
-      rightMuzzleY: ARENA_SIZE / 2,
-      reiBlasters: [],
-      isFiring: false,
-      laserChargeProgress: 0,
-      beamTickTimer: 0,
-      beamSoundTimer: 0,
-      warpChargeTimer: 0,
-      warpActive: false,
-      warpTimer: 0,
-      warpSoundTimer: 0,
-      orbitAngle: 0,
-      hudSyncTimer: 0,
-      angularVel: 0,
-      leftTrail: [],
-      rightTrail: [],
-    };
-    eastDragonStateRef.current = {
-      segments: createInitialDragonSegments(ARENA_SIZE / 2, ARENA_SIZE / 2),
-      isFiring: false,
-      beamExtension: 0,
-      muzzleX: ARENA_SIZE / 2 + 26,
-      muzzleY: ARENA_SIZE / 2,
-      beamEndX: ARENA_SIZE / 2 + 980,
-      beamEndY: ARENA_SIZE / 2,
-      beamTickTimer: 0,
-      beamSoundTimer: 0,
-      emberTimer: 0,
-    };
-    ironManStateRef.current = {
-      mode: 'REPULSOR',
-      isFiring: false,
-      laserChargeProgress: 0,
-      beamTickTimer: 0,
-      beamSoundTimer: 0,
-      repulsorTimer: 0,
-      handToggle: 0,
-      muzzleX: ARENA_SIZE / 2 + 20,
-      muzzleY: ARENA_SIZE / 2,
-      beamEndX: ARENA_SIZE / 2 + 950,
-      beamEndY: ARENA_SIZE / 2,
-      trail: [],
-    };
-    setIronManModeHud('REPULSOR');
-    iceFireDragonStateRef.current = {
-      activeDragon: 'FIRE',
-      merged: false,
-      mergeTimer: 0,
-      mergeCooldown: 0,
-      fireHead: { x: ARENA_SIZE / 2 + 24, y: ARENA_SIZE / 2 - 34, angle: 0 },
-      fireSegments: createCompanionDragonSegments(ARENA_SIZE / 2 + 24, ARENA_SIZE / 2 - 34, 14, 10),
-      iceHead: { x: ARENA_SIZE / 2 - 24, y: ARENA_SIZE / 2 + 42, angle: 0 },
-      iceSegments: createCompanionDragonSegments(ARENA_SIZE / 2 - 24, ARENA_SIZE / 2 + 42, 14, 10),
-      megaHead: { x: ARENA_SIZE / 2 + 44, y: ARENA_SIZE / 2, angle: 0 },
-      megaSegments: createCompanionDragonSegments(ARENA_SIZE / 2 + 44, ARENA_SIZE / 2, 20, 15.5),
-      isFiring: false,
-      beamExtension: 0,
-      muzzleX: ARENA_SIZE / 2 + 48,
-      muzzleY: ARENA_SIZE / 2 - 34,
-      beamEndX: ARENA_SIZE / 2 + 1000,
-      beamEndY: ARENA_SIZE / 2 - 34,
-      beamTickTimer: 0,
-      beamSoundTimer: 0,
-      emberTimer: 0,
-      hudSyncTimer: 0,
-    };
-    setIceFireDragonHud({
-      activeDragon: 'FIRE',
-      merged: false,
-      mergeTimer: 0,
-      mergeDuration: ICE_FIRE_MERGE_DURATION,
-      cooldown: 0,
-      maxCooldown: ICE_FIRE_MERGE_COOLDOWN,
-    });
-    venomFruitStateRef.current = {
-      hydraCd: 0,
-      chloroCd: 0,
-      roadCd: 0,
-      demonCd: 0,
-      demonActive: false,
-      demonTimer: 0,
-      dashTimer: 0,
-      dashVx: 0,
-      dashVy: 0,
-      dashHitIds: {},
-      auraTickTimer: 0,
-      hudSyncTimer: 0,
-      clouds: [],
-    };
-    setVenomFruitHud({
-      hydraCd: 0,
-      chloroCd: 0,
-      roadCd: 0,
-      demonCd: 0,
-      demonActive: false,
-      demonTimer: 0,
-      demonDuration: VENOM_DEMON_DURATION,
-    });
-    mobileWarpHoldingRef.current = false;
-    setDestructorWarpHud({
-      chargeProgress: 0,
-      active: false,
-      remainingRatio: 0,
-      remainingSeconds: 0,
-      chargeDuration: 3.0,
-    });
-
-    // Reset Mythic active combat state
-    mythicCombatRef.current = {
-      orbitalAngle: 0,
-      orbitalHitCooldowns: {},
-      novaShotCounter: 0,
-      solarBurnTimer: 0,
-      gravityPulseTimer: 0,
-      chainLightningCooldowns: {},
-      destructorSplitCounter: 0,
-      voidDrones: [
-        { x: ARENA_SIZE / 2, y: ARENA_SIZE / 2, angle: 0, fireTimer: 0.2 },
-        { x: ARENA_SIZE / 2, y: ARENA_SIZE / 2, angle: 0, fireTimer: 0.4 },
-        { x: ARENA_SIZE / 2, y: ARENA_SIZE / 2, angle: 0, fireTimer: 0.6 },
-      ],
-    };
-
-    syncHudPlayer();
-  };
-
-  const handleStartGame = () => {
-    initGame();
-    setGameState(GameState.PLAYING);
-    sound.playPowerup();
-    startNextWave(1);
-  };
-
-  const handlePauseToggle = () => {
-    setGameState((prev) => {
-      if (prev === GameState.PLAYING) return GameState.PAUSED;
-      if (prev === GameState.PAUSED) return GameState.PLAYING;
-      return prev;
-    });
-  };
-
-  const handleRestart = () => {
-    const p = playerRef.current;
-    if (gameState === GameState.PLAYING || gameState === GameState.PAUSED) {
-      const runCoins = p.coinsEarned || 0;
-      if (runCoins > 0) {
-        updateCoins(runCoins);
-        updateHighScore(p.score);
-      }
+  const handleOpenStore = useCallback(() => {
+    if (gameStateRef.current !== GameState.STORE) {
+      previousScreenRef.current =
+        gameStateRef.current === GameState.GAME_OVER ? GameState.GAME_OVER : GameState.MENU;
+      setAppState(GameState.STORE);
     }
-    initGame();
-    setGameState(GameState.PLAYING);
-    sound.playPowerup();
-    startNextWave(1);
-  };
+  }, [setAppState]);
 
-  const handleGoToMenu = () => {
-    const p = playerRef.current;
-    if (gameState === GameState.PLAYING || gameState === GameState.PAUSED) {
-      const runCoins = p.coinsEarned || 0;
-      if (runCoins > 0) {
-        updateCoins(runCoins);
-        updateHighScore(p.score);
-      }
+  const handleCloseStore = useCallback(() => {
+    setAppState(
+      previousScreenRef.current === GameState.GAME_OVER ? GameState.GAME_OVER : GameState.MENU
+    );
+  }, [setAppState]);
+
+  const handleOpenPrestige = useCallback(() => {
+    previousScreenRef.current = GameState.MENU;
+    setAppState(GameState.PRESTIGE);
+  }, [setAppState]);
+
+  const handleClosePrestige = useCallback(() => {
+    setAppState(GameState.MENU);
+  }, [setAppState]);
+
+  const handleToggleSound = useCallback(() => {
+    const enabled = toggleSound();
+    setSoundEnabled(enabled);
+  }, []);
+
+  // Store & Prestige callbacks
+  const handleBuyWeapon = useCallback((wt: WeaponType, price: number): boolean => {
+    if (coinsRef.current < price) return false;
+    setCoins((prev) => {
+      const next = Math.max(0, prev - price);
+      localStorage.setItem('zombie_shooter_coins', next.toString());
+      return next;
+    });
+    setUnlockedWeapons((prev) => {
+      const next = sanitizeWeapons([...prev, wt]);
+      localStorage.setItem('zombie_shooter_unlocked_weapons', JSON.stringify(next));
+      return next;
+    });
+    setEquippedWeapon(wt);
+    localStorage.setItem('zombie_shooter_equipped_weapon', wt);
+    playerRef.current.currentWeapon = wt;
+    if (playerRef.current.weapons[wt]) {
+      playerRef.current.weapons[wt].unlocked = true;
     }
-    
-    initGame();
-    setGameState(GameState.MENU);
-  };
+    return true;
+  }, []);
 
-  const handleSelectWeapon = (weaponType: WeaponType) => {
-    handleEquipWeapon(weaponType);
-  };
+  const handleEquipWeapon = useCallback((wt: WeaponType) => {
+    if (!unlockedWeaponsRef.current.includes(wt)) return;
+    setEquippedWeapon(wt);
+    localStorage.setItem('zombie_shooter_equipped_weapon', wt);
+    playerRef.current.currentWeapon = wt;
+    syncHud();
+  }, [syncHud]);
+
+  const handleBuySkin = useCallback((skinId: string, price: number): boolean => {
+    if (coinsRef.current < price) return false;
+    setCoins((prev) => {
+      const next = Math.max(0, prev - price);
+      localStorage.setItem('zombie_shooter_coins', next.toString());
+      return next;
+    });
+    setUnlockedSkins((prev) => {
+      const next = prev.includes(skinId) ? prev : [...prev, skinId];
+      localStorage.setItem('zombie_shooter_unlocked_skins', JSON.stringify(next));
+      return next;
+    });
+    setEquippedSkin(skinId);
+    localStorage.setItem('zombie_shooter_equipped_skin', skinId);
+    playerRef.current.equippedSkin = skinId;
+    return true;
+  }, []);
+
+  const handleEquipSkin = useCallback((skinId: string) => {
+    setEquippedSkin(skinId);
+    localStorage.setItem('zombie_shooter_equipped_skin', skinId);
+    playerRef.current.equippedSkin = skinId;
+  }, []);
+
+  const handleBuyShieldUpgrade = useCallback(() => {
+    const cost = (shieldLevelRef.current + 1) * 250;
+    if (coinsRef.current < cost) return;
+    updateCoins(-cost);
+    setMaxShieldLevel((prev) => {
+      const next = prev + 1;
+      localStorage.setItem('zombie_shooter_shield_level', next.toString());
+      return next;
+    });
+  }, [updateCoins]);
+
+  const handleBuyHealthUpgrade = useCallback(() => {
+    const cost = (healthLevelRef.current + 1) * 200;
+    if (coinsRef.current < cost) return;
+    updateCoins(-cost);
+    setMaxHealthLevel((prev) => {
+      const next = prev + 1;
+      localStorage.setItem('zombie_shooter_health_level', next.toString());
+      return next;
+    });
+  }, [updateCoins]);
+
+  const handleBuySpeedUpgrade = useCallback(() => {
+    if (speedLevelRef.current >= 5) return;
+    const cost = (speedLevelRef.current + 1) * 250;
+    if (coinsRef.current < cost) return;
+    updateCoins(-cost);
+    setSpeedLevel((prev) => {
+      const next = prev + 1;
+      localStorage.setItem('zombie_shooter_speed_level', next.toString());
+      return next;
+    });
+  }, [updateCoins]);
+
+  const handleBuyDamageUpgrade = useCallback(() => {
+    if (damageLevelRef.current >= 5) return;
+    const cost = (damageLevelRef.current + 1) * 350;
+    if (coinsRef.current < cost) return;
+    updateCoins(-cost);
+    setDamageLevel((prev) => {
+      const next = prev + 1;
+      localStorage.setItem('zombie_shooter_damage_level', next.toString());
+      return next;
+    });
+  }, [updateCoins]);
+
+  const handleBuyLuckUpgrade = useCallback(() => {
+    if (luckLevelRef.current >= 5) return;
+    const cost = (luckLevelRef.current + 1) * 300;
+    if (coinsRef.current < cost) return;
+    updateCoins(-cost);
+    setLuckLevel((prev) => {
+      const next = prev + 1;
+      localStorage.setItem('zombie_shooter_luck_level', next.toString());
+      return next;
+    });
+  }, [updateCoins]);
+
+  const handleAscendPrestige = useCallback((): boolean => {
+    if (prestigeLevel >= MAX_PRESTIGE) return false;
+    const cost = getPrestigeCost(prestigeLevel);
+    if (coinsRef.current < cost) return false;
+    updateCoins(-cost);
+    setPrestigeLevel((prev) => {
+      const next = Math.min(MAX_PRESTIGE, prev + 1);
+      localStorage.setItem('zombie_shooter_prestige', next.toString());
+      return next;
+    });
+    setTokens((prev) => {
+      const next = prev + 1;
+      localStorage.setItem('zombie_shooter_tokens', next.toString());
+      return next;
+    });
+    return true;
+  }, [prestigeLevel, updateCoins]);
+
+  const handleBuyTokenUpgrade = useCallback(
+    (id: TokenUpgradeId): boolean => {
+      if (tokens < 1) return false;
+      const curLvl = tokenUpgrades[id] || 0;
+      if (curLvl >= 5) return false;
+      setTokens((prev) => {
+        const next = Math.max(0, prev - 1);
+        localStorage.setItem('zombie_shooter_tokens', next.toString());
+        return next;
+      });
+      setTokenUpgrades((prev) => {
+        const next = { ...prev, [id]: (prev[id] || 0) + 1 };
+        localStorage.setItem('zombie_shooter_token_upgrades', JSON.stringify(next));
+        return next;
+      });
+      return true;
+    },
+    [tokens, tokenUpgrades]
+  );
+
+  const handleRespecTokens = useCallback(() => {
+    const spent = (Object.values(tokenUpgrades) as number[]).reduce(
+      (acc, v) => acc + (Number(v) || 0),
+      0
+    );
+    if (spent <= 0) return;
+    setTokens((prev) => {
+      const next = prev + spent;
+      localStorage.setItem('zombie_shooter_tokens', next.toString());
+      return next;
+    });
+    setTokenUpgrades({ ...DEFAULT_TOKEN_UPGRADES });
+    localStorage.setItem('zombie_shooter_token_upgrades', JSON.stringify(DEFAULT_TOKEN_UPGRADES));
+  }, [tokenUpgrades]);
 
   const handleResetAll = useCallback(() => {
-    localStorage.clear();
-    setCoins(1000);
+    try {
+      [
+        'zombie_shooter_coins',
+        'zombie_shooter_unlocked_weapons',
+        'zombie_shooter_equipped_weapon',
+        'zombie_shooter_unlocked_skins',
+        'zombie_shooter_equipped_skin',
+        'zombie_shooter_shield_level',
+        'zombie_shooter_health_level',
+        'zombie_shooter_speed_level',
+        'zombie_shooter_damage_level',
+        'zombie_shooter_luck_level',
+        'zombie_shooter_prestige',
+        'zombie_shooter_tokens',
+        'zombie_shooter_token_upgrades',
+        'zombie_shooter_highscore_zombie',
+        'zombie_shooter_highscore',
+      ].forEach((k) => localStorage.removeItem(k));
+    } catch {}
+    setCoins(0);
+    setUnlockedWeapons([WeaponType.GLOCK_19]);
+    setEquippedWeapon(WeaponType.GLOCK_19);
+    setUnlockedSkins(['skin_default']);
+    setEquippedSkin('skin_default');
     setMaxShieldLevel(0);
     setMaxHealthLevel(0);
     setSpeedLevel(0);
     setDamageLevel(0);
     setLuckLevel(0);
-    setUnlockedWeapons([WeaponType.PISTOL]);
-    setEquippedWeapon(WeaponType.PISTOL);
-    setUnlockedSkins(['skin_default']);
-    setEquippedSkin('skin_default');
-    setHighScore(0);
-    setHighScoreZombie(0);
-    setHighScoreAlien(0);
     setPrestigeLevel(0);
-    prestigeRef.current = 0;
     setTokens(0);
-    const resetTokenUpg = { ...DEFAULT_TOKEN_UPGRADES };
-    setTokenUpgrades(resetTokenUpg);
-    tokenUpgradesRef.current = resetTokenUpg;
-    const resetMastery = JSON.parse(JSON.stringify(DEFAULT_SHIP_MASTERY));
-    setShipMastery(resetMastery);
-    shipMasteryRef.current = resetMastery;
-    initGame();
-    setGameState(GameState.MENU);
+    setTokenUpgrades({ ...DEFAULT_TOKEN_UPGRADES });
+    setHighScoreZombie(0);
+    setAppState(GameState.MENU);
+  }, [setAppState]);
+
+  // Level-up upgrade callbacks
+  const handleSelectUpgrade = useCallback(
+    (option: UpgradeOption) => {
+      const nextPlayer = option.effect({
+        ...playerRef.current,
+        weapons: { ...playerRef.current.weapons },
+      });
+      nextPlayer.level += 1;
+      nextPlayer.xp = Math.max(0, nextPlayer.xp - nextPlayer.xpNeeded);
+      nextPlayer.xpNeeded = Math.round(nextPlayer.xpNeeded * 1.28 + 45);
+      playerRef.current = nextPlayer;
+
+      // Sync void drones count immediately if Mythic Void Monarch picked
+      const desiredDrones = (nextPlayer.mythicVoidDrones || 0) > 0 ? 3 : 0;
+      while (voidDronesRef.current.length < desiredDrones) {
+        voidDronesRef.current.push({
+          x: nextPlayer.x,
+          y: nextPlayer.y,
+          angle: 0,
+          fireTimer: 0.4 * voidDronesRef.current.length,
+        });
+      }
+
+      if (nextPlayer.xp >= nextPlayer.xpNeeded) {
+        setUpgradeOptions(
+          rollLevelUpOptions(nextPlayer.level, updateCoins, luckLevelRef.current, nextPlayer.acquiredUpgrades)
+        );
+        syncHud();
+        return;
+      }
+
+      syncHud();
+      setAppState(GameState.PLAYING);
+    },
+    [setAppState, syncHud, updateCoins]
+  );
+
+  const handleRerollUpgrades = useCallback(() => {
+    const p = playerRef.current;
+    if ((p.rerollsAvailable || 0) <= 0) return;
+    p.rerollsAvailable = (p.rerollsAvailable || 0) - 1;
+    setUpgradeOptions(
+      rollLevelUpOptions(p.level, updateCoins, luckLevelRef.current, p.acquiredUpgrades)
+    );
+    syncHud();
+  }, [syncHud, updateCoins]);
+
+  // Enable Gamepad menu navigation when not actively playing
+  useGamepadMenuNavigation(
+    gameState !== GameState.PLAYING,
+    gameState === GameState.STORE
+      ? handleCloseStore
+      : gameState === GameState.PRESTIGE
+        ? handleClosePrestige
+        : gameState === GameState.PAUSED
+          ? handlePauseToggle
+          : undefined
+  );
+
+  // ==========================================
+  // KEYBOARD, MOUSE & CANVAS RESIZE LISTENERS
+  // ==========================================
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const k = e.key.toLowerCase();
+      keysRef.current[k] = true;
+
+      if (k === 'escape' || k === 'p') {
+        if (gameStateRef.current === GameState.PLAYING || gameStateRef.current === GameState.PAUSED) {
+          handlePauseToggle();
+        }
+      }
+
+      if (gameStateRef.current === GameState.PLAYING && !dyingStateRef.current.active) {
+        if (k === '1') switchWeapon(WeaponType.GLOCK_19);
+        else if (k === '2') switchWeapon(WeaponType.BENELLI_M4);
+        else if (k === '3') switchWeapon(WeaponType.SCAR_L);
+      }
+    };
+
+    const handleKeyUp = (e: KeyboardEvent) => {
+      keysRef.current[e.key.toLowerCase()] = false;
+    };
+
+    const handleBlur = () => {
+      keysRef.current = {};
+      mouseRef.current.isDown = false;
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+    window.addEventListener('blur', handleBlur);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+      window.removeEventListener('blur', handleBlur);
+    };
+  }, [handlePauseToggle, switchWeapon]);
+
+  useEffect(() => {
+    const mount = threeMountRef.current;
+    if (!mount) return;
+    const diorama = new ForestDiorama3DRenderer(mount, graphicsQualityRef.current);
+    threeRendererRef.current = diorama;
+    return () => {
+      diorama.dispose();
+      threeRendererRef.current = null;
+    };
   }, []);
 
-  // Spawning Zombies Wave logic
-  const startNextWave = (nextWaveNum: number) => {
-    if (waveSpawnTimerRef.current) clearTimeout(waveSpawnTimerRef.current);
-    waveSpawnTimerRef.current = null;
-    mythicCombatRef.current.orbitalHitCooldowns = {};
-    mythicCombatRef.current.chainLightningCooldowns = {};
-    
-    setWave(nextWaveNum);
-    waveRef.current = nextWaveNum;
-    waveActiveRef.current = true;
-
-    const isAlienMode = modeRef.current === GameMode.ALIEN;
-
-    // Calculate number of enemies based on wave
-    const count = isAlienMode ? (5 + nextWaveNum * 4) : (6 + nextWaveNum * 4);
-    setZombiesRemaining(count);
-
-    // Play mode-specific alert sound (or Boss Alarm on boss waves)
-    if (nextWaveNum % 5 === 0) {
-      sound.playBossAlarm();
-      setTimeout(() => {
-        if (isAlienMode) {
-          sound.playAlienBossRoar();
-        } else {
-          sound.playZombieRoar();
-        }
-      }, 350);
-    } else {
-      if (isAlienMode) {
-        sound.playAlienShoot();
-      } else {
-        sound.playZombieHit();
-      }
-    }
-
-    // Spawn enemies spread out around the player outside of screen view
-    const p = playerRef.current;
+  useEffect(() => {
     const canvas = canvasRef.current;
-    const viewDist = canvas ? Math.max(canvas.width, canvas.height) / 1.5 : 500;
+    if (!canvas) return;
 
-    const newZombies: Zombie[] = [];
-    for (let i = 0; i < count; i++) {
-      let type: ZombieType;
-      let shootsProjectiles = false;
-      let isBoss = false;
-      let bossName: string | undefined = undefined;
-      let bossTitle: string | undefined = undefined;
-      const rand = Math.random();
+    const handleResize = () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      threeRendererRef.current?.resize(window.innerWidth, window.innerHeight);
+    };
+    handleResize();
+    window.addEventListener('resize', handleResize);
 
-      // Configure statistics based on mode
-      let radius = 16;
-      let hp = 25 + nextWaveNum * 4;
-      let speed = 75 + Math.random() * 20;
-      let damage = 12 + nextWaveNum * 1.5;
-      let scoreValue = 100;
-      let xpValue = 15;
-      let color = '#22c55e';
+    const handleMouseMove = (e: MouseEvent) => {
+      mouseRef.current.x = e.clientX;
+      mouseRef.current.y = e.clientY;
+    };
+    const handleMouseDown = (e: MouseEvent) => {
+      if (e.button === 0) mouseRef.current.isDown = true;
+    };
+    const handleMouseUp = (e: MouseEvent) => {
+      if (e.button === 0) mouseRef.current.isDown = false;
+    };
+    const handleWheel = (e: WheelEvent) => {
+      if (gameStateRef.current !== GameState.PLAYING || dyingStateRef.current.active) return;
+      const list = unlockedWeaponsRef.current;
+      if (list.length <= 1) return;
+      const idx = list.indexOf(playerRef.current.currentWeapon);
+      const dir = e.deltaY > 0 ? 1 : -1;
+      const nextIdx = (idx + dir + list.length) % list.length;
+      switchWeapon(list[nextIdx]);
+    };
 
-      if (isAlienMode) {
-        // ==========================================
-        // MODO ALIEN: APENAS INIMIGOS EXTRATERRESTRES
-        // ==========================================
-        if (nextWaveNum % 5 === 0 && i === 0) {
-          isBoss = true;
-          shootsProjectiles = true;
-          if (nextWaveNum === 5) {
-            // Onda 5: Lorde Overlord Psíquico
-            type = ZombieType.ALIEN_OVERLORD;
-            bossName = 'LORDE OVERLORD PSÍQUICO';
-            bossTitle = 'MENTE-COLMEIA XENO-CEREBRAL';
-            radius = 45;
-            hp = 480 + nextWaveNum * 100;
-            speed = 52;
-            damage = 36 + nextWaveNum * 4;
-            scoreValue = 1500;
-            xpValue = 200;
-            color = '#ec4899'; // Bright Magenta
-          } else if (nextWaveNum === 10) {
-            // Onda 10: Dreadnought Nave-Mãe
-            type = ZombieType.ALIEN_DREADNOUGHT;
-            bossName = 'DREADNOUGHT NAVE-MÃE';
-            bossTitle = 'FORTALEZA DE GUERRA FLUTUANTE';
-            radius = 52;
-            hp = 950 + nextWaveNum * 130;
-            speed = 44;
-            damage = 44 + nextWaveNum * 5;
-            scoreValue = 2400;
-            xpValue = 350;
-            color = '#06b6d4'; // Heavy Cyan Warship
-          } else {
-            // Onda 15+: Leviatã Cósmico Void
-            type = ZombieType.ALIEN_LEVIATHAN;
-            bossName = 'LEVIATÃ CÓSMICO VOID';
-            bossTitle = 'DEVORADOR ESTELAR DO VÁCUO';
-            radius = 62;
-            hp = 1550 + nextWaveNum * 175;
-            speed = 48;
-            damage = 54 + nextWaveNum * 6;
-            scoreValue = 3800;
-            xpValue = 520;
-            color = '#a855f7'; // Cosmic Void Purple
-          }
-        } else if (nextWaveNum >= 4 && rand < 0.25) {
-          // Alien Colossus (Armored Tank)
-          type = ZombieType.ALIEN_COLOSSUS;
-          radius = 28;
-          hp = 120 + nextWaveNum * 22;
-          speed = 44 + Math.random() * 8;
-          damage = 32 + nextWaveNum * 3;
-          scoreValue = 420;
-          xpValue = 65;
-          color = '#6366f1'; // Indigo Bio-Armor
-          shootsProjectiles = false;
-        } else if (nextWaveNum >= 3 && rand < 0.55) {
-          // Alien Shooter (Plasma Blaster Soldier)
-          type = ZombieType.ALIEN_SHOOTER;
-          radius = 21;
-          hp = 85 + nextWaveNum * 12;
-          speed = 65 + Math.random() * 15;
-          damage = 16 + nextWaveNum * 2;
-          scoreValue = 350;
-          xpValue = 45;
-          color = '#06b6d4'; // Deep Cyan
-          shootsProjectiles = true;
-        } else if (nextWaveNum >= 2 && rand < 0.80) {
-          // Alien Drone (Fast Erratic Swarm Drone)
-          type = ZombieType.ALIEN_DRONE;
-          radius = 12;
-          hp = 22 + nextWaveNum * 3;
-          speed = 135 + Math.random() * 25; // Very fast
-          damage = 8 + nextWaveNum;
-          scoreValue = 180;
-          xpValue = 22;
-          color = '#c084fc'; // Purple Drone
-          shootsProjectiles = true;
-        } else {
-          // Alien Scout (Fast Plasma Scout)
-          type = ZombieType.ALIEN_SCOUT;
-          radius = 14;
-          hp = 32 + nextWaveNum * 5;
-          speed = 115 + Math.random() * 20;
-          damage = 10 + nextWaveNum;
-          scoreValue = 200;
-          xpValue = 25;
-          color = '#00ffcc'; // Neon Cyan
-          shootsProjectiles = true;
-        }
-      } else {
-        // ==========================================
-        // MODO ZUMBI: APENAS INIMIGOS MORTOS-VIVOS
-        // ==========================================
-        if (nextWaveNum % 5 === 0 && i === 0) {
-          isBoss = true;
-          if (nextWaveNum === 5) {
-            // Onda 5: Tirano Necrótico Alfa
-            type = ZombieType.BOSS;
-            bossName = 'TIRANO NECRÓTICO ALFA';
-            bossTitle = 'ABOMINAÇÃO BIOLÓGICA CLASSE-V';
-            radius = 46;
-            hp = 440 + nextWaveNum * 90;
-            speed = 56;
-            damage = 42 + nextWaveNum * 5;
-            scoreValue = 1400;
-            xpValue = 190;
-            color = '#9333ea'; // Purple Necrotic Boss
-            shootsProjectiles = false;
-          } else if (nextWaveNum === 10) {
-            // Onda 10: Golias Açougueiro Pestilento
-            type = ZombieType.BOSS_BUTCHER;
-            bossName = 'GOLIAS AÇOUGUEIRO PESTILENTO';
-            bossTitle = 'CARNICEIRO BLINDADO DEFORMADO';
-            radius = 52;
-            hp = 920 + nextWaveNum * 125;
-            speed = 50;
-            damage = 48 + nextWaveNum * 5;
-            scoreValue = 2400;
-            xpValue = 350;
-            color = '#b91c1c'; // Blood Butcher Red
-            shootsProjectiles = true; // Throws cleaver shockwaves
-          } else {
-            // Onda 15+: Necro-Titã Supremo
-            type = ZombieType.BOSS_NECROTITAN;
-            bossName = 'NECRO-TITÃ SUPREMO';
-            bossTitle = 'COLOSSO DA ANIQUILAÇÃO TOTAL';
-            radius = 60;
-            hp = 1550 + nextWaveNum * 170;
-            speed = 46;
-            damage = 56 + nextWaveNum * 6;
-            scoreValue = 3800;
-            xpValue = 520;
-            color = '#4c1d95'; // Dark Obsidian Colossus
-            shootsProjectiles = true; // Radial bone spikes
-          }
-        } else if (nextWaveNum >= 3 && rand < 0.22) {
-          // Toxic Spitter (Cuspidor Tóxico)
-          type = ZombieType.TOXIC_SPITTER;
-          radius = 17;
-          hp = 36 + nextWaveNum * 6;
-          speed = 70 + Math.random() * 15;
-          damage = 14 + nextWaveNum * 1.5;
-          scoreValue = 220;
-          xpValue = 30;
-          color = '#84cc16'; // Lime/Toxic Green
-          shootsProjectiles = true;
-        } else if (nextWaveNum >= 4 && rand < 0.50) {
-          // Tank Zombie (Bruto Blindado)
-          type = ZombieType.TANK;
-          radius = 25;
-          hp = 85 + nextWaveNum * 16;
-          speed = 45 + Math.random() * 10;
-          damage = 26 + nextWaveNum * 3;
-          scoreValue = 260;
-          xpValue = 38;
-          color = '#78350f'; // Dark Brown Rot
-          shootsProjectiles = false;
-        } else if (nextWaveNum >= 2 && rand < 0.75) {
-          // Runner Zombie (Carniçal Corredor)
-          type = ZombieType.RUNNER;
-          radius = 13;
-          hp = 16 + nextWaveNum * 2;
-          speed = 140 + Math.random() * 20; // Very fast sprint
-          damage = 8 + nextWaveNum;
-          scoreValue = 150;
-          xpValue = 20;
-          color = '#ef4444'; // Red Carniçal
-          shootsProjectiles = false;
-        } else {
-          // Normal Zombie (Infectado Comum)
-          type = ZombieType.NORMAL;
-          radius = 16;
-          hp = 25 + nextWaveNum * 4;
-          speed = 75 + Math.random() * 20;
-          damage = 12 + nextWaveNum * 1.5;
-          scoreValue = 100;
-          xpValue = 15;
-          color = '#22c55e'; // Rotten Green
-          shootsProjectiles = false;
-        }
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mousedown', handleMouseDown);
+    window.addEventListener('mouseup', handleMouseUp);
+    window.addEventListener('wheel', handleWheel, { passive: true });
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mousedown', handleMouseDown);
+      window.removeEventListener('mouseup', handleMouseUp);
+      window.removeEventListener('wheel', handleWheel);
+    };
+  }, [switchWeapon]);
+
+  // ==========================================
+  // CORE SIMULATION & RENDER LOOP (60 FPS)
+  // ==========================================
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    let animId = 0;
+    let lastTime = performance.now();
+
+    const addFloatingText = (x: number, y: number, text: string, color: string, scale = 1) => {
+      if (floatingTextsRef.current.length > 60) {
+        floatingTextsRef.current.shift();
+      }
+      floatingTextsRef.current.push({
+        id: `${Date.now()}-${Math.random()}`,
+        x,
+        y,
+        text,
+        color,
+        alpha: 1,
+        vy: -38,
+        scale,
+      });
+    };
+
+    const spawnZombieForWave = (currentWave: number, forceBoss = false) => {
+      const p = playerRef.current;
+      let zx = ARENA_SIZE * 0.5;
+      let zy = ARENA_SIZE * 0.5;
+      for (let attempt = 0; attempt < 6; attempt++) {
+        const spawnDist = 520 + Math.random() * 240;
+        const spawnAngle = Math.random() * Math.PI * 2;
+        zx = Math.max(40, Math.min(ARENA_SIZE - 40, p.x + Math.cos(spawnAngle) * spawnDist));
+        zy = Math.max(40, Math.min(ARENA_SIZE - 40, p.y + Math.sin(spawnAngle) * spawnDist));
+        if (!isPointInsideHouse(zx, zy, 34)) break;
+      }
+      const blockedHouse = isPointInsideHouse(zx, zy, 30);
+      if (blockedHouse) {
+        const door = blockedHouse.porchDoor;
+        zx = door.x + (door.side === 'W' ? -48 : door.side === 'E' ? 48 : 0);
+        zy = door.z + (door.side === 'N' ? -48 : door.side === 'S' ? 48 : 0);
       }
 
-      // Position: Random circle outside player view distance
-      const spawnAngle = Math.random() * Math.PI * 2;
-      const dist = viewDist + Math.random() * 300;
-      let zx = p.x + Math.cos(spawnAngle) * dist;
-      let zy = p.y + Math.sin(spawnAngle) * dist;
+      const scaleMult = 1 + (currentWave - 1) * 0.22;
+      const speedWaveBonus = Math.min(85, (currentWave - 1) * 4);
 
-      // Clamp to arena
-      zx = Math.max(radius + 10, Math.min(ARENA_SIZE - radius - 10, zx));
-      zy = Math.max(radius + 10, Math.min(ARENA_SIZE - radius - 10, zy));
+      if (forceBoss) {
+        let bossType = ZombieType.BOSS;
+        let bossName = 'TIRANO NECRÓTICO ALFA';
+        let bossTitle = 'Abominação Mutante';
+        let baseHp = 950;
+        let radius = 36;
+        let speed = 88;
+        let damage = 28;
+        let color = '#991b1b';
 
-      newZombies.push({
-        id: `zombie-${Date.now()}-${i}-${Math.random()}`,
+        if (currentWave % 15 === 0) {
+          bossType = ZombieType.BOSS_NECROTITAN;
+          bossName = 'NECRO-TITÃ SUPREMO';
+          bossTitle = 'Senhor da Praga';
+          baseHp = 2200;
+          radius = 44;
+          speed = 82;
+          damage = 42;
+          color = '#7e22ce';
+        } else if (currentWave % 10 === 0) {
+          bossType = ZombieType.BOSS_BUTCHER;
+          bossName = 'AÇOUGUEIRO PESTILENTO';
+          bossTitle = 'Carrasco da Quarentena';
+          baseHp = 1550;
+          radius = 40;
+          speed = 102;
+          damage = 34;
+          color = '#b91c1c';
+        }
+
+        const totalBossHp = Math.round(baseHp * (1 + (currentWave - 5) * 0.14));
+        const bossPos = resolveForestEntityCollision(zx, zy, radius);
+        zombiesRef.current.push({
+          id: `boss-${currentWave}-${Math.random()}`,
+          type: bossType,
+          x: bossPos.x,
+          y: bossPos.y,
+          radius,
+          speed: speed + Math.min(35, currentWave * 1.5),
+          hp: totalBossHp,
+          maxHp: totalBossHp,
+          damage,
+          scoreValue: 500 + currentWave * 60,
+          xpValue: 180 + currentWave * 20,
+          color,
+          angle: Math.atan2(p.y - bossPos.y, p.x - bossPos.x),
+          lastAttackTime: 0,
+          knockbackX: 0,
+          knockbackY: 0,
+          isStunned: false,
+          stunTimer: 0,
+          isBoss: true,
+          bossName,
+          bossTitle,
+          specialAttackTimer: 2.8,
+          lastShootTime: 0,
+          aiSeed: Math.random() * 100,
+        });
+        return;
+      }
+
+      const roll = Math.random();
+      let type = ZombieType.NORMAL;
+      let radius = 16;
+      let hp = Math.round(42 * scaleMult);
+      let speed = 96 + speedWaveBonus * 0.65;
+      let damage = 12 + Math.floor(currentWave * 1.1);
+      let color = '#166534';
+      let scoreValue = 28;
+      let xpValue = 24;
+      let shootsProjectiles = false;
+
+      if (currentWave >= 2 && roll > 0.72 && roll <= 0.88) {
+        type = ZombieType.RUNNER;
+        radius = 13.5;
+        hp = Math.round(28 * scaleMult);
+        speed = 168 + speedWaveBonus;
+        damage = 9 + Math.floor(currentWave * 0.9);
+        color = '#dc2626';
+        scoreValue = 36;
+        xpValue = 28;
+      } else if (currentWave >= 3 && roll > 0.88 && roll <= 0.96) {
+        type = ZombieType.TANK;
+        radius = 24;
+        hp = Math.round(135 * scaleMult);
+        speed = 68 + speedWaveBonus * 0.4;
+        damage = 22 + Math.floor(currentWave * 1.6);
+        color = '#3f6212';
+        scoreValue = 75;
+        xpValue = 52;
+      } else if (currentWave >= 4 && roll > 0.96) {
+        type = ZombieType.TOXIC_SPITTER;
+        radius = 16.5;
+        hp = Math.round(52 * scaleMult);
+        speed = 86 + speedWaveBonus * 0.45;
+        damage = 14 + Math.floor(currentWave * 1.1);
+        color = '#84cc16';
+        scoreValue = 58;
+        xpValue = 42;
+        shootsProjectiles = true;
+      }
+
+      const zPos = resolveForestEntityCollision(zx, zy, radius);
+      zombiesRef.current.push({
+        id: `z-${Date.now()}-${Math.random()}`,
         type,
-        x: zx,
-        y: zy,
+        x: zPos.x,
+        y: zPos.y,
         radius,
         speed,
         hp,
@@ -2558,7074 +1261,2188 @@ export default function App() {
         scoreValue,
         xpValue,
         color,
-        angle: 0,
+        angle: Math.atan2(p.y - zPos.y, p.x - zPos.x),
         lastAttackTime: 0,
         knockbackX: 0,
         knockbackY: 0,
         isStunned: false,
         stunTimer: 0,
         shootsProjectiles,
-        isBoss,
-        bossName,
-        bossTitle,
-        lastShootTime: Date.now() + Math.random() * 1500,
+        lastShootTime: 0,
+        aiSeed: Math.random() * 100,
       });
-    }
+    };
 
-    // Set initial active boss for HUD if spawned
-    const spawnedBoss = newZombies.find(z => z.isBoss);
-    if (spawnedBoss) {
-      setActiveBoss({
-        id: spawnedBoss.id,
-        name: spawnedBoss.bossName || 'CHEFE SUPREMO',
-        title: spawnedBoss.bossTitle || 'AMEAÇA DE NÍVEL ALFA',
-        hp: Math.round(spawnedBoss.hp),
-        maxHp: Math.round(spawnedBoss.maxHp),
-        type: spawnedBoss.type,
-        color: spawnedBoss.color,
-      });
-    } else {
-      setActiveBoss(null);
-    }
+    const startNextWave = () => {
+      const nextWave = waveRef.current + 1;
+      waveRef.current = nextWave;
+      setWave(nextWave);
 
-    zombiesRef.current = newZombies;
-    syncHudPlayer();
-  };
+      const isBossWave = nextWave % 5 === 0;
+      const count = 7 + nextWave * 4;
+      zombiesToSpawnRef.current = count;
+      spawnTimerRef.current = 0.3;
 
-  // Triggered on level up with dynamic rarity roll
-  const handleLevelUp = (currentLvl: number) => {
-    setRerollsLeft(1);
-    const rolled = rollLevelUpOptions(
-      currentLvl,
-      { updateCoins },
-      luckLevel,
-      playerRef.current.acquiredUpgrades
-    );
-    setLevelUpOptions(rolled);
-    setGameState(GameState.LEVEL_UP);
-  };
-
-  // Reroll upgrade options with audio feedback
-  const handleRerollUpgrades = () => {
-    if (rerollsLeft <= 0) return;
-    setRerollsLeft((prev) => Math.max(0, prev - 1));
-    const rolled = rollLevelUpOptions(
-      playerRef.current.level,
-      { updateCoins },
-      luckLevel,
-      playerRef.current.acquiredUpgrades
-    );
-    setLevelUpOptions(rolled);
-  };
-
-  const handleSelectUpgrade = (option: UpgradeOption) => {
-    // Apply the upgrade effect defensively
-    try {
-      const updatedPlayer = option.effect({ ...playerRef.current });
-      if (updatedPlayer) {
-        playerRef.current = updatedPlayer;
+      if (isBossWave) {
+        spawnZombieForWave(nextWave, true);
+        sound.playBossAlarm();
+        window.setTimeout(() => sound.playZombieRoar(), 350);
+      } else {
+        sound.playZombieHit();
       }
-    } catch {
-      // keep current player state safe if upgrade callback throws
-    }
+      syncHud();
+    };
 
-    // Deduct XP and scale threshold for next level
-    const curXp = Number.isFinite(playerRef.current.xp) ? playerRef.current.xp : 0;
-    const curNeeded = Number.isFinite(playerRef.current.xpNeeded) ? playerRef.current.xpNeeded : 100;
-    playerRef.current.xp = Math.max(0, curXp - curNeeded);
-    playerRef.current.xpNeeded = Math.max(100, Math.round(curNeeded * 1.28 + 20));
-    playerRef.current.level = (playerRef.current.level || 1) + 1;
+    const handleZombieDeath = (z: Zombie) => {
+      if (z.isDead) return;
+      z.isDead = true;
+      zombieHitFlashRef.current.delete(z.id);
 
-    syncHudPlayer();
+      const p = playerRef.current;
+      const cam = cameraRef.current;
+      p.kills += 1;
 
-    // Create custom particle burst around player
-    const p = playerRef.current;
-    const isMythicPick = option.rarity === 'MYTHIC';
-    if (isMythicPick) {
-      particlesRef.current.push({
-        id: `particle-mythic-nova-${Date.now()}-${Math.random()}`,
-        type: 'MYTHIC_NOVA',
-        x: p.x,
-        y: p.y,
-        vx: 0,
-        vy: 0,
-        radius: 14,
-        growthSpeed: 480,
-        color: '#d946ef',
-        alpha: 1,
-        decay: 0.032,
-      });
-    }
+      const earnedCred = Math.round(z.scoreValue * (p.bonusCoinsMult || 1));
+      p.score += earnedCred;
+      p.coinsEarned = (p.coinsEarned || 0) + earnedCred;
+      updateCoins(earnedCred);
 
-    for (let i = 0; i < (isMythicPick ? 52 : 36); i++) {
-      const angle = Math.random() * Math.PI * 2;
-      const speed = 110 + Math.random() * 170;
-      particlesRef.current.push({
-        id: `particle-lvl-${Date.now()}-${i}-${Math.random()}`,
-        type: 'LEVEL_UP',
-        x: p.x,
-        y: p.y,
-        vx: Math.cos(angle) * speed,
-        vy: Math.sin(angle) * speed,
-        radius: 2.5 + Math.random() * 3.5,
-        color: isMythicPick
-          ? i % 3 === 0
-            ? '#38bdf8'
-            : i % 3 === 1
-            ? '#e879f9'
-            : '#fde047'
-          : '#facc15',
-        alpha: 1,
-        decay: 0.02 + Math.random() * 0.02,
-      });
-    }
+      const critXpLvl = tokenUpgradesRef.current.token_crit_xp || 0;
+      const xpGain = Math.round(z.xpValue * (1 + critXpLvl * 0.15));
+      p.xp += xpGain;
 
-    // Handle multi-level XP rollover cleanly!
-    if (playerRef.current.xp >= playerRef.current.xpNeeded) {
-      handleLevelUp(playerRef.current.level);
-      return;
-    }
-
-    // Unpause game back into combat
-    setGameState(GameState.PLAYING);
-  };
-
-  // Spawning powerups/drops
-  const spawnItemDrop = (x: number, y: number) => {
-    // 30% chance to drop a consumable on zombie death
-    if (Math.random() > 0.35) return;
-
-    const rand = Math.random();
-    let type = DropType.HEALTH;
-    let color = '#10b981'; // Green
-    
-    const p = playerRef.current;
-
-    // Determine drop type
-    if (rand < 0.35) {
-      type = DropType.HEALTH;
-      color = '#10b981'; // Green (Health)
-    } else if (rand < 0.70) {
-      type = DropType.AMMO;
-      color = '#ef4444'; // Red (Ammo)
-    } else if (rand < 0.90) {
-      type = DropType.PISTOL_CLIP;
-      color = '#fbbf24'; // Yellow/Gold (Pistol Clip)
-    } else if (p.maxShield > 0) {
-      type = DropType.SHIELD;
-      color = '#22d3ee'; // Cyan (Shield)
-    } else {
-      type = DropType.HEALTH;
-      color = '#10b981';
-    }
-
-    itemDropsRef.current.push({
-      id: `drop-${Date.now()}-${Math.random()}`,
-      x,
-      y,
-      radius: 12,
-      type,
-      amount: type === DropType.HEALTH ? 25 : type === DropType.AMMO ? 40 : type === DropType.PISTOL_CLIP ? 1 : 25,
-      color,
-      pulseTimer: 0,
-    });
-  };
-
-  const triggerRocketExplosion = (expX: number, expY: number, damage: number) => {
-    sound.playExplosion();
-    screenShakeRef.current = Math.min(40, screenShakeRef.current + 30);
-    muzzleFlashIntensityRef.current = 1.0;
-    flashLightsRef.current.push({
-      x: expX,
-      y: expY,
-      radius: 260,
-      color: 'orange',
-      alpha: 0.72,
-      decay: 2.6,
-    });
-
-    // 1. Fire shockwave ring expanding rapidly
-    particlesRef.current.push({
-      id: `rocket-ring-${Date.now()}-${Math.random()}`,
-      type: 'FIRE_RING',
-      x: expX,
-      y: expY,
-      vx: 0,
-      vy: 0,
-      radius: 12,
-      growthSpeed: 450,
-      color: '#ff4500',
-      alpha: 1.0,
-      decay: 0.08,
-    });
-
-    // 2. Central expanding explosion fireball
-    particlesRef.current.push({
-      id: `rocket-exp-${Date.now()}-${Math.random()}`,
-      type: 'EXPLOSION',
-      x: expX,
-      y: expY,
-      vx: 0,
-      vy: 0,
-      radius: 18,
-      growthSpeed: 280,
-      color: '#ffaa00',
-      alpha: 1.0,
-      decay: 0.06,
-    });
-
-    // 3. Thick smoke clouds rising from blast
-    for (let s = 0; s < 10; s++) {
-      const smokeAngle = Math.random() * Math.PI * 2;
-      const smokeSpeed = 30 + Math.random() * 80;
-      particlesRef.current.push({
-        id: `exp-smoke-${Date.now()}-${s}-${Math.random()}`,
-        type: 'SMOKE',
-        x: expX,
-        y: expY,
-        vx: Math.cos(smokeAngle) * smokeSpeed,
-        vy: Math.sin(smokeAngle) * smokeSpeed,
-        radius: 12 + Math.random() * 12,
-        growthSpeed: 28 + Math.random() * 15,
-        color: Math.random() < 0.5 ? 'rgba(51, 65, 85, 0.7)' : 'rgba(30, 41, 59, 0.6)',
-        alpha: 0.8,
-        decay: 0.02 + Math.random() * 0.02,
-      });
-    }
-
-    // 4. Shrapnel / Fire sparks in 360 degrees
-    for (let k = 0; k < 28; k++) {
-      const sparkAngle = Math.random() * Math.PI * 2;
-      const sparkSpeed = 120 + Math.random() * 320;
-      particlesRef.current.push({
-        id: `rocket-spark-${Date.now()}-${k}-${Math.random()}`,
-        type: 'SPARK',
-        x: expX,
-        y: expY,
-        vx: Math.cos(sparkAngle) * sparkSpeed,
-        vy: Math.sin(sparkAngle) * sparkSpeed,
-        radius: 2.5 + Math.random() * 3,
-        color: k % 3 === 0 ? '#ffffff' : k % 3 === 1 ? '#fbbf24' : '#ef4444',
-        alpha: 1,
-        decay: 0.025 + Math.random() * 0.035,
-      });
-    }
-
-    // 5. Scorch crater on floor canvas
-    bloodSplatsRef.current.push({
-      x: expX,
-      y: expY,
-      radius: 32 + Math.random() * 16,
-      alpha: 0.75,
-      color: '#1c1917', // Scorched charcoal crater
-    });
-
-    // 6. AoE Damage, Knockback & Igniting nearby Zombies
-    const blastRadius = 180;
-    zombiesRef.current.forEach((z) => {
-      const dist = Math.hypot(z.x - expX, z.y - expY);
-      if (dist < blastRadius) {
-        const falloff = 1 - (dist / blastRadius) * 0.5;
-        const finalDmg = Math.round(damage * falloff);
-        z.hp -= finalDmg;
-        z.isStunned = true;
-        z.stunTimer = 0.45;
-
-        // Set nearby enemies on fire!
-        z.isOnFire = true;
-        z.burnTimer = 3.5;
-
-        const pushAngle = Math.atan2(z.y - expY, z.x - expX);
-        const kbForce = 650 * falloff * (playerRef.current.knockbackMult || 1);
-        z.knockbackX += Math.cos(pushAngle) * kbForce;
-        z.knockbackY += Math.sin(pushAngle) * kbForce;
+      if ((p.vampirism || 0) > 0 && p.hp < p.maxHp) {
+        p.hp = Math.min(p.maxHp, p.hp + (p.vampirism || 0));
       }
-    });
-  };
 
-  const triggerCarpetBombExplosion = (expX: number, expY: number, damage: number) => {
-    sound.playExplosion();
-    screenShakeRef.current = Math.min(50, screenShakeRef.current + 38);
-    muzzleFlashIntensityRef.current = 1.0;
-    flashLightsRef.current.push({
-      x: expX,
-      y: expY,
-      radius: 320,
-      color: 'red',
-      alpha: 0.8,
-      decay: 2.2,
-    });
-
-    // 1. Double expanding stealth fire rings (stealth crimson + high-heat core)
-    particlesRef.current.push({
-      id: `bomb-ring1-${Date.now()}-${Math.random()}`,
-      type: 'FIRE_RING',
-      x: expX,
-      y: expY,
-      vx: 0,
-      vy: 0,
-      radius: 16,
-      growthSpeed: 520,
-      color: '#f43f5e', // Stealth Laser Crimson
-      alpha: 1.0,
-      decay: 0.07,
-    });
-    particlesRef.current.push({
-      id: `bomb-ring2-${Date.now()}-${Math.random()}`,
-      type: 'FIRE_RING',
-      x: expX,
-      y: expY,
-      vx: 0,
-      vy: 0,
-      radius: 10,
-      growthSpeed: 380,
-      color: '#fbbf24', // Amber core
-      alpha: 1.0,
-      decay: 0.09,
-    });
-
-    // 2. Central blast fireball
-    particlesRef.current.push({
-      id: `bomb-exp-${Date.now()}-${Math.random()}`,
-      type: 'EXPLOSION',
-      x: expX,
-      y: expY,
-      vx: 0,
-      vy: 0,
-      radius: 24,
-      growthSpeed: 340,
-      color: '#ff2255',
-      alpha: 1.0,
-      decay: 0.05,
-    });
-
-    // 3. Cluster submunition pop rings (carpet bombing staggered blastlets)
-    for (let c = 0; c < 5; c++) {
-      const clusterAngle = (c / 5) * Math.PI * 2 + Math.random() * 0.4;
-      const clusterDist = 40 + Math.random() * 50;
-      const subX = expX + Math.cos(clusterAngle) * clusterDist;
-      const subY = expY + Math.sin(clusterAngle) * clusterDist;
-
-      particlesRef.current.push({
-        id: `bomb-sub-${Date.now()}-${c}-${Math.random()}`,
-        type: 'FIRE_RING',
-        x: subX,
-        y: subY,
-        vx: 0,
-        vy: 0,
-        radius: 8,
-        growthSpeed: 290,
-        color: c % 2 === 0 ? '#ef4444' : '#f59e0b',
-        alpha: 0.9,
-        decay: 0.1,
-      });
-
-      // Mini craters for the submunitions
-      bloodSplatsRef.current.push({
-        x: subX,
-        y: subY,
-        radius: 18 + Math.random() * 10,
-        alpha: 0.7,
-        color: '#0f172a',
-      });
-    }
-
-    // 4. Heavy tactical dark smoke clouds
-    for (let s = 0; s < 14; s++) {
-      const smokeAngle = Math.random() * Math.PI * 2;
-      const smokeSpeed = 35 + Math.random() * 95;
-      particlesRef.current.push({
-        id: `bomb-smoke-${Date.now()}-${s}-${Math.random()}`,
-        type: 'SMOKE',
-        x: expX,
-        y: expY,
-        vx: Math.cos(smokeAngle) * smokeSpeed,
-        vy: Math.sin(smokeAngle) * smokeSpeed,
-        radius: 16 + Math.random() * 14,
-        growthSpeed: 32 + Math.random() * 20,
-        color: Math.random() < 0.6 ? 'rgba(15, 23, 42, 0.85)' : 'rgba(30, 41, 59, 0.75)',
-        alpha: 0.85,
-        decay: 0.02 + Math.random() * 0.015,
-      });
-    }
-
-    // 5. Fiery shrapnel sparks
-    for (let k = 0; k < 36; k++) {
-      const sparkAngle = Math.random() * Math.PI * 2;
-      const sparkSpeed = 140 + Math.random() * 380;
-      particlesRef.current.push({
-        id: `bomb-spark-${Date.now()}-${k}-${Math.random()}`,
-        type: 'SPARK',
-        x: expX,
-        y: expY,
-        vx: Math.cos(sparkAngle) * sparkSpeed,
-        vy: Math.sin(sparkAngle) * sparkSpeed,
-        radius: 3 + Math.random() * 3,
-        color: k % 3 === 0 ? '#ffffff' : k % 3 === 1 ? '#f43f5e' : '#fb923c',
-        alpha: 1,
-        decay: 0.025 + Math.random() * 0.03,
-      });
-    }
-
-    // 6. Huge scorched carpet bomb crater
-    bloodSplatsRef.current.push({
-      x: expX,
-      y: expY,
-      radius: 46 + Math.random() * 16,
-      alpha: 0.85,
-      color: '#09090b', // Deep charcoal stealth crater
-    });
-
-    // 7. Devastating AoE damage, knockback and carpet napalm ignition
-    const blastRadius = 240;
-    zombiesRef.current.forEach((z) => {
-      const dist = Math.hypot(z.x - expX, z.y - expY);
-      if (dist < blastRadius) {
-        const falloff = 1 - (dist / blastRadius) * 0.45;
-        const finalDmg = Math.round(damage * falloff);
-        z.hp -= finalDmg;
-        z.isStunned = true;
-        z.stunTimer = 0.75;
-
-        // Severe burn
-        z.isOnFire = true;
-        z.burnTimer = 5.0;
-
-        const pushAngle = Math.atan2(z.y - expY, z.x - expX);
-        const kbForce = 780 * falloff * (playerRef.current.knockbackMult || 1);
-        z.knockbackX += Math.cos(pushAngle) * kbForce;
-        z.knockbackY += Math.sin(pushAngle) * kbForce;
-      }
-    });
-  };
-
-  const reloadActiveWeapon = () => {
-    const p = playerRef.current;
-    let w = p.weapons[p.currentWeapon];
-    if (!w) {
-      p.currentWeapon = WeaponType.PISTOL;
-      if (!p.weapons[WeaponType.PISTOL]) {
-        p.weapons[WeaponType.PISTOL] = JSON.parse(JSON.stringify(INITIAL_WEAPONS[WeaponType.PISTOL]));
-      }
-      w = p.weapons[WeaponType.PISTOL];
-    }
-    if (w && w.currentAmmo < w.ammoCapacity) {
-      w.currentAmmo = w.ammoCapacity;
-      sound.playReload();
-      syncHudPlayer();
-    }
-  };
-
-  // Trigger weapon shooting
-  const fireActiveWeapon = (angle: number) => {
-    const p = playerRef.current;
-    const now = Date.now();
-    let w = p.weapons[p.currentWeapon];
-
-    if (!w) {
-      p.currentWeapon = WeaponType.PISTOL;
-      if (!p.weapons[WeaponType.PISTOL]) {
-        p.weapons[WeaponType.PISTOL] = JSON.parse(JSON.stringify(INITIAL_WEAPONS[WeaponType.PISTOL]));
-      }
-      w = p.weapons[WeaponType.PISTOL];
-    }
-
-    if (!w) return;
-
-    // Check firing rate cooldown
-    const delay = 1000 / w.fireRate;
-    if (now - p.lastShotTime < delay) return;
-
-    p.lastShotTime = now;
-
-    const isRocket = p.currentWeapon === WeaponType.ROCKET_LAUNCHER;
-    const isFlame = p.currentWeapon === WeaponType.FLAMETHROWER;
-
-    if (isRocket) {
-      sound.playRocketLaunch();
-      screenShakeRef.current = Math.min(32, screenShakeRef.current + 22);
-      muzzleFlashIntensityRef.current = 1.0;
-      gunRecoilRef.current = 14;
-
-      p.x -= Math.cos(angle) * 12;
-      p.y -= Math.sin(angle) * 12;
-      p.x = Math.max(p.radius, Math.min(ARENA_SIZE - p.radius, p.x));
-      p.y = Math.max(p.radius, Math.min(ARENA_SIZE - p.radius, p.y));
-
-      const muzzleX = p.x + Math.cos(angle) * (p.radius + 20);
-      const muzzleY = p.y + Math.sin(angle) * (p.radius + 20);
-
-      // Backblast smoke behind player
-      for (let b = 0; b < 9; b++) {
-        const bbAngle = angle + Math.PI + (Math.random() * 0.7 - 0.35);
-        const bbSpeed = 75 + Math.random() * 135;
-        particlesRef.current.push({
-          id: `backblast-${Date.now()}-${b}-${Math.random()}`,
-          type: 'SMOKE',
-          x: p.x - Math.cos(angle) * 20,
-          y: p.y - Math.sin(angle) * 20,
-          vx: Math.cos(bbAngle) * bbSpeed,
-          vy: Math.sin(bbAngle) * bbSpeed,
-          radius: 8 + Math.random() * 7,
-          growthSpeed: 24,
-          color: b < 3 ? 'rgba(234, 88, 12, 0.65)' : 'rgba(100, 116, 139, 0.65)',
-          alpha: 0.8,
-          decay: 0.036 + Math.random() * 0.015,
-          rotation: Math.random() * Math.PI * 2,
-          rotSpeed: (Math.random() - 0.5) * 0.06,
+      if (z.isBoss) {
+        sound.playPowerup();
+        sound.playExplosion();
+        cam.trauma = Math.min(1, cam.trauma + 0.55);
+        cam.shake = Math.max(cam.shake, 12);
+        flashLightsRef.current.push({
+          x: z.x,
+          y: z.y,
+          radius: 260,
+          color: 'red',
+          alpha: 0.75,
+          decay: 1.8,
         });
-      }
-
-      bulletsRef.current.push({
-        id: `rocket-${Date.now()}-${Math.random()}`,
-        x: muzzleX,
-        y: muzzleY,
-        vx: Math.cos(angle) * w.bulletSpeed,
-        vy: Math.sin(angle) * w.bulletSpeed,
-        radius: 8,
-        damage: w.damage,
-        piercingRemaining: 1,
-        color: '#f97316',
-        distanceTraveled: 0,
-        maxDistance: 850,
-        ownerAngle: angle,
-        isRocket: true,
-      });
-
-      // Infinite ammo: no ammo consumption
-      return;
-    }
-
-    if (isFlame) {
-      sound.playFlamethrower();
-      screenShakeRef.current = Math.min(10, screenShakeRef.current + 1.0);
-      gunRecoilRef.current = 2.2;
-
-      const muzzleX = p.x + Math.cos(angle) * (p.radius + 20);
-      const muzzleY = p.y + Math.sin(angle) * (p.radius + 20);
-
-      const flameSpread = angle + (Math.random() * w.spread * 2 - w.spread);
-      const flameSpeed = w.bulletSpeed * (0.9 + Math.random() * 0.25);
-      const vx = Math.cos(flameSpread) * flameSpeed;
-      const vy = Math.sin(flameSpread) * flameSpeed;
-
-      // Invisible/spark hitbox projectile for cone damage & burning DOT
-      bulletsRef.current.push({
-        id: `flame-${Date.now()}-${Math.random()}`,
-        x: muzzleX,
-        y: muzzleY,
-        vx,
-        vy,
-        radius: 10,
-        flameMaxRadius: 34,
-        damage: w.damage,
-        piercingRemaining: w.piercing,
-        color: '#ff5500',
-        distanceTraveled: 0,
-        maxDistance: 360,
-        ownerAngle: angle,
-        isFlame: true,
-      });
-
-      // Push dense continuous spine points for renderFlamethrowerStream (zero fireballs)
-      const streamVx = Math.cos(angle + (Math.random() - 0.5) * 0.14) * (w.bulletSpeed * 1.05);
-      const streamVy = Math.sin(angle + (Math.random() - 0.5) * 0.14) * (w.bulletSpeed * 1.05);
-      flameStreamRef.current.push(
-        {
-          x: muzzleX + Math.cos(angle) * 7,
-          y: muzzleY + Math.sin(angle) * 7,
-          vx: streamVx,
-          vy: streamVy,
-          age: 0.025,
-          maxAge: 0.54,
-          seed: Math.random() * 100,
-        },
-        {
-          x: muzzleX,
-          y: muzzleY,
-          vx: streamVx,
-          vy: streamVy,
-          age: 0,
-          maxAge: 0.54,
-          seed: Math.random() * 100,
-        }
-      );
-      if (flameStreamRef.current.length > 90) {
-        flameStreamRef.current.splice(0, flameStreamRef.current.length - 90);
-      }
-
-      // Sharp directional incandescent sparks at nozzle (no round balls)
-      for (let fe = 0; fe < 2; fe++) {
-        const emberAngle = angle + (Math.random() * 0.65 - 0.325);
-        const emberSpeed = 140 + Math.random() * 180;
         particlesRef.current.push({
-          id: `ember-${Date.now()}-${fe}-${Math.random()}`,
-          type: 'SPARK',
-          x: muzzleX,
-          y: muzzleY,
-          vx: Math.cos(emberAngle) * emberSpeed,
-          vy: Math.sin(emberAngle) * emberSpeed,
-          radius: 1.5 + Math.random() * 1.6,
-          color: fe % 2 === 0 ? '#fef08a' : '#fb923c',
+          id: `boss-exp-${Math.random()}`,
+          x: z.x,
+          y: z.y,
+          vx: 0,
+          vy: 0,
+          radius: 75,
+          color: '#f43f5e',
           alpha: 0.95,
-          decay: 0.09,
+          decay: 1.4,
+          type: 'EXPLOSION',
         });
+        if (getWaterDepth(z.x, z.y) > 0.5) {
+          threeRendererRef.current?.triggerWaterRipple(z.x, z.y, 1.85);
+          sound.playWaterSplash(true);
+        }
+      } else {
+        sound.playZombieKill();
       }
 
-      return;
-    }
-
-    if (p.currentWeapon === WeaponType.VENOM_FRUIT) {
-      const vf = venomFruitStateRef.current;
-      const demonMode = vf.demonActive;
-      sound.playVenomShot(demonMode);
-      screenShakeRef.current = Math.min(12, screenShakeRef.current + (demonMode ? 3.5 : 1.8));
-      muzzleFlashIntensityRef.current = demonMode ? 0.85 : 0.55;
-      gunRecoilRef.current = demonMode ? 5 : 3;
-
-      const spreadA = angle + (Math.random() * w.spread * 2 - w.spread);
-      const muzzleX = p.x + Math.cos(spreadA) * (p.radius + 18);
-      const muzzleY = p.y + Math.sin(spreadA) * (p.radius + 18);
-
-      bulletsRef.current.push({
-        id: `venom-shot-${Date.now()}-${Math.random()}`,
-        x: muzzleX,
-        y: muzzleY,
-        vx: Math.cos(spreadA) * (demonMode ? w.bulletSpeed * 1.15 : w.bulletSpeed),
-        vy: Math.sin(spreadA) * (demonMode ? w.bulletSpeed * 1.15 : w.bulletSpeed),
-        radius: demonMode ? 15 : 6.8,
-        damage: demonMode ? Math.round(w.damage * 2.1) : w.damage,
-        piercingRemaining: demonMode ? 6 : w.piercing,
-        color: demonMode ? '#f43f5e' : '#a855f7',
-        distanceTraveled: 0,
-        maxDistance: demonMode ? 780 : 720,
-        ownerAngle: spreadA,
-        isVenom: true,
-        isVenomWave: demonMode,
-        weaponType: WeaponType.VENOM_FRUIT,
+      // Ground expanding liquid blood pool + 3D ballistic blood droplets
+      const isAcidZombie = z.type === ZombieType.TOXIC_SPITTER;
+      const bloodColor = isAcidZombie ? '#65a30d' : '#7f1d1d';
+      const targetPoolR = z.radius * (z.isBoss ? 1.75 : 1.15 + Math.random() * 0.6);
+      if (splatsRef.current.length > 260) {
+        splatsRef.current.shift();
+      }
+      splatsRef.current.push({
+        x: z.x,
+        y: z.y,
+        radius: Math.max(6, targetPoolR * 0.38),
+        targetRadius: targetPoolR,
+        alpha: 0.94,
+        color: bloodColor,
+        angle: Math.random() * Math.PI * 2,
+        stretch: 1 + Math.random() * 0.35,
+        isLiquid: true,
+        variant: Math.floor(Math.random() * 3),
       });
 
-      if (p.mythicSplitShot && p.mythicSplitShot > 0) {
-        [-0.2, 0.2].forEach((off, idx) => {
-          const sa = spreadA + off;
-          bulletsRef.current.push({
-            id: `venom-split-${Date.now()}-${idx}-${Math.random()}`,
-            x: muzzleX,
-            y: muzzleY,
-            vx: Math.cos(sa) * w.bulletSpeed,
-            vy: Math.sin(sa) * w.bulletSpeed,
-            radius: demonMode ? 11 : 5.5,
-            damage: Math.round(w.damage * (demonMode ? 1.5 : 0.9) * (p.mythicSplitShot || 1)),
-            piercingRemaining: demonMode ? 4 : w.piercing,
-            color: demonMode ? '#fb7185' : '#c084fc',
-            distanceTraveled: 0,
-            maxDistance: 680,
-            ownerAngle: sa,
-            isVenom: true,
-            isVenomWave: demonMode,
-            weaponType: WeaponType.VENOM_FRUIT,
-          });
+      // Directional splash streaks around body
+      const streakCount = z.isBoss ? 4 : 2;
+      for (let s = 0; s < streakCount; s++) {
+        const sa = Math.random() * Math.PI * 2;
+        const dist = z.radius * (0.7 + Math.random() * 1.15);
+        const sr = z.radius * (0.45 + Math.random() * 0.35);
+        if (splatsRef.current.length > 260) splatsRef.current.shift();
+        splatsRef.current.push({
+          x: z.x + Math.cos(sa) * dist,
+          y: z.y + Math.sin(sa) * dist,
+          radius: sr * 0.45,
+          targetRadius: sr,
+          alpha: 0.88,
+          color: bloodColor,
+          angle: sa,
+          stretch: 1.3 + Math.random() * 0.4,
+          isLiquid: true,
+          variant: (s + 1) % 3,
         });
       }
 
-      for (let vp = 0; vp < 3; vp++) {
-        const va = spreadA + (Math.random() - 0.5) * 0.7;
-        const vSpd = 65 + Math.random() * 90;
+      const burstCount = z.isBoss ? 22 : 10;
+      for (let i = 0; i < burstCount; i++) {
+        const ba = Math.random() * Math.PI * 2;
+        const bs = 70 + Math.random() * 215;
         particlesRef.current.push({
-          id: `venom-muzz-${Date.now()}-${vp}-${Math.random()}`,
-          type: 'SPARK',
-          x: muzzleX,
-          y: muzzleY,
-          vx: Math.cos(va) * vSpd,
-          vy: Math.sin(va) * vSpd,
-          radius: 2.2 + Math.random() * 2,
-          color: demonMode ? '#fb7185' : '#d8b4fe',
-          alpha: 0.9,
-          decay: 0.08,
+          id: `b-${Math.random()}`,
+          x: z.x,
+          y: z.y,
+          z: 10 + Math.random() * 14,
+          vx: Math.cos(ba) * bs,
+          vy: Math.sin(ba) * bs,
+          vz: 55 + Math.random() * 115,
+          drag: 3.5,
+          radius: 2.2 + Math.random() * 3.4,
+          color: isAcidZombie ? '#84cc16' : '#b91c1c',
+          alpha: 0.95,
+          decay: 1.4,
+          type: isAcidZombie ? 'TOXIC_ACID' : 'BLOOD',
         });
       }
 
-      // MYTHIC SINGULARITY: Radial Nova Shot burst every 3 shots
-      if (p.mythicSingularity && p.mythicSingularity > 0) {
-        mythicCombatRef.current.novaShotCounter += 1;
-        if (mythicCombatRef.current.novaShotCounter >= 3) {
-          mythicCombatRef.current.novaShotCounter = 0;
-          const novaCount = 12;
-          const novaDmg = Math.round(w.damage * (1.25 + (p.mythicSingularity - 1) * 0.4));
-          for (let ni = 0; ni < novaCount; ni++) {
-            const na = (ni * Math.PI * 2) / novaCount + spreadA * 0.25;
-            bulletsRef.current.push({
-              id: `nova-${Date.now()}-${ni}-${Math.random()}`,
-              x: p.x + Math.cos(na) * 20,
-              y: p.y + Math.sin(na) * 20,
-              vx: Math.cos(na) * 760,
-              vy: Math.sin(na) * 760,
-              radius: 6,
-              damage: novaDmg,
-              piercingRemaining: 4,
-              color: ni % 2 === 0 ? '#38bdf8' : '#f0abfc',
-              distanceTraveled: 0,
-              maxDistance: 560,
-              ownerAngle: na,
-              isRay: true,
-            });
+      // Epic Shatter Doctrine shrapnel
+      if ((p.shatterLevel || 0) > 0) {
+        sound.playShatterBurst();
+        const shardCount = 4 + (p.shatterLevel || 1) * 2;
+        const baseWeaponDmg = p.weapons[p.currentWeapon]?.damage || 15;
+        for (let s = 0; s < shardCount; s++) {
+          const sa = (s * Math.PI * 2) / shardCount + Math.random() * 0.35;
+          bulletsRef.current.push({
+            id: `shrap-${Math.random()}`,
+            x: z.x,
+            y: z.y,
+            vx: Math.cos(sa) * 520,
+            vy: Math.sin(sa) * 520,
+            radius: 4,
+            damage: Math.round(baseWeaponDmg * (0.55 + (p.shatterLevel || 1) * 0.2)),
+            piercingRemaining: 2,
+            color: '#fb923c',
+            distanceTraveled: 0,
+            maxDistance: 210,
+            ownerAngle: sa,
+            isShrapnel: true,
+          });
+        }
+      }
+
+      // Mythic Solar Phoenix supernova explosion on kill
+      if ((p.mythicSolarAura || 0) > 0) {
+        particlesRef.current.push({
+          id: `nova-${Math.random()}`,
+          x: z.x,
+          y: z.y,
+          vx: 0,
+          vy: 0,
+          radius: 18,
+          growthSpeed: 290,
+          color: '#fbbf24',
+          alpha: 0.9,
+          decay: 2.2,
+          type: 'FIRE_RING',
+        });
+        flashLightsRef.current.push({
+          x: z.x,
+          y: z.y,
+          radius: 140,
+          color: 'orange',
+          alpha: 0.45,
+          decay: 2.8,
+        });
+        for (let ni = 0; ni < zombiesRef.current.length; ni++) {
+          const oz = zombiesRef.current[ni];
+          if (oz.isDead || oz.id === z.id) continue;
+          const dSq = (oz.x - z.x) ** 2 + (oz.y - z.y) ** 2;
+          if (dSq < 115 * 115) {
+            oz.hp -= 28 * (p.mythicSolarAura || 1);
+            oz.isOnFire = true;
+            oz.burnTimer = 2.5;
           }
+        }
+      }
+
+      // Supply Drop chance (Health / Shield)
+      const dropChance = z.isBoss ? 1.0 : 0.08 + luckLevelRef.current * 0.015;
+      if (Math.random() < dropChance && dropsRef.current.length < 30) {
+        const dropIsShield = p.maxShield > 0 && Math.random() > 0.48;
+        dropsRef.current.push({
+          id: `drop-${Math.random()}`,
+          x: z.x,
+          y: z.y,
+          radius: 11,
+          type: dropIsShield ? DropType.SHIELD : DropType.HEALTH,
+          amount: dropIsShield ? 35 : 30,
+          color: dropIsShield ? '#22d3ee' : '#10b981',
+          pulseTimer: 0,
+        });
+      }
+
+      // Check Level Up trigger
+      if (p.xp >= p.xpNeeded && gameStateRef.current === GameState.PLAYING) {
+        setUpgradeOptions(
+          rollLevelUpOptions(p.level, updateCoins, luckLevelRef.current, p.acquiredUpgrades)
+        );
+        syncHud();
+        setAppState(GameState.LEVEL_UP);
+      }
+    };
+
+    const damageZombie = (z: Zombie, rawDmg: number, isCrit = false, hitAngle = 0) => {
+      if (z.isDead) return;
+      const p = playerRef.current;
+      z.hp -= rawDmg;
+      zombieHitFlashRef.current.set(z.id, performance.now());
+
+      const kbStrength = (isCrit ? 115 : 65) * (p.knockbackMult || 1) * (z.isBoss ? 0.15 : 1);
+      z.knockbackX += Math.cos(hitAngle) * kbStrength;
+      z.knockbackY += Math.sin(hitAngle) * kbStrength;
+
+      sound.playZombieHit();
+
+      addFloatingText(
+        z.x + (Math.random() - 0.5) * 14,
+        z.y - z.radius - 6,
+        isCrit ? `${Math.round(rawDmg)}!` : `${Math.round(rawDmg)}`,
+        isCrit ? '#fbbf24' : '#ffffff',
+        isCrit ? 1.25 : 0.95
+      );
+
+      // Ballistic 3D liquid blood droplets + directional arterial splatter behind zombie
+      const isAcid = z.type === ZombieType.TOXIC_SPITTER;
+      const dropCount = isCrit ? 6 : 4;
+      for (let b = 0; b < dropCount; b++) {
+        const ba = hitAngle + (Math.random() - 0.5) * 0.85;
+        const bs = 85 + Math.random() * 145;
+        particlesRef.current.push({
+          id: `hit-${Math.random()}`,
+          x: z.x + Math.cos(hitAngle) * (z.radius * 0.45),
+          y: z.y + Math.sin(hitAngle) * (z.radius * 0.45),
+          z: 12 + Math.random() * 8,
+          vx: Math.cos(ba) * bs,
+          vy: Math.sin(ba) * bs,
+          vz: 45 + Math.random() * 85,
+          drag: 3.8,
+          radius: 1.9 + Math.random() * 2.3,
+          color: isAcid ? '#84cc16' : '#dc2626',
+          alpha: 0.92,
+          decay: 1.75,
+          type: isAcid ? 'TOXIC_ACID' : 'BLOOD',
+        });
+      }
+
+      if (isCrit || Math.random() < 0.45) {
+        const dist = z.radius * (0.9 + Math.random() * 0.9);
+        const sr = z.radius * (isCrit ? 0.65 : 0.42);
+        if (splatsRef.current.length > 260) splatsRef.current.shift();
+        splatsRef.current.push({
+          x: z.x + Math.cos(hitAngle) * dist,
+          y: z.y + Math.sin(hitAngle) * dist,
+          radius: sr * 0.45,
+          targetRadius: sr,
+          alpha: 0.86,
+          color: isAcid ? '#65a30d' : '#7f1d1d',
+          angle: hitAngle + (Math.random() - 0.5) * 0.35,
+          stretch: 1.45,
+          isLiquid: true,
+          variant: Math.floor(Math.random() * 3),
+        });
+      }
+
+      if (z.hp <= 0) {
+        handleZombieDeath(z);
+      }
+    };
+
+    const triggerPlayerDeathSequence = (fatalAngle: number) => {
+      const p = playerRef.current;
+      if (dyingStateRef.current.active) return;
+
+      dyingStateRef.current = {
+        active: true,
+        timer: 0,
+        total: 2.25,
+        fatalAngle,
+        startX: p.x,
+        startY: p.y,
+        recoilX: Math.cos(fatalAngle) * 38,
+        recoilY: Math.sin(fatalAngle) * 38,
+        flatlinePlayed: false,
+        bodyFallPlayed: false,
+        bloodPoolRadius: 6,
+        droppedWeapon: {
+          type: p.currentWeapon,
+          x: p.x + Math.cos(p.angle) * 18,
+          y: p.y + Math.sin(p.angle) * 18,
+          vx: Math.cos(fatalAngle + 0.65) * 125,
+          vy: Math.sin(fatalAngle + 0.65) * 125,
+          angle: p.angle,
+          rotSpeed: 6.5,
+        },
+      };
+
+      cameraRef.current.trauma = 1.0;
+      cameraRef.current.shake = 16;
+      sound.playDeathImpact();
+    };
+
+    const applyDamageToPlayer = (dmg: number, sourceAngle: number) => {
+      const p = playerRef.current;
+      if (dyingStateRef.current.active) return;
+      const now = performance.now();
+      if (now - lastDamageTimeRef.current < 320) return;
+
+      // Temporal dodge chance
+      if ((p.dodgeChance || 0) > 0 && Math.random() < (p.dodgeChance || 0)) {
+        lastDamageTimeRef.current = now;
+        sound.playTemporalDodge();
+        addFloatingText(p.x, p.y - 26, 'DESVIO!', '#22d3ee', 1.15);
+        return;
+      }
+
+      lastDamageTimeRef.current = now;
+      shieldRechargeTimerRef.current = 4.2;
+      playerDamageFlashRef.current = 1.0;
+      cameraRef.current.trauma = Math.min(1, cameraRef.current.trauma + 0.42);
+      cameraRef.current.shake = Math.max(cameraRef.current.shake, 8);
+
+      let remaining = dmg;
+      if (p.shield > 0) {
+        const absorbed = Math.min(p.shield, remaining);
+        p.shield -= absorbed;
+        remaining -= absorbed;
+
+        // Kinetic shock shield perk
+        if ((p.shieldShockLevel || 0) > 0) {
+          sound.playChainLightning();
           particlesRef.current.push({
-            id: `nova-ring-${Date.now()}-${Math.random()}`,
-            type: 'MYTHIC_NOVA',
+            id: `shk-${Math.random()}`,
             x: p.x,
             y: p.y,
             vx: 0,
             vy: 0,
-            radius: 16,
+            radius: 22,
             growthSpeed: 420,
             color: '#38bdf8',
             alpha: 0.9,
-            decay: 0.045,
+            decay: 2.6,
+            type: 'PLASMA_RING',
           });
-          sound.playMythicBlast();
+          for (let i = 0; i < zombiesRef.current.length; i++) {
+            const z = zombiesRef.current[i];
+            if (z.isDead) continue;
+            const d = Math.hypot(z.x - p.x, z.y - p.y);
+            if (d < 165) {
+              const pa = Math.atan2(z.y - p.y, z.x - p.x);
+              z.knockbackX += Math.cos(pa) * 320;
+              z.knockbackY += Math.sin(pa) * 320;
+              z.isStunned = true;
+              z.stunTimer = 0.8 + (p.shieldShockLevel || 1) * 0.25;
+              damageZombie(z, 22 * (p.shieldShockLevel || 1), false, pa);
+            }
+          }
         }
       }
 
-      return;
-    }
-
-    const isRaygun = p.currentWeapon === WeaponType.RAYGUN;
-    const isRayRifle = p.currentWeapon === WeaponType.RAY_RIFLE;
-    const isLaserMinigun = p.currentWeapon === WeaponType.LASER_MINIGUN;
-
-    // Play dedicated authentic sounds per weapon
-    if (p.currentWeapon === WeaponType.PISTOL) {
-      sound.playPistol();
-    } else if (p.currentWeapon === WeaponType.MAGNUM) {
-      sound.playMagnum();
-    } else if (p.currentWeapon === WeaponType.SHOTGUN) {
-      sound.playShotgun();
-    } else if (p.currentWeapon === WeaponType.MACHINE_GUN) {
-      sound.playMachineGun();
-    } else if (p.currentWeapon === WeaponType.ASSAULT_RIFLE) {
-      sound.playAssaultRifle();
-    } else if (p.currentWeapon === WeaponType.LMG) {
-      sound.playLmg();
-    } else if (p.currentWeapon === WeaponType.MINIGUN) {
-      sound.playMinigun();
-    } else if (p.currentWeapon === WeaponType.SNIPER) {
-      sound.playSniper();
-    } else if (p.currentWeapon === WeaponType.PLASMA_RIFLE) {
-      sound.playShoot(true);
-    } else if (p.currentWeapon === WeaponType.RAYGUN) {
-      sound.playRaygun();
-    } else if (p.currentWeapon === WeaponType.RAY_RIFLE) {
-      sound.playRayRifle();
-    } else if (p.currentWeapon === WeaponType.LASER_MINIGUN) {
-      sound.playLaserMinigun();
-    } else {
-      sound.playShoot(false);
-    }
-
-    // Dynamic recoil parameters based on weapon
-    const isPlasma = p.currentWeapon === WeaponType.PLASMA_RIFLE;
-    const isShotgun = p.currentWeapon === WeaponType.SHOTGUN;
-    const isMagnum = p.currentWeapon === WeaponType.MAGNUM;
-    const isMG = p.currentWeapon === WeaponType.MACHINE_GUN;
-    const isAR = p.currentWeapon === WeaponType.ASSAULT_RIFLE;
-    const isLMG = p.currentWeapon === WeaponType.LMG;
-    const isMinigun = p.currentWeapon === WeaponType.MINIGUN;
-    const isSniper = p.currentWeapon === WeaponType.SNIPER;
-    const isHeavyBallistic = isShotgun || isSniper || isMagnum;
-
-    const shakeAmt = isLaserMinigun
-      ? 1.5
-      : isSniper
-        ? 14
-        : isRayRifle
-          ? 7
-          : isRaygun
-            ? 5
-            : isPlasma
-              ? 12
-              : isShotgun
-                ? 10
-                : isMagnum
-                  ? 8
-                  : isLMG || isMinigun
-                    ? 3.2
-                    : isAR
-                      ? 4.2
-                      : isMG
-                        ? 2.5
-                        : 3.5;
-    const recoilKick = isLaserMinigun
-      ? 2
-      : isSniper
-        ? 12
-        : isRayRifle
-          ? 7
-          : isRaygun
-            ? 5
-            : isPlasma
-              ? 11
-              : isShotgun
-                ? 9
-                : isMagnum
-                  ? 8.5
-                  : isAR || isLMG
-                    ? 5.2
-                    : isMG || isMinigun
-                      ? 4
-                      : 5.5;
-    const pushbackForce = isLaserMinigun
-      ? 1.0
-      : isSniper
-        ? 9.5
-        : isRayRifle
-          ? 3.5
-          : isRaygun
-            ? 2.5
-            : isPlasma
-              ? 7
-              : isShotgun
-                ? 8.5
-                : isMagnum
-                  ? 5.5
-                  : isAR || isLMG
-                    ? 2.8
-                    : isMG || isMinigun
-                      ? 1.8
-                      : 2.5;
-    const bloomIncrease = isLaserMinigun
-      ? 0.002
-      : isSniper
-        ? 0.014
-        : isRayRifle
-          ? 0.008
-          : isRaygun
-            ? 0.01
-            : isPlasma
-              ? 0.005
-              : isShotgun
-                ? 0.012
-                : isMG || isMinigun
-                  ? 0.022
-                  : 0.014;
-
-    // Apply screen shake
-    screenShakeRef.current = Math.min(18, screenShakeRef.current + shakeAmt);
-
-    // Apply muzzle flash illumination
-    muzzleFlashIntensityRef.current = 1.0;
-
-    // Apply visual recoil on weapon sprite
-    gunRecoilRef.current = recoilKick;
-
-    // Apply physical pushback (recoil kickback force)
-    p.x -= Math.cos(angle) * pushbackForce;
-    p.y -= Math.sin(angle) * pushbackForce;
-    p.x = Math.max(p.radius, Math.min(ARENA_SIZE - p.radius, p.x));
-    p.y = Math.max(p.radius, Math.min(ARENA_SIZE - p.radius, p.y));
-
-    // Increase dynamic spread bloom
-    dynamicSpreadRef.current = Math.min(0.18, dynamicSpreadRef.current + bloomIncrease);
-
-    // Bullet spawning parameters
-    const bulletRadius = isRaygun
-      ? 8
-      : isRayRifle
-        ? 7
-        : isLaserMinigun
-          ? 5
-          : isPlasma
-            ? 10
-            : isSniper
-              ? 6.5
-              : isMagnum
-                ? 5.2
-                : isHeavyBallistic
-                  ? 4.5
-                  : 4;
-    const bColor = w.color;
-    const bSpeed = w.bulletSpeed;
-
-    // Create muzzle flash particles (calibrated per firearm barrel length)
-    const barrelLenOffset = isSniper ? 26 : isLMG || isMinigun || isAR ? 21 : isShotgun || isMagnum ? 18 : 15;
-    const muzzleX = p.x + Math.cos(angle) * (p.radius + barrelLenOffset);
-    const muzzleY = p.y + Math.sin(angle) * (p.radius + barrelLenOffset);
-
-    // Spawn nice muzzle flash sparks
-    const sparkCount = isPlasma ? 8 : (isRaygun || isRayRifle || isLaserMinigun) ? 6 : 5;
-    for (let i = 0; i < sparkCount; i++) {
-      const flashAngle = angle + (Math.random() * 0.5 - 0.25);
-      const flashSpeed = (isPlasma || isLaserMinigun ? 90 : 60) + Math.random() * (isPlasma ? 140 : 110);
-      particlesRef.current.push({
-        id: `muzzle-${Date.now()}-${i}-${Math.random()}`,
-        type: 'MUZZLE',
-        x: muzzleX,
-        y: muzzleY,
-        vx: Math.cos(flashAngle) * flashSpeed,
-        vy: Math.sin(flashAngle) * flashSpeed,
-        radius: (isPlasma ? 3 : 2) + Math.random() * 3,
-        color: bColor,
-        alpha: 1,
-        decay: isPlasma ? 0.15 + Math.random() * 0.1 : 0.1 + Math.random() * 0.1,
-      });
-    }
-
-    if (isRaygun || isRayRifle) {
-      // Ray Ring particle effect
-      particlesRef.current.push({
-        id: `ray-ring-${Date.now()}-${Math.random()}`,
-        type: 'RAY_RING',
-        x: muzzleX,
-        y: muzzleY,
-        vx: (p.vx || 0) * 0.2,
-        vy: (p.vy || 0) * 0.2,
-        radius: 3,
-        growthSpeed: 160,
-        color: bColor,
-        alpha: 1.0,
-        decay: 0.15,
-      });
-    }
-
-    if (isPlasma) {
-      // 1. Spawning dynamic expanding plasma energy rings (concentric shockwaves)
-      particlesRef.current.push({
-        id: `plasma-ring-${Date.now()}-${Math.random()}`,
-        type: 'PLASMA_RING',
-        x: muzzleX,
-        y: muzzleY,
-        vx: (p.vx || 0) * 0.2, // move slightly with player
-        vy: (p.vy || 0) * 0.2,
-        radius: 4,
-        growthSpeed: 190, // expands fast
-        color: '#38bdf8', // beautiful cyan glow
-        alpha: 1.0,
-        decay: 0.14, // fades out quickly
-      });
-
-      // 2. Crackling electricity lightning arcs propagating forward!
-      for (let arcIndex = 0; arcIndex < 3; arcIndex++) {
-        const arcPoints: { x: number; y: number }[] = [];
-        let currX = muzzleX;
-        let currY = muzzleY;
-        const baseAngle = angle + (Math.random() * 0.8 - 0.4);
-        
-        // Generate a jagged line of 4 segments
-        for (let seg = 0; seg < 4; seg++) {
-          const segLength = 8 + Math.random() * 10;
-          const segAngle = baseAngle + (Math.random() * 0.6 - 0.3);
-          currX += Math.cos(segAngle) * segLength;
-          currY += Math.sin(segAngle) * segLength;
-          arcPoints.push({ x: currX, y: currY });
-        }
-
-        particlesRef.current.push({
-          id: `energy-arc-${Date.now()}-${arcIndex}-${Math.random()}`,
-          type: 'ENERGY_ARC',
-          x: muzzleX,
-          y: muzzleY,
-          vx: (p.vx || 0) * 0.1,
-          vy: (p.vy || 0) * 0.1,
-          radius: 2,
-          color: '#38bdf8', // cyan lightning
-          alpha: 1.0,
-          decay: 0.25, // stays for only 4-5 frames
-          points: arcPoints,
-        });
-      }
-
-      // 3. Swirling tangent orbs/sparks circling the muzzle path
-      for (let s = 0; s < 4; s++) {
-        const swirlAngle = angle + (Math.random() * Math.PI * 2);
-        const swirlSpeed = 80 + Math.random() * 90;
-        particlesRef.current.push({
-          id: `swirl-${Date.now()}-${s}-${Math.random()}`,
-          type: 'SPARK',
-          x: muzzleX + Math.cos(swirlAngle) * 8,
-          y: muzzleY + Math.sin(swirlAngle) * 8,
-          vx: Math.cos(swirlAngle + Math.PI / 2 + (Math.random() * 0.4 - 0.2)) * swirlSpeed,
-          vy: Math.sin(swirlAngle + Math.PI / 2 + (Math.random() * 0.4 - 0.2)) * swirlSpeed,
-          radius: 1.5 + Math.random() * 2,
-          color: '#e0f2fe', // hot glowing cyan-white
-          alpha: 1.0,
-          decay: 0.15 + Math.random() * 0.1,
-        });
-      }
-    } else {
-      // Firearms (Pistol, Magnum, Shotgun, SMG, Assault Rifle, LMG, Minigun, Sniper) muzzle flash + realistic gunsmoke
-      const flareColor = isShotgun
-        ? 'rgba(248, 113, 113, 0.95)'
-        : isSniper
-          ? 'rgba(253, 224, 71, 0.96)'
-          : isMG
-            ? 'rgba(192, 132, 252, 0.95)'
-            : 'rgba(251, 191, 36, 0.95)';
-      const flareRadius = isSniper ? 16 : isShotgun ? 14 : isMagnum ? 11 : isAR || isLMG ? 9 : isMG || isMinigun ? 8 : 7;
-      const flareGrowth = isSniper ? 52 : isShotgun ? 45 : isMagnum ? 34 : 24;
-      const flareDecay = isShotgun || isSniper ? 0.24 : 0.30;
-
-      particlesRef.current.push({
-        id: `muzzle-flare-${Date.now()}-${Math.random()}`,
-        type: 'MUZZLE_FLARE',
-        x: muzzleX,
-        y: muzzleY,
-        vx: (p.vx || 0) * 0.15,
-        vy: (p.vy || 0) * 0.15,
-        radius: flareRadius,
-        growthSpeed: flareGrowth,
-        color: flareColor,
-        alpha: 1.0,
-        decay: flareDecay,
-      });
-
-      // Realistic multi-stage gunsmoke plumes for ALL firearms
-      const smokeCount = isShotgun
-        ? 10
-        : isSniper
-          ? 8
-          : isMagnum
-            ? 6
-            : isAR || isLMG
-              ? 4
-              : isMG || isMinigun
-                ? 3
-                : 4; // Pistol
-      const maxSmokeSpread = isShotgun ? 0.52 : isSniper ? 0.30 : isMagnum ? 0.38 : 0.28;
-      const smokeColors = ['#e2e8f0', '#cbd5e1', '#94a3b8', '#64748b'];
-
-      // Initial burnt-powder hot flash puff right at barrel exit
-      particlesRef.current.push({
-        id: `gunsmoke-hot-${Date.now()}-${Math.random()}`,
-        type: 'SMOKE',
-        x: muzzleX + Math.cos(angle) * 3,
-        y: muzzleY + Math.sin(angle) * 3,
-        vx: Math.cos(angle) * (isShotgun || isSniper ? 95 : 55) + (p.vx || 0) * 0.15,
-        vy: Math.sin(angle) * (isShotgun || isSniper ? 95 : 55) + (p.vy || 0) * 0.15,
-        radius: isShotgun || isSniper ? 6.8 : 4.6,
-        growthSpeed: isShotgun || isSniper ? 30 : 18,
-        color: 'rgba(234, 88, 12, 0.58)',
-        alpha: 0.52,
-        decay: 0.036,
-        rotation: Math.random() * Math.PI * 2,
-        rotSpeed: (Math.random() - 0.5) * 0.09,
-      });
-
-      for (let s = 0; s < smokeCount; s++) {
-        const smokeAngle = angle + (Math.random() * maxSmokeSpread * 2 - maxSmokeSpread);
-        const smokeSpeed =
-          (isShotgun || isSniper ? 78 : isMagnum ? 62 : 44) +
-          Math.random() * (isShotgun || isSniper ? 110 : 62);
-        const chosenColor = smokeColors[s % smokeColors.length];
-        const baseRad = isShotgun || isSniper ? 6.5 : isMagnum ? 5.6 : isAR || isLMG ? 4.8 : 4.2;
-
-        particlesRef.current.push({
-          id: `gunsmoke-${Date.now()}-${s}-${Math.random()}`,
-          type: 'SMOKE',
-          x: muzzleX + Math.cos(smokeAngle) * (s * 3.4),
-          y: muzzleY + Math.sin(smokeAngle) * (s * 3.4),
-          vx: Math.cos(smokeAngle) * smokeSpeed + (p.vx || 0) * 0.12,
-          vy: Math.sin(smokeAngle) * smokeSpeed + (p.vy || 0) * 0.12,
-          radius: baseRad + Math.random() * 4.0,
-          growthSpeed: (isShotgun || isSniper ? 26 : 16) + Math.random() * 9,
-          color: chosenColor,
-          alpha: 0.48 + Math.random() * 0.24,
-          decay: isShotgun || isSniper ? 0.012 + Math.random() * 0.007 : 0.015 + Math.random() * 0.009,
-          rotation: Math.random() * Math.PI * 2,
-          rotSpeed: (Math.random() - 0.5) * 0.075,
-        });
-      }
-
-      // Thin curling smoke wisps drifting slowly from the hot barrel
-      const wispCount = isHeavyBallistic ? 2 : 1;
-      for (let wc = 0; wc < wispCount; wc++) {
-        if (wc === 0 || Math.random() < 0.75) {
-          const wispAngle = angle + (Math.random() - 0.5) * 0.35;
+      if (remaining > 0) {
+        p.hp = Math.max(0, p.hp - remaining);
+        sound.playPlayerHit();
+        for (let pb = 0; pb < 4; pb++) {
+          const ba = sourceAngle + (Math.random() - 0.5) * 1.1;
+          const bs = 60 + Math.random() * 90;
           particlesRef.current.push({
-            id: `wisp-smoke-${Date.now()}-${wc}-${Math.random()}`,
-            type: 'SMOKE',
-            x: muzzleX + Math.cos(angle) * (2 + wc * 4),
-            y: muzzleY + Math.sin(angle) * (2 + wc * 4),
-            vx: Math.cos(wispAngle) * (18 + wc * 12) + (p.vx || 0) * 0.08,
-            vy: Math.sin(wispAngle) * (18 + wc * 12) - 20 + (p.vy || 0) * 0.08,
-            radius: 3.4 + Math.random() * 2.2,
-            growthSpeed: 11.5,
-            color: '#e2e8f0',
-            alpha: 0.38,
-            decay: 0.010,
-            rotation: Math.random() * Math.PI * 2,
-            rotSpeed: (Math.random() - 0.5) * 0.05,
+            id: `pblood-${Math.random()}`,
+            x: p.x,
+            y: p.y,
+            z: 14,
+            vx: Math.cos(ba) * bs,
+            vy: Math.sin(ba) * bs,
+            vz: 40 + Math.random() * 65,
+            drag: 4,
+            radius: 1.8 + Math.random() * 1.8,
+            color: '#b91c1c',
+            alpha: 0.9,
+            decay: 1.8,
+            type: 'BLOOD',
           });
         }
+      } else {
+        sound.playZombieHit();
       }
 
-      // Side muzzle-brake vents (Sniper .50 BMG) or revolver cylinder gap gas puffs (Magnum)
-      if (isSniper || isMagnum) {
-        const ventBaseX = isSniper ? muzzleX - Math.cos(angle) * 4 : p.x + Math.cos(angle) * (p.radius + 7);
-        const ventBaseY = isSniper ? muzzleY - Math.sin(angle) * 4 : p.y + Math.sin(angle) * (p.radius + 7);
-        [-1, 1].forEach((side) => {
-          const ventAngle = angle + side * (Math.PI * 0.55) + (Math.random() - 0.5) * 0.25;
-          const ventSpeed = (isSniper ? 115 : 68) + Math.random() * 45;
-          particlesRef.current.push({
-            id: `side-smoke-${Date.now()}-${side}-${Math.random()}`,
-            type: 'SMOKE',
-            x: ventBaseX,
-            y: ventBaseY,
-            vx: Math.cos(ventAngle) * ventSpeed + (p.vx || 0) * 0.1,
-            vy: Math.sin(ventAngle) * ventSpeed + (p.vy || 0) * 0.1,
-            radius: isSniper ? 5.6 : 4.2,
-            growthSpeed: isSniper ? 24 : 15,
-            color: '#cbd5e1',
-            alpha: 0.48,
-            decay: 0.015,
-            rotation: Math.random() * Math.PI * 2,
-            rotSpeed: side * 0.06,
-          });
-        });
+      if (p.hp <= 0) {
+        triggerPlayerDeathSequence(sourceAngle);
       }
-    }
+      syncHud();
+    };
 
-    const currentSpread = w.spread + dynamicSpreadRef.current;
-    const isPyroSkinIgnite =
-      p.equippedSkin === 'skin_pyro_igniter' && Math.random() < 0.22;
+    const fireConventionalWeapon = (nowSec: number) => {
+      const p = playerRef.current;
+      const wStats = p.weapons[p.currentWeapon];
+      if (!wStats) return;
 
-    if (isPyroSkinIgnite) {
-      particlesRef.current.push({
-        id: `pyro-muzzle-${Date.now()}-${Math.random()}`,
-        type: 'FLAME',
-        x: muzzleX,
-        y: muzzleY,
-        vx: Math.cos(angle) * 140,
-        vy: Math.sin(angle) * 140,
-        radius: 4.5,
-        color: '#fb923c',
-        alpha: 0.9,
-        decay: 0.1,
-      });
-    }
+      const interval = 1 / Math.max(0.5, wStats.fireRate);
+      if (nowSec - p.lastShotTime < interval) return;
+      p.lastShotTime = nowSec;
 
-    // Shotgun fires organic, randomized buckshot scatter (never in a rigid line)
-    if (isShotgun) {
-      const pelletCount = 7; // Generous 7-pellet buckshot cloud
-      for (let i = 0; i < pelletCount; i++) {
-        // Organic, natural bell-curve scatter inside the cone
-        const scatterOffset = (Math.random() + Math.random() - 1) * currentSpread * 1.35;
-        const finalAngle = angle + scatterOffset;
+      const cam = cameraRef.current;
+      const currentSpread = wStats.spread + weaponBloomRef.current;
+      const baseSpeed = wStats.bulletSpeed;
+      const hasPyroIgnite = p.equippedSkin === 'skin_pyro_igniter' && Math.random() < 0.22;
 
-        // Randomize pellet velocity so they don't form a flat rigid arc!
-        const speedMultiplier = 0.82 + Math.random() * 0.36; // 82% to 118% speed
-        const pelletSpeed = bSpeed * speedMultiplier;
+      let barrelOffset = 18;
+      let muzzleColor = '#fbbf24';
+      let lightColor: 'amber' | 'orange' | 'cyan' = 'amber';
+      let casingColor = '#f59e0b';
+      let isShell = false;
 
-        // Slight natural muzzle jitter along perpendicular axis
-        const perpAngle = angle + Math.PI / 2;
-        const jitterDist = (Math.random() - 0.5) * 5;
-        const pelletX = muzzleX + Math.cos(perpAngle) * jitterDist;
-        const pelletY = muzzleY + Math.sin(perpAngle) * jitterDist;
+      if (p.currentWeapon === WeaponType.GLOCK_19) {
+        barrelOffset = 17;
+        muzzleColor = '#fbbf24';
+        lightColor = 'amber';
+        casingColor = '#f59e0b';
+        sound.playGlock19();
 
-        // Variable pellet size and falloff distance for true organic depth
-        const pelletRadius = bulletRadius * (0.8 + Math.random() * 0.45);
-        const maxRange = 380 + Math.random() * 120;
-        
+        cam.shake = Math.max(cam.shake, 3.4);
+        weaponRecoilRef.current = Math.min(10, weaponRecoilRef.current + 5.2);
+        cam.recoilVx -= Math.cos(p.angle) * 44;
+        cam.recoilVy -= Math.sin(p.angle) * 44;
+        weaponBloomRef.current = Math.min(0.11, weaponBloomRef.current + 0.012);
+        cam.trauma = Math.min(1, cam.trauma + 0.08);
+        cam.zoomImpulse -= 0.004;
+        cam.rollVel += (Math.random() > 0.5 ? 1 : -1) * 0.018;
+
+        const shotAngle = p.angle + (Math.random() - 0.5) * currentSpread;
+        const bx = p.x + Math.cos(p.angle) * (p.radius + barrelOffset);
+        const by = p.y + Math.sin(p.angle) * (p.radius + barrelOffset);
         bulletsRef.current.push({
-          id: `bullet-${Date.now()}-${i}-${Math.random()}`,
-          x: pelletX,
-          y: pelletY,
-          vx: Math.cos(finalAngle) * pelletSpeed,
-          vy: Math.sin(finalAngle) * pelletSpeed,
-          radius: pelletRadius,
-          damage: w.damage,
-          piercingRemaining: w.piercing,
-          color: isPyroSkinIgnite ? '#fb923c' : bColor,
+          id: `b-${Math.random()}`,
+          x: bx,
+          y: by,
+          vx: Math.cos(shotAngle) * baseSpeed,
+          vy: Math.sin(shotAngle) * baseSpeed,
+          radius: 3.8,
+          damage: wStats.damage,
+          piercingRemaining: wStats.piercing,
+          color: wStats.color,
           distanceTraveled: 0,
-          maxDistance: maxRange,
-          ownerAngle: angle,
-          weaponType: WeaponType.SHOTGUN,
-          isIgnite: isPyroSkinIgnite,
+          maxDistance: 680,
+          ownerAngle: shotAngle,
+          weaponType: WeaponType.GLOCK_19,
+          isIgnite: hasPyroIgnite,
         });
-      }
-    } else {
-      // Standard single bullet (Pistol, Magnum, Assault Rifle, LMG, Sniper, Machine Gun, Plasma, Minigun, Laser Minigun, etc.)
-      const finalAngle = angle + (Math.random() * currentSpread * 2 - currentSpread);
-      bulletsRef.current.push({
-        id: `bullet-${Date.now()}-${Math.random()}`,
-        x: muzzleX,
-        y: muzzleY,
-        vx: Math.cos(finalAngle) * bSpeed,
-        vy: Math.sin(finalAngle) * bSpeed,
-        radius: bulletRadius,
-        damage: w.damage,
-        piercingRemaining: w.piercing,
-        color: isPyroSkinIgnite ? '#fb923c' : bColor,
-        distanceTraveled: 0,
-        maxDistance: isSniper
-          ? 1250
-          : isLaserMinigun
-            ? 950
-            : isRayRifle
-              ? 850
-              : isRaygun
-                ? 700
-                : p.currentWeapon === WeaponType.PISTOL
-                  ? 600
-                  : 780,
-        ownerAngle: angle,
-        isRay: isRaygun || isRayRifle,
-        isLaser: isLaserMinigun,
-        weaponType: p.currentWeapon,
-        isIgnite: isPyroSkinIgnite,
-      });
-    }
+      } else if (p.currentWeapon === WeaponType.BENELLI_M4) {
+        barrelOffset = 22;
+        muzzleColor = '#fb923c';
+        lightColor = 'orange';
+        casingColor = '#dc2626';
+        isShell = true;
+        sound.playBenelliM4();
 
-    // MYTHIC CHRONO-REAPER: Triple Spectral Split Shot flanking rays
-    if (p.mythicSplitShot && p.mythicSplitShot > 0 && !isFlame) {
-      const splitOffsets = [-0.16, 0.16];
-      for (let si = 0; si < splitOffsets.length; si++) {
-        const sAngle = angle + splitOffsets[si];
-        bulletsRef.current.push({
-          id: `split-${Date.now()}-${si}-${Math.random()}`,
-          x: muzzleX,
-          y: muzzleY,
-          vx: Math.cos(sAngle) * Math.max(680, bSpeed * 1.05),
-          vy: Math.sin(sAngle) * Math.max(680, bSpeed * 1.05),
-          radius: Math.max(4.5, bulletRadius * 0.85),
-          damage: Math.round(w.damage * (0.65 + (p.mythicSplitShot - 1) * 0.15)),
-          piercingRemaining: Math.max(3, w.piercing),
-          color: '#e879f9',
-          distanceTraveled: 0,
-          maxDistance: 780,
-          ownerAngle: sAngle,
-          isRay: true,
-          weaponType: p.currentWeapon,
+        cam.shake = Math.max(cam.shake, 9.5);
+        weaponRecoilRef.current = Math.min(10, weaponRecoilRef.current + 9.0);
+        cam.recoilVx -= Math.cos(p.angle) * 108;
+        cam.recoilVy -= Math.sin(p.angle) * 108;
+        weaponBloomRef.current = Math.min(0.14, weaponBloomRef.current + 0.014);
+        cam.trauma = Math.min(1, cam.trauma + 0.25);
+        cam.zoomImpulse -= 0.016;
+        cam.rollVel += (Math.random() > 0.5 ? 1 : -1) * 0.05;
+
+        const mx = p.x + Math.cos(p.angle) * (p.radius + barrelOffset);
+        const my = p.y + Math.sin(p.angle) * (p.radius + barrelOffset);
+        particlesRef.current.push({
+          id: `sw-${Math.random()}`,
+          x: mx,
+          y: my,
+          vx: 0,
+          vy: 0,
+          radius: 8,
+          growthSpeed: 280,
+          color: '#fed7aa',
+          alpha: 0.72,
+          decay: 4.5,
+          type: 'SHOCKWAVE_HEAT',
         });
-      }
-    }
 
-    // MYTHIC SINGULARITY: Radial Nova Shot burst every 3 shots
-    if (p.mythicSingularity && p.mythicSingularity > 0) {
-      mythicCombatRef.current.novaShotCounter += 1;
-      if (mythicCombatRef.current.novaShotCounter >= 3) {
-        mythicCombatRef.current.novaShotCounter = 0;
-        const novaCount = 12;
-        const novaDmg = Math.round(w.damage * (1.25 + (p.mythicSingularity - 1) * 0.4));
-        for (let ni = 0; ni < novaCount; ni++) {
-          const na = (ni * Math.PI * 2) / novaCount + angle * 0.25;
+        // 7 realistic 00 Buckshot pellets
+        const scatterSpread = currentSpread * 1.15;
+        const perpX = -Math.sin(p.angle);
+        const perpY = Math.cos(p.angle);
+        for (let pellet = 0; pellet < 7; pellet++) {
+          const shotAngle = p.angle + (Math.random() + Math.random() - 1) * scatterSpread;
+          const pelletSpeed = baseSpeed * (0.85 + Math.random() * 0.3);
+          const jitter = (Math.random() - 0.5) * 4.2;
           bulletsRef.current.push({
-            id: `nova-${Date.now()}-${ni}-${Math.random()}`,
-            x: p.x + Math.cos(na) * 20,
-            y: p.y + Math.sin(na) * 20,
-            vx: Math.cos(na) * 760,
-            vy: Math.sin(na) * 760,
-            radius: 6,
-            damage: novaDmg,
+            id: `buck-${Math.random()}`,
+            x: mx + perpX * jitter,
+            y: my + perpY * jitter,
+            vx: Math.cos(shotAngle) * pelletSpeed,
+            vy: Math.sin(shotAngle) * pelletSpeed,
+            radius: 4.2 * (0.8 + Math.random() * 0.45),
+            damage: wStats.damage,
+            piercingRemaining: wStats.piercing,
+            color: wStats.color,
+            distanceTraveled: 0,
+            maxDistance: 420 + Math.random() * 120,
+            ownerAngle: shotAngle,
+            weaponType: WeaponType.BENELLI_M4,
+            isIgnite: hasPyroIgnite,
+          });
+        }
+      } else {
+        // WeaponType.SCAR_L
+        barrelOffset = 24;
+        muzzleColor = '#bae6fd';
+        lightColor = 'cyan';
+        casingColor = '#eab308';
+        sound.playScarL();
+
+        cam.shake = Math.max(cam.shake, 4.5);
+        weaponRecoilRef.current = Math.min(10, weaponRecoilRef.current + 5.5);
+        cam.recoilVx -= Math.cos(p.angle) * 52;
+        cam.recoilVy -= Math.sin(p.angle) * 52;
+        weaponBloomRef.current = Math.min(0.11, weaponBloomRef.current + 0.011);
+        cam.trauma = Math.min(1, cam.trauma + 0.11);
+        cam.zoomImpulse -= 0.006;
+        cam.rollVel += (Math.random() > 0.5 ? 1 : -1) * 0.022;
+
+        const mx = p.x + Math.cos(p.angle) * (p.radius + barrelOffset);
+        const my = p.y + Math.sin(p.angle) * (p.radius + barrelOffset);
+        particlesRef.current.push({
+          id: `sw-scar-${Math.random()}`,
+          x: mx,
+          y: my,
+          vx: 0,
+          vy: 0,
+          radius: 6,
+          growthSpeed: 210,
+          color: '#e0f2fe',
+          alpha: 0.5,
+          decay: 5.2,
+          type: 'SHOCKWAVE_HEAT',
+        });
+
+        const shotAngle = p.angle + (Math.random() - 0.5) * currentSpread;
+        bulletsRef.current.push({
+          id: `scar-${Math.random()}`,
+          x: mx,
+          y: my,
+          vx: Math.cos(shotAngle) * baseSpeed,
+          vy: Math.sin(shotAngle) * baseSpeed,
+          radius: 4.4,
+          damage: wStats.damage,
+          piercingRemaining: wStats.piercing,
+          color: wStats.color,
+          distanceTraveled: 0,
+          maxDistance: 920,
+          ownerAngle: shotAngle,
+          weaponType: WeaponType.SCAR_L,
+          isIgnite: hasPyroIgnite,
+        });
+      }
+
+      // Mythic Chrono Reaper Spectral Triple Split Shot
+      if ((p.mythicSplitShot || 0) > 0) {
+        const mx = p.x + Math.cos(p.angle) * (p.radius + barrelOffset);
+        const my = p.y + Math.sin(p.angle) * (p.radius + barrelOffset);
+        const wingAngles = [p.angle - 0.19, p.angle + 0.19];
+        for (const wa of wingAngles) {
+          bulletsRef.current.push({
+            id: `split-${Math.random()}`,
+            x: mx,
+            y: my,
+            vx: Math.cos(wa) * (baseSpeed * 1.1),
+            vy: Math.sin(wa) * (baseSpeed * 1.1),
+            radius: 4.5,
+            damage: Math.round(wStats.damage * (0.75 + (p.mythicSplitShot || 1) * 0.25)),
+            piercingRemaining: Math.max(3, wStats.piercing + 2),
+            color: '#e879f9',
+            distanceTraveled: 0,
+            maxDistance: 720,
+            ownerAngle: wa,
+            isRay: true,
+          });
+        }
+      }
+
+      // Mythic Singularity Star Nova every 3 shots
+      mythicShotCountRef.current += 1;
+      if ((p.mythicSingularity || 0) > 0 && mythicShotCountRef.current % 3 === 0) {
+        sound.playMythicBlast();
+        const novaCount = 8;
+        for (let ni = 0; ni < novaCount; ni++) {
+          const na = p.angle + (ni * Math.PI * 2) / novaCount;
+          bulletsRef.current.push({
+            id: `nova-ray-${Math.random()}`,
+            x: p.x,
+            y: p.y,
+            vx: Math.cos(na) * 860,
+            vy: Math.sin(na) * 860,
+            radius: 5,
+            damage: Math.round(wStats.damage * (1.2 + (p.mythicSingularity || 1) * 0.35)),
             piercingRemaining: 4,
-            color: ni % 2 === 0 ? '#38bdf8' : '#f0abfc',
+            color: '#38bdf8',
             distanceTraveled: 0,
             maxDistance: 560,
             ownerAngle: na,
             isRay: true,
           });
         }
-        particlesRef.current.push({
-          id: `nova-ring-${Date.now()}-${Math.random()}`,
-          type: 'MYTHIC_NOVA',
-          x: p.x,
-          y: p.y,
-          vx: 0,
-          vy: 0,
-          radius: 16,
-          growthSpeed: 420,
-          color: '#38bdf8',
-          alpha: 0.9,
-          decay: 0.045,
-        });
       }
-    }
 
-    // Spawn a bullet shell casing ejection
-    const casingAngle = angle - Math.PI / 2 + (Math.random() * 0.4 - 0.2);
-    const casingSpeed = 40 + Math.random() * 40;
-    particlesRef.current.push({
-      id: `casing-${Date.now()}-${Math.random()}`,
-      type: 'CASING',
-      x: p.x,
-      y: p.y,
-      vx: Math.cos(casingAngle) * -casingSpeed,
-      vy: Math.sin(casingAngle) * -casingSpeed,
-      radius: 1.5,
-      color: '#d97706', // Brass orange/gold
-      alpha: 1,
-      decay: 0.02,
-      rotation: Math.random() * Math.PI * 2,
-      rotSpeed: 0.1 + Math.random() * 0.2,
-    });
+      // Muzzle flare & flash light + gunpowder smoke + spent brass casing ejection
+      const mx = p.x + Math.cos(p.angle) * (p.radius + barrelOffset);
+      const my = p.y + Math.sin(p.angle) * (p.radius + barrelOffset);
+      muzzleFlashRef.current = 1.0;
 
-    syncHudPlayer();
-  };
+      flashLightsRef.current.push({
+        x: mx,
+        y: my,
+        radius: p.currentWeapon === WeaponType.BENELLI_M4 ? 190 : 135,
+        color: lightColor,
+        alpha: 0.5,
+        decay: 8.5,
+      });
 
-  // Dramatic slow-motion player death sequence
-  const triggerPlayerDeath = (p: Player, attackAngle: number = p.angle + Math.PI) => {
-    if (dyingRef.current?.active) return;
+      particlesRef.current.push({
+        id: `mf-${Math.random()}`,
+        x: mx,
+        y: my,
+        vx: Math.cos(p.angle) * 35,
+        vy: Math.sin(p.angle) * 35,
+        radius: p.currentWeapon === WeaponType.BENELLI_M4 ? 13 : 9,
+        color: muzzleColor,
+        alpha: 0.95,
+        decay: 14,
+        type: 'MUZZLE_FLARE',
+        rotation: p.angle,
+      });
 
-    // Knock weapon out of player's hands with randomized momentum
-    const weaponKickAngle = attackAngle + (Math.random() * 0.5 - 0.25);
-    const weaponSpeed = 190 + Math.random() * 70;
+      // Gunpowder smoke puff
+      particlesRef.current.push({
+        id: `gunsmoke-${Math.random()}`,
+        x: mx,
+        y: my,
+        vx: Math.cos(p.angle) * 55 + (Math.random() - 0.5) * 20,
+        vy: Math.sin(p.angle) * 55 + (Math.random() - 0.5) * 20,
+        drag: 3.5,
+        radius: p.currentWeapon === WeaponType.BENELLI_M4 ? 11 : 7,
+        growthSpeed: 16,
+        color: 'rgba(203, 213, 225, 0.3)',
+        alpha: 0.38,
+        decay: 1.9,
+        type: 'SMOKE',
+        rotation: Math.random() * Math.PI * 2,
+      });
 
-    dyingRef.current = {
-      active: true,
-      timer: 2.8,
-      total: 2.8,
-      fatalAngle: attackAngle,
-      startX: p.x,
-      startY: p.y,
-      recoilX: Math.cos(attackAngle) * 35,
-      recoilY: Math.sin(attackAngle) * 35,
-      flatlinePlayed: false,
-      bodyFallPlayed: false,
-      bloodPoolRadius: 8,
-      droppedWeapon: {
-        type: p.currentWeapon,
+      // Spent brass / shotgun hull ejection to the right side
+      const ejectAngle = p.angle + Math.PI * 0.5 + (Math.random() - 0.5) * 0.35;
+      const ejectSpeed = 88 + Math.random() * 48;
+      particlesRef.current.push({
+        id: `casing-${Math.random()}`,
         x: p.x + Math.cos(p.angle) * 10,
         y: p.y + Math.sin(p.angle) * 10,
-        vx: Math.cos(weaponKickAngle) * weaponSpeed,
-        vy: Math.sin(weaponKickAngle) * weaponSpeed,
-        angle: p.angle,
-        rotSpeed: (Math.random() > 0.5 ? 1 : -1) * (8 + Math.random() * 8),
-      },
+        vx: Math.cos(ejectAngle) * ejectSpeed,
+        vy: Math.sin(ejectAngle) * ejectSpeed,
+        drag: 5.2,
+        radius: isShell ? 2.2 : p.currentWeapon === WeaponType.SCAR_L ? 1.8 : 1.5,
+        color: casingColor,
+        alpha: 1,
+        decay: 1.55,
+        type: 'CASING',
+        rotation: Math.random() * Math.PI * 2,
+        rotSpeed: (Math.random() - 0.5) * 18,
+      });
     };
 
-    sound.playDeathImpact();
-    screenShakeRef.current = 52;
-
-    // Push player slightly along fatal blow
-    p.x += Math.cos(attackAngle) * 18;
-    p.y += Math.sin(attackAngle) * 18;
-    p.x = Math.max(p.radius, Math.min(ARENA_SIZE - p.radius, p.x));
-    p.y = Math.max(p.radius, Math.min(ARENA_SIZE - p.radius, p.y));
-
-    // 1. Violent arterial blood spray flying backwards
-    for (let i = 0; i < 55; i++) {
-      const sprayAngle = attackAngle + (Math.random() * 1.4 - 0.7);
-      const spraySpeed = 80 + Math.random() * 260;
-      particlesRef.current.push({
-        id: `fatal-blood-${Date.now()}-${i}-${Math.random()}`,
-        type: 'BLOOD',
-        x: p.x,
-        y: p.y,
-        vx: Math.cos(sprayAngle) * spraySpeed,
-        vy: Math.sin(sprayAngle) * spraySpeed,
-        radius: 3 + Math.random() * 4.5,
-        color: Math.random() > 0.35 ? '#dc2626' : '#991b1b',
-        alpha: 1,
-        decay: 0.012 + Math.random() * 0.02,
-      });
-    }
-
-    // 2. Visor glass shatter fragments & tactical spark burst
-    for (let j = 0; j < 25; j++) {
-      const shardAngle = Math.random() * Math.PI * 2;
-      const shardSpeed = 60 + Math.random() * 200;
-      particlesRef.current.push({
-        id: `visor-shard-${Date.now()}-${j}-${Math.random()}`,
-        type: 'SPARK',
-        x: p.x + Math.cos(p.angle) * 10,
-        y: p.y + Math.sin(p.angle) * 10,
-        vx: Math.cos(shardAngle) * shardSpeed,
-        vy: Math.sin(shardAngle) * shardSpeed,
-        radius: 1.5 + Math.random() * 2.5,
-        color: j % 2 === 0 ? '#38bdf8' : '#ffffff',
-        alpha: 1,
-        decay: 0.03 + Math.random() * 0.03,
-      });
-    }
-
-    // 3. Expanding shockwave ring
-    particlesRef.current.push({
-      id: `death-ring-${Date.now()}-${Math.random()}`,
-      type: 'FIRE_RING',
-      x: p.x,
-      y: p.y,
-      vx: 0,
-      vy: 0,
-      radius: 6,
-      growthSpeed: 220,
-      color: '#ef4444',
-      alpha: 1,
-      decay: 0.035,
-    });
-  };
-
-  // Main Canvas Rendering & Physics Game Loop
-  useEffect(() => {
-    let animationFrameId: number;
-    let lastTime = performance.now();
-    let shieldRegenTimer = 0;
-
-    const gameLoop = (time: number) => {
-      // Calculate delta time in seconds, clamped to avoid massive jumps on lag spikes
-      const unscaledDt = Math.min(0.1, (time - lastTime) / 1000);
-      lastTime = time;
-
+    const updateGame = (dt: number, nowMs: number) => {
+      const state = gameStateRef.current;
       const p = playerRef.current;
+      const cam = cameraRef.current;
+      const width = canvas.width;
+      const height = canvas.height;
+      const nowSec = nowMs / 1000;
 
-      // Visceral low health heartbeat pulse audio check with dynamic rate
-      if (gameState === GameState.PLAYING && p.hp > 0 && p.hp <= p.maxHp * 0.30) {
-        const hpRatio = p.hp / (p.maxHp * 0.30); // 1.0 (at 30%) down to 0.0 (near death)
-        const beatInterval = 380 + hpRatio * 440; // 380ms (rapid tachycardia) to 820ms
-        const urgency = 1.0 + (1 - hpRatio) * 0.7; // 1.0 to 1.7 volume & pitch
-        if (time - lastHeartbeatRef.current > beatInterval) {
-          lastHeartbeatRef.current = time;
-          sound.playHeartbeat(urgency);
-          screenShakeRef.current = Math.max(screenShakeRef.current, 1.8 + (1 - hpRatio) * 2.8);
-        }
+      // Poll controller every frame
+      const gp = readActiveGamepadState(gamepadEdgeRef.current, gamepadStateRef.current);
+
+      if (gp.pausePressed && (state === GameState.PLAYING || state === GameState.PAUSED)) {
+        handlePauseToggle();
+        return;
       }
 
-      // Check if dramatic slow-motion death sequence is active
-      let dt = unscaledDt;
-      if (dyingRef.current?.active) {
-        const d = dyingRef.current;
-        const elapsed = d.total - d.timer;
-        d.timer -= unscaledDt;
+      if (state !== GameState.PLAYING) return;
 
-        // Friction and rotation on dropped weapon
-        d.droppedWeapon.x += d.droppedWeapon.vx * unscaledDt;
-        d.droppedWeapon.y += d.droppedWeapon.vy * unscaledDt;
-        d.droppedWeapon.vx *= Math.pow(0.08, unscaledDt);
-        d.droppedWeapon.vy *= Math.pow(0.08, unscaledDt);
-        d.droppedWeapon.angle += d.droppedWeapon.rotSpeed * unscaledDt;
-        d.droppedWeapon.rotSpeed *= Math.pow(0.15, unscaledDt);
+      // Advance 3-minute (180s) Day & Night cycle smoothly while active
+      if (!dyingStateRef.current.active) {
+        dayCycleTimeRef.current = (dayCycleTimeRef.current + dt) % DAY_NIGHT_CYCLE_SECONDS;
+      }
 
-        // Body fall sound trigger at ~0.55s
-        if (elapsed >= 0.55 && !d.bodyFallPlayed) {
-          d.bodyFallPlayed = true;
-          sound.playBodyFall();
-          screenShakeRef.current = Math.max(screenShakeRef.current, 12);
+      // Handle Gamepad weapon switching (B / L1)
+      if (gp.switchPressed && !dyingStateRef.current.active && unlockedWeaponsRef.current.length > 1) {
+        const list = unlockedWeaponsRef.current;
+        const idx = list.indexOf(p.currentWeapon);
+        switchWeapon(list[(idx + 1) % list.length]);
+      }
+
+      // ==========================================
+      // DYING SLOW-MOTION COLLAPSE SEQUENCE
+      // ==========================================
+      if (dyingStateRef.current.active) {
+        const ds = dyingStateRef.current;
+        ds.timer += dt;
+        const progress = Math.min(1, ds.timer / ds.total);
+        const timeScale = 0.25;
+        const scaledDt = dt * timeScale;
+
+        if (ds.timer < 0.45) {
+          const slideT = ds.timer / 0.45;
+          p.x = ds.startX + ds.recoilX * (1 - Math.pow(1 - slideT, 2));
+          p.y = ds.startY + ds.recoilY * (1 - Math.pow(1 - slideT, 2));
+          p.x = Math.max(p.radius, Math.min(ARENA_SIZE - p.radius, p.x));
+          p.y = Math.max(p.radius, Math.min(ARENA_SIZE - p.radius, p.y));
         }
 
-        // Heart monitor flatline audio trigger at ~1.05s
-        if (elapsed >= 1.05 && !d.flatlinePlayed) {
-          d.flatlinePlayed = true;
+        if (!ds.bodyFallPlayed && ds.timer >= 0.42) {
+          ds.bodyFallPlayed = true;
+          sound.playBodyFall();
+        }
+        if (!ds.flatlinePlayed && ds.timer >= 0.72) {
+          ds.flatlinePlayed = true;
           sound.playFlatline();
         }
 
-        // Blood pool gradually expands beneath the fallen soldier
-        if (d.bloodPoolRadius < 52) {
-          d.bloodPoolRadius += unscaledDt * 22;
-        }
+        ds.bloodPoolRadius = Math.min(34, 6 + progress * 30);
 
-        // Time dilation (slow-motion death camera)
-        dt = unscaledDt * 0.18;
+        // Dropped weapon slide
+        ds.droppedWeapon.x += ds.droppedWeapon.vx * scaledDt;
+        ds.droppedWeapon.y += ds.droppedWeapon.vy * scaledDt;
+        ds.droppedWeapon.vx *= Math.exp(-3.5 * scaledDt);
+        ds.droppedWeapon.vy *= Math.exp(-3.5 * scaledDt);
+        ds.droppedWeapon.angle += ds.droppedWeapon.rotSpeed * scaledDt;
+        ds.droppedWeapon.rotSpeed *= Math.exp(-3.2 * scaledDt);
 
-        if (d.timer <= 0) {
-          bloodSplatsRef.current.push({
-            x: p.x,
-            y: p.y,
-            radius: d.bloodPoolRadius + 8,
-            color: '#450a0a',
-            alpha: 0.95,
-          });
-          dyingRef.current = null;
-          p.hp = 0;
-          setGameState(GameState.GAME_OVER);
+        cam.trauma = Math.max(0, cam.trauma - dt * 0.9);
+        cam.shake = Math.max(0, cam.shake - dt * 18);
+        cam.x += (p.x - width / 2 - cam.x) * (1 - Math.exp(-4 * dt));
+        cam.y += (p.y - height / 2 - cam.y) * (1 - Math.exp(-4 * dt));
+
+        if (ds.timer >= ds.total) {
+          ds.active = false;
           sound.playGameOver();
-          updateHighScore(p.score);
-          const runCoins = p.coinsEarned || 0;
-          updateCoins(runCoins);
-          drawGame(time);
-          return;
-        }
-      }
-
-      lastDrawDtRef.current = dt;
-
-      if (gameState === GameState.PLAYING || dyingRef.current?.active) {
-        updateGame(dt);
-      }
-
-      drawGame(time);
-
-      animationFrameId = requestAnimationFrame(gameLoop);
-    };
-
-    // Update coordinates and physics
-    const updateGame = (dt: number) => {
-      const p = playerRef.current;
-      const nowMs = Date.now();
-
-      let levelUpQueuedThisFrame = false;
-
-      const handleZombieDeath = (z: Zombie, depth: number = 0) => {
-        if (!z || z.isDead || depth > 2) return;
-        z.isDead = true;
-        const isAlienUnit = modeRef.current === GameMode.ALIEN;
-        if (isAlienUnit) {
-          sound.playFreeze();
-        } else {
-          sound.playZombieKill();
-        }
-        p.kills += 1;
-        const baseCoins = z.isBoss
-          ? 350
-          : z.type === ZombieType.TANK || z.type === ZombieType.ALIEN_COLOSSUS
-            ? 60
-            : z.type === ZombieType.RUNNER || z.type === ZombieType.ALIEN_DRONE
-              ? 25
-              : 15;
-        const zombieCoins = Math.round(baseCoins * (p.bonusCoinsMult || 1));
-        p.coinsEarned = (p.coinsEarned || 0) + zombieCoins;
-        p.score = p.coinsEarned;
-
-        if (z.isBoss) {
-          sound.playPowerup();
-          flashLightsRef.current.push({
-            x: z.x,
-            y: z.y,
-            radius: 360,
-            color: isAlienUnit ? 'purple' : 'amber',
-            alpha: 0.85,
-            decay: 1.8,
-          });
-          for (let exp = 0; exp < 16; exp++) {
-            const expAngle = Math.random() * Math.PI * 2;
-            const expSpeed = 60 + Math.random() * 140;
-            particlesRef.current.push({
-              id: `boss-exp-${Date.now()}-${exp}-${Math.random()}`,
-              type: isAlienUnit ? 'ALIEN_PLASMA' : 'EXPLOSION',
-              x: z.x,
-              y: z.y,
-              vx: Math.cos(expAngle) * expSpeed,
-              vy: Math.sin(expAngle) * expSpeed,
-              radius: 4 + Math.random() * 5,
-              color: z.color,
-              alpha: 1,
-              decay: 0.03,
-            });
+          if (p.score > highScoreZombieRef.current) {
+            setHighScoreZombie(p.score);
+            localStorage.setItem('zombie_shooter_highscore_zombie', p.score.toString());
+            localStorage.setItem('zombie_shooter_highscore', p.score.toString());
           }
+          syncHud();
+          setAppState(GameState.GAME_OVER);
         }
-
-        if (p.vampirism && p.vampirism > 0) {
-          p.hp = Math.min(p.maxHp, p.hp + p.vampirism);
-        }
-
-        // EPIC SHATTER DOCTRINE: Fragmentation burst + shrapnel darts on kill
-        if (p.shatterLevel && p.shatterLevel > 0 && depth < 1) {
-          sound.playShatterBurst();
-          const shardCount = 4 + p.shatterLevel * 2;
-          const activeW = p.weapons[p.currentWeapon] || INITIAL_WEAPONS[WeaponType.PISTOL];
-          const shardDmg = Math.max(16, Math.round(activeW.damage * 0.55 * p.shatterLevel));
-          for (let s = 0; s < shardCount; s++) {
-            const sa = (s * Math.PI * 2) / shardCount + Math.random() * 0.35;
-            bulletsRef.current.push({
-              id: `shrapnel-${Date.now()}-${s}-${Math.random()}`,
-              x: z.x,
-              y: z.y,
-              vx: Math.cos(sa) * 620,
-              vy: Math.sin(sa) * 620,
-              radius: 5,
-              damage: shardDmg,
-              piercingRemaining: 2,
-              color: '#fb923c',
-              distanceTraveled: 0,
-              maxDistance: 210,
-              ownerAngle: sa,
-              isShrapnel: true,
-            });
-          }
-          particlesRef.current.push({
-            id: `shatter-ring-${Date.now()}-${Math.random()}`,
-            type: 'FIRE_RING',
-            x: z.x,
-            y: z.y,
-            vx: 0,
-            vy: 0,
-            radius: 8,
-            growthSpeed: 280,
-            color: '#fb923c',
-            alpha: 0.85,
-            decay: 0.08,
-          });
-        }
-
-        // MYTHIC SOLAR PHOENIX: Fiery Solar Explosion on kill
-        if (p.mythicSolarAura && p.mythicSolarAura > 0 && depth < 1) {
-          const solarRadius = 115 + (p.mythicSolarAura - 1) * 20;
-          const activeW = p.weapons[p.currentWeapon] || INITIAL_WEAPONS[WeaponType.PISTOL];
-          const solarBlastDmg = Math.max(28, Math.round(activeW.damage * 0.85 * p.mythicSolarAura));
-
-          particlesRef.current.push({
-            id: `solar-exp-ring-${Date.now()}-${Math.random()}`,
-            type: 'FIRE_RING',
-            x: z.x,
-            y: z.y,
-            vx: 0,
-            vy: 0,
-            radius: 10,
-            growthSpeed: 390,
-            color: '#fbbf24',
-            alpha: 0.95,
-            decay: 0.06,
-          });
-          particlesRef.current.push({
-            id: `solar-exp-core-${Date.now()}-${Math.random()}`,
-            type: 'EXPLOSION',
-            x: z.x,
-            y: z.y,
-            vx: 0,
-            vy: 0,
-            radius: 14,
-            growthSpeed: 240,
-            color: '#f97316',
-            alpha: 0.9,
-            decay: 0.07,
-          });
-
-          const list = zombiesRef.current;
-          for (let si = 0; si < list.length; si++) {
-            const nz = list[si];
-            if (nz.id === z.id || nz.hp <= 0) continue;
-            const d = Math.hypot(nz.x - z.x, nz.y - z.y);
-            if (d <= solarRadius + nz.radius) {
-              nz.hp -= solarBlastDmg;
-              nz.isOnFire = true;
-              nz.burnTimer = 3.5;
-              const pa = Math.atan2(nz.y - z.y, nz.x - z.x);
-              nz.knockbackX += Math.cos(pa) * 220 * (p.knockbackMult || 1);
-              nz.knockbackY += Math.sin(pa) * 220 * (p.knockbackMult || 1);
-              if (nz.hp <= 0) {
-                handleZombieDeath(nz, depth + 1);
-              }
-            }
-          }
-        }
-
-        // Realistic organic blood / alien ichor splatter burst on enemy death
-        const deathFluidColors = isAlienUnit
-          ? (z.isBoss || z.type === ZombieType.ALIEN_OVERLORD
-              ? ['#ec4899', '#f43f5e', '#9d174d']
-              : z.type === ZombieType.ALIEN_DRONE
-                ? ['#c084fc', '#a855f7', '#06b6d4']
-                : ['#00ffcc', '#2dd4bf', '#0e7490'])
-          : (z.isBoss
-              ? ['#991b1b', '#7f1d1d', '#be123c']
-              : z.type === ZombieType.TOXIC_SPITTER
-                ? ['#84cc16', '#65a30d', '#3f6212']
-                : ['#450a0a', '#7f1d1d', '#991b1b', '#b91c1c', '#dc2626']);
-        const deathBurstCount = z.isBoss ? 22 : z.type === ZombieType.TANK || z.type === ZombieType.ALIEN_COLOSSUS ? 16 : 11;
-        for (let dk = 0; dk < deathBurstCount; dk++) {
-          const dAng = Math.random() * Math.PI * 2;
-          const dSpd = 45 + Math.random() * (z.isBoss ? 150 : 120);
-          particlesRef.current.push({
-            id: `death-fluid-${Date.now()}-${dk}-${Math.random()}`,
-            type: isAlienUnit ? 'ALIEN_BLOOD' : z.type === ZombieType.TOXIC_SPITTER ? 'TOXIC_ACID' : 'BLOOD',
-            x: z.x + Math.cos(dAng) * (z.radius * 0.25),
-            y: z.y + Math.sin(dAng) * (z.radius * 0.25),
-            vx: Math.cos(dAng) * dSpd,
-            vy: Math.sin(dAng) * dSpd,
-            radius: 1.8 + Math.random() * 2.4,
-            color: deathFluidColors[dk % deathFluidColors.length],
-            alpha: 0.94,
-            decay: 0.024 + Math.random() * 0.018,
-          });
-        }
-
-        const finalSplatColor = isAlienUnit
-          ? (z.isBoss ? '#9d174d' : z.type === ZombieType.ALIEN_DRONE ? '#7e22ce' : '#0e7490')
-          : (z.isBoss ? '#450a0a' : z.type === ZombieType.TOXIC_SPITTER ? '#3f6212' : z.type === ZombieType.RUNNER ? '#7f1d1d' : '#450a0a');
-
-        // Natural coagulated central blood pool + 2-3 organic peripheral droplets
-        bloodSplatsRef.current.push({
-          x: z.x,
-          y: z.y,
-          radius: z.radius * (1.05 + Math.random() * 0.45),
-          alpha: 0.78,
-          color: finalSplatColor,
-        });
-        for (let ds = 0; ds < 3; ds++) {
-          const sa = Math.random() * Math.PI * 2;
-          const sDist = z.radius * (0.65 + Math.random() * 0.95);
-          bloodSplatsRef.current.push({
-            x: z.x + Math.cos(sa) * sDist,
-            y: z.y + Math.sin(sa) * sDist,
-            radius: 3.8 + Math.random() * 4.5,
-            alpha: 0.62,
-            color: ds === 0 ? '#7f1d1d' : finalSplatColor,
-            angle: sa,
-            stretch: 1.0 + Math.random() * 0.35,
-          });
-        }
-        while (bloodSplatsRef.current.length > 160) {
-          bloodSplatsRef.current.shift();
-        }
-
-        const xpMult = 1 + (tokenUpgradesRef.current.token_crit_xp || 0) * 0.15;
-        p.xp += Math.round(z.xpValue * xpMult);
-
-        const activeShipKey: ShipTypeKey | null =
-          p.currentWeapon === WeaponType.TROPER
-            ? 'TROPER'
-            : p.currentWeapon === WeaponType.DESTRUCTOR
-              ? 'DESTRUCTOR'
-              : p.currentWeapon === WeaponType.INTERCEPTOR
-                ? 'INTERCEPTOR'
-                : p.currentWeapon === WeaponType.NAVE_REI
-                  ? 'NAVE_REI'
-                  : null;
-        if (activeShipKey) {
-          addShipMasteryXp(activeShipKey, z.isBoss ? 45 : 8);
-          if (
-            activeShipKey === 'INTERCEPTOR' &&
-            destructorStateRef.current.warpActive &&
-            hasMasteryNode(shipMasteryRef.current, 'INTERCEPTOR', 'int_frenzy')
-          ) {
-            masterySkillCooldownRef.current = Math.max(0, masterySkillCooldownRef.current - 0.45);
-          }
-          if (
-            activeShipKey === 'NAVE_REI' &&
-            destructorStateRef.current.warpActive &&
-            hasMasteryNode(shipMasteryRef.current, 'NAVE_REI', 'rei_emperor') &&
-            depth < 1
-          ) {
-            const rw = p.weapons[WeaponType.NAVE_REI] || INITIAL_WEAPONS[WeaponType.NAVE_REI];
-            const empBlastDmg = Math.max(20, Math.round(rw.damage * 1.25));
-            particlesRef.current.push({
-              id: `rei-emp-kill-${Date.now()}-${Math.random()}`,
-              type: 'FIRE_RING',
-              x: z.x,
-              y: z.y,
-              vx: 0,
-              vy: 0,
-              radius: 12,
-              growthSpeed: 380,
-              color: '#ef4444',
-              alpha: 0.9,
-              decay: 0.06,
-            });
-            for (let ri = 0; ri < zombiesRef.current.length; ri++) {
-              const rz = zombiesRef.current[ri];
-              if (rz.id === z.id || rz.hp <= 0) continue;
-              if (Math.hypot(rz.x - z.x, rz.y - z.y) <= 95 + rz.radius) {
-                rz.hp -= empBlastDmg;
-                if (rz.hp <= 0) handleZombieDeath(rz, depth + 1);
-              }
-            }
-          }
-        }
-
-        spawnItemDrop(z.x, z.y);
-
-        if (p.xp >= p.xpNeeded && !levelUpQueuedThisFrame) {
-          levelUpQueuedThisFrame = true;
-          handleLevelUp(p.level);
-        }
-
-        setZombiesRemaining((prev) => {
-          const updated = Math.max(0, prev - 1);
-          if (updated === 0) {
-            waveActiveRef.current = false;
-            const curWave = waveRef.current;
-            p.coinsEarned = (p.coinsEarned || 0) + curWave * 50;
-            p.score = p.coinsEarned;
-            const scheduleNextWave = () => {
-              if (gameStateRef.current !== GameState.PLAYING) {
-                waveSpawnTimerRef.current = window.setTimeout(scheduleNextWave, 400);
-                return;
-              }
-              startNextWave(waveRef.current + 1);
-            };
-            if (waveSpawnTimerRef.current) clearTimeout(waveSpawnTimerRef.current);
-            waveSpawnTimerRef.current = window.setTimeout(scheduleNextWave, 2500);
-          }
-          return updated;
-        });
-      };
-
-      // Helper: Chain Lightning Arc jumps across up to 3*level nearby enemies
-      const triggerChainLightning = (sourceZ: Zombie, baseDamage: number, chainLevel: number) => {
-        if (chainLevel <= 0) return;
-        const lastChain = mythicCombatRef.current.chainLightningCooldowns[sourceZ.id] || 0;
-        if (nowMs - lastChain < 220) return;
-        mythicCombatRef.current.chainLightningCooldowns[sourceZ.id] = nowMs;
-
-        const maxJumps = 3 * chainLevel;
-        const jumpDmg = Math.max(8, Math.round(baseDamage * 0.48));
-        const hitIds = new Set<string>([sourceZ.id]);
-        let currX = sourceZ.x;
-        let currY = sourceZ.y;
-        let jumped = false;
-
-        for (let jump = 0; jump < maxJumps; jump++) {
-          let closest: Zombie | null = null;
-          let minD = 240;
-          for (let zi = 0; zi < zombiesRef.current.length; zi++) {
-            const cand = zombiesRef.current[zi];
-            if (cand.hp <= 0 || hitIds.has(cand.id)) continue;
-            const dist = Math.hypot(cand.x - currX, cand.y - currY);
-            if (dist < minD) {
-              minD = dist;
-              closest = cand;
-            }
-          }
-          if (!closest) break;
-
-          jumped = true;
-          hitIds.add(closest.id);
-
-          // Build jagged electric arc polyline
-          const segs = 4;
-          const arcPts: { x: number; y: number }[] = [];
-          for (let s = 1; s <= segs; s++) {
-            const frac = s / segs;
-            const jitter = s === segs ? 0 : 14;
-            arcPts.push({
-              x: currX + (closest.x - currX) * frac + (Math.random() - 0.5) * jitter,
-              y: currY + (closest.y - currY) * frac + (Math.random() - 0.5) * jitter,
-            });
-          }
-          particlesRef.current.push({
-            id: `chain-arc-${Date.now()}-${jump}-${Math.random()}`,
-            type: 'ENERGY_ARC',
-            x: currX,
-            y: currY,
-            vx: 0,
-            vy: 0,
-            radius: 2.5,
-            color: jump % 2 === 0 ? '#38bdf8' : '#fde047',
-            alpha: 1,
-            decay: 0.16,
-            points: arcPts,
-          });
-
-          closest.hp -= jumpDmg;
-          closest.isStunned = true;
-          closest.stunTimer = Math.max(closest.stunTimer, 0.24);
-          if (closest.hp <= 0) {
-            handleZombieDeath(closest);
-          }
-          currX = closest.x;
-          currY = closest.y;
-        }
-
-        if (jumped) {
-          sound.playChainLightning();
-        }
-      };
-
-      // Helper: Escudo Cinético de Choque shockwave when shield takes damage
-      const triggerShieldShock = () => {
-        const sLevel = p.shieldShockLevel || 0;
-        if (sLevel <= 0) return;
-        sound.playGravityPulse();
-        const shockRadius = 175 + (sLevel - 1) * 25;
-        const shockDmg = 18 * sLevel;
-        particlesRef.current.push({
-          id: `shield-shock-${Date.now()}-${Math.random()}`,
-          type: 'PLASMA_RING',
-          x: p.x,
-          y: p.y,
-          vx: 0,
-          vy: 0,
-          radius: 18,
-          growthSpeed: 420,
-          color: '#22d3ee',
-          alpha: 1,
-          decay: 0.055,
-        });
-        for (let zi = 0; zi < zombiesRef.current.length; zi++) {
-          const nz = zombiesRef.current[zi];
-          if (nz.hp <= 0) continue;
-          const dist = Math.hypot(nz.x - p.x, nz.y - p.y);
-          if (dist <= shockRadius + nz.radius) {
-            const pa = Math.atan2(nz.y - p.y, nz.x - p.x);
-            nz.knockbackX += Math.cos(pa) * 460 * (p.knockbackMult || 1);
-            nz.knockbackY += Math.sin(pa) * 460 * (p.knockbackMult || 1);
-            nz.isStunned = true;
-            nz.stunTimer = Math.max(nz.stunTimer, 0.85);
-            nz.hp -= shockDmg;
-            if (nz.hp <= 0) {
-              handleZombieDeath(nz);
-            }
-          }
-        }
-      };
-
-      // 1. GATHER MOVEMENT & AIM INPUTS FIRST (Touch + Gamepad + Keyboard/Mouse)
-      const gp = readActiveGamepadState(gamepadEdgesRef.current, gamepadSnapshotRef.current);
-
-      if (gp.pausePressed) {
-        setGameState(GameState.PAUSED);
         return;
       }
-      if (gp.reloadPressed) {
-        reloadActiveWeapon();
-      }
-      if (gp.switchPressed) {
-        if (p.currentWeapon === WeaponType.IRON_MAN) {
-          toggleIronManModeRef.current();
-        } else if (p.currentWeapon === WeaponType.ICE_AND_FIRE_DRAGON) {
-          switchIceFireDragonRef.current();
-        }
-      }
-      if (p.currentWeapon === WeaponType.VENOM_FRUIT) {
-        if (gp.venomSkill1Pressed) triggerVenomHydraRef.current();
-        if (gp.venomSkill2Pressed) triggerVenomChloroRef.current();
-        if (gp.venomSkill3Pressed) triggerVenomRoadRef.current();
-        if (gp.skillPressed) triggerVenomDemonRef.current();
-      } else if (gp.skillPressed) {
-        if (p.currentWeapon === WeaponType.ICE_AND_FIRE_DRAGON) {
-          triggerIceFireMergeRef.current();
-        } else if (
-          p.currentWeapon === WeaponType.TROPER ||
-          p.currentWeapon === WeaponType.DESTRUCTOR ||
-          p.currentWeapon === WeaponType.INTERCEPTOR ||
-          p.currentWeapon === WeaponType.NAVE_REI
-        ) {
-          triggerShipMasterySkillRef.current();
-        }
-      }
 
+      // ==========================================
+      // PLAYER MOVEMENT & INPUT RESOLUTION
+      // ==========================================
       let moveX = 0;
       let moveY = 0;
+      if (keysRef.current['w'] || keysRef.current['arrowup']) moveY -= 1;
+      if (keysRef.current['s'] || keysRef.current['arrowdown']) moveY += 1;
+      if (keysRef.current['a'] || keysRef.current['arrowleft']) moveX -= 1;
+      if (keysRef.current['d'] || keysRef.current['arrowright']) moveX += 1;
 
-      if (leftJoystick.current.active) {
-        moveX = leftJoystick.current.x;
-        moveY = leftJoystick.current.y;
-      } else if (gp.connected && (gp.moveX !== 0 || gp.moveY !== 0)) {
+      if (leftJoystickRef.current.active) {
+        moveX = leftJoystickRef.current.x;
+        moveY = leftJoystickRef.current.y;
+      } else if (gp.connected && (Math.abs(gp.moveX) > 0.05 || Math.abs(gp.moveY) > 0.05)) {
         moveX = gp.moveX;
         moveY = gp.moveY;
-      } else {
-        if (keysPressed.current['w'] || keysPressed.current['arrowup']) moveY = -1;
-        if (keysPressed.current['s'] || keysPressed.current['arrowdown']) moveY = 1;
-        if (keysPressed.current['a'] || keysPressed.current['arrowleft']) moveX = -1;
-        if (keysPressed.current['d'] || keysPressed.current['arrowright']) moveX = 1;
-
-        if (moveX !== 0 && moveY !== 0) {
-          const len = Math.sqrt(moveX * moveX + moveY * moveY);
-          moveX /= len;
-          moveY /= len;
-        }
       }
 
-      let shootingAngle = p.angle;
-      let shouldFire = false;
-      const isTroper = p.currentWeapon === WeaponType.TROPER;
-      const isDestructor = p.currentWeapon === WeaponType.DESTRUCTOR;
-      const isInterceptor = p.currentWeapon === WeaponType.INTERCEPTOR;
-      const isRei = p.currentWeapon === WeaponType.NAVE_REI;
-      const isEastDragon = p.currentWeapon === WeaponType.EAST_DRAGON;
-      const isIronMan = p.currentWeapon === WeaponType.IRON_MAN;
-      const isIceFireDragon = p.currentWeapon === WeaponType.ICE_AND_FIRE_DRAGON;
-      const hasWarpShip = isDestructor || isInterceptor || isRei;
-      const isShip = isTroper || hasWarpShip;
-      const ds = destructorStateRef.current;
-      const ed = eastDragonStateRef.current;
-      const im = ironManStateRef.current;
-      const ifd = iceFireDragonStateRef.current;
+      const moveMag = Math.hypot(moveX, moveY);
+      if (moveMag > 1) {
+        moveX /= moveMag;
+        moveY /= moveMag;
+      } else if (moveMag > 0.01 && (keysRef.current['w'] || keysRef.current['a'] || keysRef.current['s'] || keysRef.current['d'])) {
+        moveX /= moveMag;
+        moveY /= moveMag;
+      }
 
-      let destructorTargetX = p.x + Math.cos(p.angle) * 300;
-      let destructorTargetY = p.y + Math.sin(p.angle) * 300;
+      const waterSpeedMult = getWaterSpeedMultiplier(p.x, p.y);
+      const preWaterDepth = getWaterDepth(p.x, p.y);
+      const playerDrift = preWaterDepth > 2.8 ? getOceanCurrentDrift(p.x, p.y, nowSec) : { vx: 0, vz: 0 };
+      const vx = moveX * p.speed * waterSpeedMult;
+      const vy = moveY * p.speed * waterSpeedMult;
+      p.vx = vx;
+      p.vy = vy;
 
-      if (isShip && !dyingRef.current?.active) {
-        // Ships: aim toward cursor / right joystick / gamepad stick within ±30° gimbal cone;
-        // ship hull rotates smoothly with exponential angular damping.
-        if (rightJoystick.current.active) {
-          const rx = rightJoystick.current.x;
-          const ry = rightJoystick.current.y;
-          const dragDist = Math.hypot(rx, ry);
-          if (dragDist > 0.15) {
-            const joyAngle = Math.atan2(ry, rx);
-            destructorTargetX = p.x + Math.cos(joyAngle) * 360;
-            destructorTargetY = p.y + Math.sin(joyAngle) * 360;
-            shouldFire = true;
-          }
-        } else if (gp.connected && (gp.aimActive || gp.fireHeld)) {
-          const gpAngle = gp.aimActive ? Math.atan2(gp.aimY, gp.aimX) : p.angle;
-          destructorTargetX = p.x + Math.cos(gpAngle) * 360;
-          destructorTargetY = p.y + Math.sin(gpAngle) * 360;
-          shouldFire = gp.aimFire || gp.fireHeld;
-        } else if (canvasRef.current) {
-          if (hasMouseMovedRef.current) {
-            const camLeft = cameraRef.current.x - canvasRef.current.width / 2;
-            const camTop = cameraRef.current.y - canvasRef.current.height / 2;
-            destructorTargetX = mousePos.current.x + camLeft;
-            destructorTargetY = mousePos.current.y + camTop;
-          }
-          shouldFire = isMouseDown.current;
-        }
+      const nextPlayerPos = resolveForestEntityCollision(
+        p.x + (vx + playerDrift.vx * 0.75) * dt,
+        p.y + (vy + playerDrift.vz * 0.75) * dt,
+        p.radius
+      );
+      p.x = nextPlayerPos.x;
+      p.y = nextPlayerPos.y;
 
-        const desiredAimAngle = Math.atan2(destructorTargetY - p.y, destructorTargetX - p.x);
-        shootingAngle = desiredAimAngle;
-
-        const MAX_GIMBAL = Math.PI / 6; // 30 degrees each side
-        let angleDiff = desiredAimAngle - p.angle;
-        while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
-        while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
-
-        let excess = 0;
-        if (angleDiff > MAX_GIMBAL) {
-          excess = angleDiff - MAX_GIMBAL;
-        } else if (angleDiff < -MAX_GIMBAL) {
-          excess = angleDiff + MAX_GIMBAL;
-        }
-
-        if (masterySkillCooldownRef.current > 0) {
-          masterySkillCooldownRef.current = Math.max(0, masterySkillCooldownRef.current - dt);
-        }
-        const smNow = shipMasteryRef.current;
-
-        // Smooth angular turn smoothing
-        const destTurnBoost =
-          isDestructor && hasMasteryNode(smNow, 'DESTRUCTOR', 'dest_core') ? 1.15 : 1.0;
-        const turnResponsiveness =
-          (isTroper ? 7.8 : isRei ? 3.9 : isDestructor ? 5.2 : 6.8) * (hasWarpShip && ds.warpActive ? 1.25 : 1.0) * destTurnBoost;
-        if (Math.abs(excess) > 0.001) {
-          const lerpFactor = 1 - Math.exp(-turnResponsiveness * dt);
-          const step = excess * lerpFactor;
-          p.angle += step;
-          ds.angularVel = dt > 0.0001 ? step / dt : 0;
-        } else {
-          ds.angularVel *= Math.exp(-12 * dt);
-        }
-
-        while (p.angle > Math.PI) p.angle -= Math.PI * 2;
-        while (p.angle < -Math.PI) p.angle += Math.PI * 2;
-
-        // Troper has NO Warp — only Destructor, Interceptor & Nave Rei charge Warp/Fúria
-        const hasDestCapacitor = isDestructor && hasMasteryNode(smNow, 'DESTRUCTOR', 'dest_capacitor');
-        const hasReiCore = isRei && hasMasteryNode(smNow, 'NAVE_REI', 'rei_crimson_core');
-        const WARP_CHARGE_DURATION = isRei ? (hasReiCore ? 4.5 : 6.0) : hasDestCapacitor ? 2.1 : 3.0;
-        const WARP_MODE_DURATION = isRei ? 10.0 : hasDestCapacitor ? 10.0 : 8.0;
-
-        if (hasWarpShip) {
-          const holdingShift = !!keysPressed.current['shift'] || mobileWarpHoldingRef.current || gp.warpHeld;
-
-          if (!ds.warpActive) {
-            if (holdingShift) {
-              ds.warpChargeTimer = Math.min(WARP_CHARGE_DURATION, ds.warpChargeTimer + dt);
-              ds.warpSoundTimer += dt;
-              if (ds.warpSoundTimer >= 0.2) {
-                ds.warpSoundTimer = 0;
-                sound.playDestructorWarpChargeTick(ds.warpChargeTimer / WARP_CHARGE_DURATION);
-              }
-
-              // Nave Rei: emits crackling red electricity & particles during charge!
-              const chargeP = ds.warpChargeTimer / WARP_CHARGE_DURATION;
-              if (isRei && chargeP > 0.12 && Math.random() < 0.35 + chargeP * 0.55) {
-                const arcStartA = Math.random() * Math.PI * 2;
-                const arcPoints: { x: number; y: number }[] = [];
-                let ax = p.x + Math.cos(arcStartA) * 26;
-                let ay = p.y + Math.sin(arcStartA) * 26;
-                for (let seg = 0; seg < 4; seg++) {
-                  const stepA = arcStartA + (Math.random() - 0.5) * 1.1;
-                  const stepL = 12 + Math.random() * 14;
-                  ax += Math.cos(stepA) * stepL;
-                  ay += Math.sin(stepA) * stepL;
-                  arcPoints.push({ x: ax, y: ay });
-                }
-                particlesRef.current.push({
-                  id: `rei-celec-${Date.now()}-${Math.random()}`,
-                  type: 'ENERGY_ARC',
-                  x: p.x,
-                  y: p.y,
-                  vx: 0,
-                  vy: 0,
-                  radius: 2.2,
-                  color: '#ef4444',
-                  alpha: 0.95,
-                  decay: 0.14,
-                  points: arcPoints,
-                });
-              }
-
-              if (ds.warpChargeTimer >= WARP_CHARGE_DURATION) {
-                ds.warpActive = true;
-                ds.warpTimer = WARP_MODE_DURATION;
-                ds.warpChargeTimer = 0;
-                ds.warpSoundTimer = 0;
-                if (isRei) {
-                  sound.playReiFuryActivate();
-                } else {
-                  sound.playDestructorWarpActivate();
-                }
-                screenShakeRef.current = Math.min(30, screenShakeRef.current + (isRei ? 20 : 14));
-                particlesRef.current.push({
-                  id: `warp-ring-1-${Date.now()}-${Math.random()}`,
-                  type: 'PLASMA_RING',
-                  x: p.x,
-                  y: p.y,
-                  vx: 0,
-                  vy: 0,
-                  radius: isRei ? 36 : 26,
-                  growthSpeed: isRei ? 520 : 420,
-                  color: isRei ? '#ef4444' : '#e879f9',
-                  alpha: 1,
-                  decay: 0.032,
-                });
-                particlesRef.current.push({
-                  id: `warp-ring-2-${Date.now()}-${Math.random()}`,
-                  type: 'PLASMA_RING',
-                  x: p.x,
-                  y: p.y,
-                  vx: 0,
-                  vy: 0,
-                  radius: 20,
-                  growthSpeed: isRei ? 380 : 300,
-                  color: isRei ? '#fbbf24' : isInterceptor ? '#00f5d4' : '#22d3ee',
-                  alpha: 1,
-                  decay: 0.038,
-                });
-              }
-            } else {
-              ds.warpChargeTimer = Math.max(0, ds.warpChargeTimer - dt * 2.5);
-              ds.warpSoundTimer = 0;
-            }
-          } else {
-            ds.warpTimer -= dt;
-            if (hasReiCore && p.maxShield > 0 && p.shield < p.maxShield) {
-              p.shield = Math.min(p.maxShield, p.shield + 14 * dt);
-            }
-            if (ds.warpTimer <= 0) {
-              ds.warpActive = false;
-              ds.warpTimer = 0;
-            }
-          }
-
-          // Advance particle accelerator spheres rapidly (super-super-fast during Nave Rei Modo Fúria!)
-          const chargeRatio = ds.warpActive ? 1 : ds.warpChargeTimer / WARP_CHARGE_DURATION;
-          const accelSpeed = isRei
-            ? (ds.warpActive ? 68 : 8 + Math.pow(chargeRatio, 1.25) * 48)
-            : (ds.warpActive ? 42 : 7 + Math.pow(chargeRatio, 1.35) * 34);
-          ds.orbitAngle = (ds.orbitAngle + accelSpeed * dt) % (Math.PI * 200);
-
-          // Destructor Tier 3: Refração Orbital — accelerator spheres damage touching enemies
-          if (
-            isDestructor &&
-            (ds.warpActive || ds.warpChargeTimer > 0.25) &&
-            hasMasteryNode(smNow, 'DESTRUCTOR', 'dest_orbital_burn')
-          ) {
-            masteryCombatTimersRef.current.orbitalBurnTimer += dt;
-            if (masteryCombatTimersRef.current.orbitalBurnTimer >= 0.22) {
-              masteryCombatTimersRef.current.orbitalBurnTimer = 0;
-              const dw = p.weapons[WeaponType.DESTRUCTOR] || INITIAL_WEAPONS[WeaponType.DESTRUCTOR];
-              const orbSlashDmg = Math.max(24, Math.round(dw.damage * 0.9));
-              for (let zi = 0; zi < zombiesRef.current.length; zi++) {
-                const oz = zombiesRef.current[zi];
-                if (oz.hp <= 0) continue;
-                if (Math.hypot(oz.x - p.x, oz.y - p.y) <= 82 + oz.radius) {
-                  oz.hp -= orbSlashDmg;
-                  if (oz.hp <= 0) handleZombieDeath(oz);
-                }
-              }
-            }
-          }
-
-          // Nave Rei Tier 3: Tempestade de Fúria — continuous red lightning arcs shock nearby enemies
-          if (
-            isRei &&
-            (ds.warpActive || chargeRatio > 0.2) &&
-            hasMasteryNode(smNow, 'NAVE_REI', 'rei_storm')
-          ) {
-            masteryCombatTimersRef.current.reiStormTimer += dt;
-            if (masteryCombatTimersRef.current.reiStormTimer >= (ds.warpActive ? 0.26 : 0.45)) {
-              masteryCombatTimersRef.current.reiStormTimer = 0;
-              const rw = p.weapons[WeaponType.NAVE_REI] || INITIAL_WEAPONS[WeaponType.NAVE_REI];
-              const shockDmg = Math.max(28, Math.round(rw.damage * (ds.warpActive ? 1.2 : 0.65)));
-              for (let zi = 0; zi < zombiesRef.current.length; zi++) {
-                const rz = zombiesRef.current[zi];
-                if (rz.hp <= 0) continue;
-                if (Math.hypot(rz.x - p.x, rz.y - p.y) <= 195 + rz.radius) {
-                  rz.hp -= shockDmg;
-                  rz.isStunned = true;
-                  rz.stunTimer = Math.max(rz.stunTimer, 0.25);
-                  if (rz.hp <= 0) handleZombieDeath(rz);
-                }
-              }
-            }
-          }
-
-          // Nave Rei Modo Fúria: continuous dense crimson particles + red electricity bolts + proximity shock
-          if (isRei && ds.warpActive) {
-            for (let fp = 0; fp < 4; fp++) {
-              const pa = Math.random() * Math.PI * 2;
-              const spd = 95 + Math.random() * 190;
-              particlesRef.current.push({
-                id: `rei-fury-pt-${Date.now()}-${fp}-${Math.random()}`,
-                type: fp % 2 === 0 ? 'SPARK' : 'MUZZLE',
-                x: p.x + Math.cos(pa) * (20 + Math.random() * 24),
-                y: p.y + Math.sin(pa) * (20 + Math.random() * 24),
-                vx: Math.cos(pa) * spd,
-                vy: Math.sin(pa) * spd,
-                radius: 2.5 + Math.random() * 3.0,
-                color: fp === 0 ? '#fca5a5' : fp % 2 === 0 ? '#ef4444' : '#dc2626',
-                alpha: 1,
-                decay: 0.05,
-              });
-            }
-            for (let eb = 0; eb < 2; eb++) {
-              const arcStartA = Math.random() * Math.PI * 2;
-              const arcPoints: { x: number; y: number }[] = [];
-              let ax = p.x + Math.cos(arcStartA) * 24;
-              let ay = p.y + Math.sin(arcStartA) * 24;
-              for (let seg = 0; seg < 4; seg++) {
-                const stepA = arcStartA + (Math.random() - 0.5) * 1.1;
-                const stepL = 16 + Math.random() * 18;
-                ax += Math.cos(stepA) * stepL;
-                ay += Math.sin(stepA) * stepL;
-                arcPoints.push({ x: ax, y: ay });
-              }
-              particlesRef.current.push({
-                id: `rei-felec-${Date.now()}-${eb}-${Math.random()}`,
-                type: 'ENERGY_ARC',
-                x: p.x,
-                y: p.y,
-                vx: 0,
-                vy: 0,
-                radius: 2.6,
-                color: eb === 0 ? '#ef4444' : '#fca5a5',
-                alpha: 1,
-                decay: 0.16,
-                points: arcPoints,
-              });
-            }
-          }
-        } else {
-          ds.warpActive = false;
-          ds.warpChargeTimer = 0;
-          ds.warpTimer = 0;
-          ds.warpSoundTimer = 0;
-          mobileWarpHoldingRef.current = false;
-        }
-
-        ds.hudSyncTimer += dt;
-        if (ds.hudSyncTimer >= 0.08) {
-          ds.hudSyncTimer = 0;
-          if (hasWarpShip) {
-            setDestructorWarpHud({
-              chargeProgress: ds.warpChargeTimer / WARP_CHARGE_DURATION,
-              active: ds.warpActive,
-              remainingRatio: ds.warpActive ? Math.max(0, ds.warpTimer / WARP_MODE_DURATION) : 0,
-              remainingSeconds: ds.warpActive ? Math.max(0, ds.warpTimer) : 0,
-              chargeDuration: WARP_CHARGE_DURATION,
-            });
-          } else {
-            setDestructorWarpHud({
-              chargeProgress: 0,
-              active: false,
-              remainingRatio: 0,
-              remainingSeconds: 0,
-              chargeDuration: 3.0,
+      const onPierNow = isPointOnPier(p.x, p.y);
+      const playerWaterDepth = getWaterDepth(p.x, p.y);
+      if (splashCooldownRef.current > 0) splashCooldownRef.current -= dt;
+      // Shoreline hysteresis prevents splash-sound/particle spam when walking along the 2.2 contour
+      const inWaterNow = wasPlayerInWaterRef.current ? playerWaterDepth > 1.2 : playerWaterDepth > 3.2;
+      if (inWaterNow !== wasPlayerInWaterRef.current) {
+        const jumpedFromPier = inWaterNow && wasOnPierRef.current;
+        wasPlayerInWaterRef.current = inWaterNow;
+        if (splashCooldownRef.current <= 0 || jumpedFromPier) {
+          splashCooldownRef.current = 0.34;
+          sound.playWaterSplash(inWaterNow);
+          threeRendererRef.current?.triggerWaterRipple(p.x, p.y, jumpedFromPier ? 1.65 : 1.15);
+          particlesRef.current.push({
+            id: `wring-io-${Math.random()}`,
+            x: p.x,
+            y: p.y,
+            vx: 0,
+            vy: 0,
+            radius: jumpedFromPier ? 16 : 12,
+            growthSpeed: jumpedFromPier ? 118 : 92,
+            color: '#bae6fd',
+            alpha: 0.78,
+            decay: 1.45,
+            type: 'WATER_RING',
+          });
+          const splashCount = jumpedFromPier ? 11 : 7;
+          for (let ws = 0; ws < splashCount; ws++) {
+            const sa = (ws * Math.PI * 2) / splashCount + Math.random() * 0.4;
+            const spd = (jumpedFromPier ? 75 : 52) + Math.random() * 70;
+            particlesRef.current.push({
+              id: `wsplash-io-${Math.random()}`,
+              x: p.x + Math.cos(sa) * 10,
+              y: p.y + Math.sin(sa) * 10,
+              z: jumpedFromPier ? 10 : 6,
+              vx: Math.cos(sa) * spd,
+              vy: Math.sin(sa) * spd,
+              vz: (jumpedFromPier ? 95 : 70) + Math.random() * 60,
+              drag: 3.2,
+              radius: 2.2 + Math.random() * 1.8,
+              color: '#e0f2fe',
+              alpha: 0.9,
+              decay: 1.9,
+              type: 'WATER_SPLASH',
             });
           }
-          syncMasterySkillHud(p.currentWeapon, masterySkillCooldownRef.current);
         }
-      } else {
-        if (ds.isFiring || ds.laserChargeProgress > 0 || ds.warpActive || ds.warpChargeTimer > 0 || ds.angularVel !== 0) {
-          ds.isFiring = false;
-          ds.laserChargeProgress = 0;
-          ds.warpActive = false;
-          ds.warpChargeTimer = 0;
-          ds.warpTimer = 0;
-          ds.angularVel = 0;
-          mobileWarpHoldingRef.current = false;
-          setDestructorWarpHud({
-            chargeProgress: 0,
-            active: false,
-            remainingRatio: 0,
-            remainingSeconds: 0,
-            chargeDuration: 3.0,
+      }
+      wasOnPierRef.current = onPierNow;
+
+      if (inWaterNow && Math.hypot(vx, vy) > 25) {
+        swimWakeTimerRef.current += dt;
+        if (swimWakeTimerRef.current >= 0.24) {
+          swimWakeTimerRef.current = 0;
+          threeRendererRef.current?.triggerWaterRipple(p.x, p.y, 0.52);
+          particlesRef.current.push({
+            id: `wwake-${Math.random()}`,
+            x: p.x,
+            y: p.y,
+            vx: -vx * 0.08,
+            vy: -vy * 0.08,
+            radius: 10,
+            growthSpeed: 54,
+            color: '#e0f2fe',
+            alpha: 0.58,
+            decay: 1.15,
+            type: 'WATER_RING',
           });
         }
+      } else {
+        swimWakeTimerRef.current = 0.16;
+      }
 
-        if (isEastDragon) {
-          // East Dragon smoothly turns its horned head toward cursor / right joystick / gamepad stick
-          if (rightJoystick.current.active) {
-            const rx = rightJoystick.current.x;
-            const ry = rightJoystick.current.y;
-            const dragDist = Math.hypot(rx, ry);
-            if (dragDist > 0.15) {
-              const targetAng = Math.atan2(ry, rx);
-              let diff = targetAng - p.angle;
-              while (diff > Math.PI) diff -= Math.PI * 2;
-              while (diff < -Math.PI) diff += Math.PI * 2;
-              p.angle += diff * (1 - Math.exp(-10 * dt));
-              shootingAngle = p.angle;
-              shouldFire = true;
-            }
-          } else if (gp.connected && (gp.aimActive || gp.fireHeld)) {
-            const targetAng = gp.aimActive
-              ? Math.atan2(gp.aimY, gp.aimX)
-              : moveX !== 0 || moveY !== 0
-                ? Math.atan2(moveY, moveX)
-                : p.angle;
-            let diff = targetAng - p.angle;
-            while (diff > Math.PI) diff -= Math.PI * 2;
-            while (diff < -Math.PI) diff += Math.PI * 2;
-            p.angle += diff * (1 - Math.exp(-10 * dt));
-            shootingAngle = p.angle;
-            shouldFire = gp.aimFire || gp.fireHeld;
-          } else if (canvasRef.current && (hasMouseMovedRef.current || isMouseDown.current)) {
-            const camLeft = cameraRef.current.x - canvasRef.current.width / 2;
-            const camTop = cameraRef.current.y - canvasRef.current.height / 2;
-            const screenPlayerX = p.x - camLeft;
-            const screenPlayerY = p.y - camTop;
-            const targetAng = Math.atan2(mousePos.current.y - screenPlayerY, mousePos.current.x - screenPlayerX);
-            let diff = targetAng - p.angle;
-            while (diff > Math.PI) diff -= Math.PI * 2;
-            while (diff < -Math.PI) diff += Math.PI * 2;
-            p.angle += diff * (1 - Math.exp(-10 * dt));
-            shootingAngle = p.angle;
-            shouldFire = isMouseDown.current;
-          } else if (moveX !== 0 || moveY !== 0) {
-            const targetAng = Math.atan2(moveY, moveX);
-            let diff = targetAng - p.angle;
-            while (diff > Math.PI) diff -= Math.PI * 2;
-            while (diff < -Math.PI) diff += Math.PI * 2;
-            p.angle += diff * (1 - Math.exp(-8 * dt));
-            shootingAngle = p.angle;
-          }
-          while (p.angle > Math.PI) p.angle -= Math.PI * 2;
-          while (p.angle < -Math.PI) p.angle += Math.PI * 2;
-        } else {
-          if (rightJoystick.current.active) {
-            const rx = rightJoystick.current.x;
-            const ry = rightJoystick.current.y;
-            const dragDist = Math.hypot(rx, ry);
-            if (dragDist > 0.15) {
-              shootingAngle = Math.atan2(ry, rx);
-              p.angle = shootingAngle;
-              shouldFire = true;
-            }
-          } else if (gp.connected && (gp.aimActive || gp.fireHeld)) {
-            shootingAngle = gp.aimActive
-              ? Math.atan2(gp.aimY, gp.aimX)
-              : moveX !== 0 || moveY !== 0
-                ? Math.atan2(moveY, moveX)
-                : p.angle;
-            p.angle = shootingAngle;
-            shouldFire = gp.aimFire || gp.fireHeld;
-          } else if (isMouseDown.current && canvasRef.current) {
-            const camLeft = cameraRef.current.x - canvasRef.current.width / 2;
-            const camTop = cameraRef.current.y - canvasRef.current.height / 2;
-            const screenPlayerX = p.x - camLeft;
-            const screenPlayerY = p.y - camTop;
-            const dx = mousePos.current.x - screenPlayerX;
-            const dy = mousePos.current.y - screenPlayerY;
-            shootingAngle = Math.atan2(dy, dx);
-            p.angle = shootingAngle;
-            shouldFire = true;
-          } else if (moveX !== 0 || moveY !== 0) {
-            p.angle = Math.atan2(moveY, moveX);
-          }
+      // Aim resolution (Touch Right Joystick -> Gamepad Right Stick -> Mouse World Coords)
+      if (rightJoystickRef.current.active) {
+        p.angle = Math.atan2(rightJoystickRef.current.y, rightJoystickRef.current.x);
+      } else if (gp.connected && gp.aimActive) {
+        p.angle = Math.atan2(gp.aimY, gp.aimX);
+      } else if (!gp.connected) {
+        const worldAim = threeRendererRef.current
+          ? threeRendererRef.current.screenToWorld(mouseRef.current.x, mouseRef.current.y)
+          : { x: mouseRef.current.x + cam.x, y: mouseRef.current.y + cam.y };
+        p.angle = Math.atan2(worldAim.y - p.y, worldAim.x - p.x);
+      }
+
+      // Firing check
+      const isFiring =
+        mouseRef.current.isDown ||
+        rightJoystickRef.current.active ||
+        (gp.connected && (gp.fireHeld || gp.aimFire));
+      if (isFiring) {
+        fireConventionalWeapon(nowSec);
+      }
+
+      // Passive HP regeneration & Energy Shield recharge
+      if ((p.regenHpRate || 0) > 0 && p.hp < p.maxHp) {
+        p.hp = Math.min(p.maxHp, p.hp + (p.regenHpRate || 0) * dt);
+      }
+      if (shieldRechargeTimerRef.current > 0) {
+        shieldRechargeTimerRef.current -= dt;
+      } else if (p.maxShield > 0 && p.shield < p.maxShield) {
+        p.shield = Math.min(p.maxShield, p.shield + 14 * dt);
+      }
+
+      // Low HP arterial heartbeat
+      const hpRatio = p.hp / Math.max(1, p.maxHp);
+      if (hpRatio <= 0.3) {
+        heartbeatTimerRef.current -= dt;
+        if (heartbeatTimerRef.current <= 0) {
+          const intensity = hpRatio <= 0.15 ? 1.45 : 1.0;
+          sound.playHeartbeat(intensity);
+          heartbeatTimerRef.current = hpRatio <= 0.15 ? 0.56 : 0.85;
         }
       }
 
-      if (dyingRef.current?.active) {
-        moveX = 0;
-        moveY = 0;
-        shouldFire = false;
-        ds.isFiring = false;
-        ds.laserChargeProgress = 0;
-        ed.isFiring = false;
-        ed.beamExtension = 0;
-        im.isFiring = false;
-        im.laserChargeProgress = 0;
-        ifd.isFiring = false;
-        ifd.beamExtension = 0;
-      }
-
-      // 2. PLAYER POSITION UPDATE & VENOM FRUIT DASH/COOLDOWNS
-      const vfState = venomFruitStateRef.current;
-      if (vfState.hydraCd > 0) vfState.hydraCd = Math.max(0, vfState.hydraCd - dt);
-      if (vfState.chloroCd > 0) vfState.chloroCd = Math.max(0, vfState.chloroCd - dt);
-      if (vfState.roadCd > 0) vfState.roadCd = Math.max(0, vfState.roadCd - dt);
-      if (vfState.demonCd > 0) vfState.demonCd = Math.max(0, vfState.demonCd - dt);
-      if (vfState.demonActive) {
-        vfState.demonTimer -= dt;
-        if (vfState.demonTimer <= 0 || p.currentWeapon !== WeaponType.VENOM_FRUIT) {
-          vfState.demonActive = false;
-          vfState.demonTimer = 0;
-          vfState.demonCd = VENOM_DEMON_CD;
-        }
-      }
-
-      if (vfState.dashTimer > 0 && !dyingRef.current?.active) {
-        vfState.dashTimer = Math.max(0, vfState.dashTimer - dt);
-        p.vx = vfState.dashVx;
-        p.vy = vfState.dashVy;
-
-        // Surging liquid venom trail particles during Estrada Venenosa dash
-        for (let vt = 0; vt < 2; vt++) {
+      // Skin active combat perks & ambient trails
+      skinEffectTimerRef.current += dt;
+      skinOrbitalTimerRef.current += dt;
+      if (skinEffectTimerRef.current >= 0.08 && Math.hypot(vx, vy) > 40) {
+        skinEffectTimerRef.current = 0;
+        if (p.equippedSkin === 'skin_pyro_igniter') {
           particlesRef.current.push({
-            id: `vroad-tr-${Date.now()}-${vt}-${Math.random()}`,
-            type: 'SMOKE',
+            id: `pyro-${Math.random()}`,
             x: p.x + (Math.random() - 0.5) * 14,
             y: p.y + (Math.random() - 0.5) * 14,
-            vx: -p.vx * 0.12 + (Math.random() - 0.5) * 35,
-            vy: -p.vy * 0.12 + (Math.random() - 0.5) * 35,
-            radius: 7 + Math.random() * 5,
-            growthSpeed: 12,
-            color: vfState.demonActive ? 'rgba(244, 63, 94, 0.6)' : 'rgba(168, 85, 247, 0.6)',
-            alpha: 0.72,
-            decay: 0.045,
+            vx: (Math.random() - 0.5) * 28,
+            vy: (Math.random() - 0.5) * 28,
+            radius: 3.5,
+            color: '#f97316',
+            alpha: 0.7,
+            decay: 2.2,
+            type: 'FLAME',
           });
-        }
-
-        const vwDash = p.weapons[WeaponType.VENOM_FRUIT] || INITIAL_WEAPONS[WeaponType.VENOM_FRUIT];
-        const dashDmg = Math.round(vwDash.damage * (vfState.demonActive ? 3.2 : 2.3));
-        for (let zi = 0; zi < zombiesRef.current.length; zi++) {
-          const dz = zombiesRef.current[zi];
-          if (dz.hp <= 0 || vfState.dashHitIds[dz.id]) continue;
-          if (Math.hypot(dz.x - p.x, dz.y - p.y) <= 88 + dz.radius) {
-            vfState.dashHitIds[dz.id] = true;
-            dz.hp -= dashDmg;
-            dz.isPoisoned = true;
-            dz.poisonTimer = Math.max(dz.poisonTimer || 0, 5.0);
-            dz.poisonDps = Math.max(dz.poisonDps || 0, vfState.demonActive ? 36 : 20);
-            if (vfState.demonActive) dz.isKinjitePoison = true;
-            const kba = Math.atan2(dz.y - p.y, dz.x - p.x);
-            dz.knockbackX += Math.cos(kba) * 380 * (p.knockbackMult || 1);
-            dz.knockbackY += Math.sin(kba) * 380 * (p.knockbackMult || 1);
-            if (dz.hp <= 0) handleZombieDeath(dz);
-          }
-        }
-      } else {
-        const warpSpeedMult = hasWarpShip && ds.warpActive
-          ? (isInterceptor ? 2.85 : isRei ? 2.25 : 2.65)
-          : p.currentWeapon === WeaponType.VENOM_FRUIT && vfState.demonActive
-            ? 1.25
-            : isEastDragon
-              ? 1.15
-              : isIronMan
-                ? 1.12
-                : 1.0;
-        p.vx = moveX * p.speed * warpSpeedMult;
-        p.vy = moveY * p.speed * warpSpeedMult;
-      }
-
-      // Venom Demon Kinjite corrosive proximity aura + Toxic Chloro Gas Clouds update
-      if (!dyingRef.current?.active) {
-        if (p.currentWeapon === WeaponType.VENOM_FRUIT && vfState.demonActive) {
-          vfState.auraTickTimer += dt;
-          if (vfState.auraTickTimer >= 0.25) {
-            vfState.auraTickTimer = 0;
-            const vwAura = p.weapons[WeaponType.VENOM_FRUIT] || INITIAL_WEAPONS[WeaponType.VENOM_FRUIT];
-            const auraDmg = Math.max(12, Math.round(vwAura.damage * 1.15));
-            for (let zi = 0; zi < zombiesRef.current.length; zi++) {
-              const az = zombiesRef.current[zi];
-              if (az.hp <= 0) continue;
-              if (Math.hypot(az.x - p.x, az.y - p.y) <= 115 + az.radius) {
-                az.hp -= auraDmg;
-                az.isPoisoned = true;
-                az.poisonTimer = Math.max(az.poisonTimer || 0, 4.5);
-                az.poisonDps = Math.max(az.poisonDps || 0, 36);
-                az.isKinjitePoison = true;
-                if (az.hp <= 0) handleZombieDeath(az);
-              }
-            }
-          }
-        }
-
-        if (vfState.clouds.length > 0) {
-          const nextClouds: VenomCloudArea[] = [];
-          for (let ci = 0; ci < vfState.clouds.length; ci++) {
-            const cl = vfState.clouds[ci];
-            cl.timer -= dt;
-            if (cl.timer <= 0) continue;
-            cl.tickTimer += dt;
-            if (cl.tickTimer >= 0.28) {
-              cl.tickTimer = 0;
-              for (let zi = 0; zi < zombiesRef.current.length; zi++) {
-                const cz = zombiesRef.current[zi];
-                if (cz.hp <= 0) continue;
-                if (Math.hypot(cz.x - cl.x, cz.y - cl.y) <= cl.radius + cz.radius) {
-                  cz.hp -= cl.damage;
-                  cz.isPoisoned = true;
-                  cz.poisonTimer = Math.max(cz.poisonTimer || 0, 4.0);
-                  cz.poisonDps = Math.max(cz.poisonDps || 0, cl.isKinjite ? 34 : 18);
-                  if (cl.isKinjite) cz.isKinjitePoison = true;
-                  cz.isStunned = true;
-                  cz.stunTimer = Math.max(cz.stunTimer, 0.16);
-                  if (cz.hp <= 0) handleZombieDeath(cz);
-                }
-              }
-            }
-            nextClouds.push(cl);
-          }
-          vfState.clouds = nextClouds;
-        }
-      }
-
-      if (p.currentWeapon === WeaponType.VENOM_FRUIT) {
-        vfState.hudSyncTimer += dt;
-        if (vfState.hudSyncTimer >= 0.08) {
-          vfState.hudSyncTimer = 0;
-          syncVenomHudImmediate();
-        }
-      }
-
-      p.x += p.vx * dt;
-      p.y += p.vy * dt;
-
-      // Constrain player in arena bounds
-      p.x = Math.max(p.radius, Math.min(ARENA_SIZE - p.radius, p.x));
-      p.y = Math.max(p.radius, Math.min(ARENA_SIZE - p.radius, p.y));
-
-      // Keep ship blaster geometry & rear thruster trails locked to post-movement coords
-      if (isShip && !dyingRef.current?.active) {
-        ds.isFiring = shouldFire;
-        if (shouldFire) {
-          ds.laserChargeProgress = Math.min(1, ds.laserChargeProgress + dt / 0.26);
-        } else {
-          ds.laserChargeProgress = 0;
-        }
-
-        if (hasWarpShip) {
-          if (isRei) {
-            ds.reiBlasters = getReiBlastersWorld(p.x, p.y, p.angle, destructorTargetX, destructorTargetY);
-          } else {
-            const geo = isInterceptor
-              ? getInterceptorBlastersWorld(p.x, p.y, p.angle, destructorTargetX, destructorTargetY)
-              : getDestructorBlastersWorld(p.x, p.y, p.angle, destructorTargetX, destructorTargetY);
-            ds.leftBlasterAngle = geo.leftAngle;
-            ds.rightBlasterAngle = geo.rightAngle;
-            ds.leftMuzzleX = geo.leftMuzzleX;
-            ds.leftMuzzleY = geo.leftMuzzleY;
-            ds.rightMuzzleX = geo.rightMuzzleX;
-            ds.rightMuzzleY = geo.rightMuzzleY;
-          }
-
-          // Compute world nozzle coordinates for BOTH rear thrusters
-          const nozzleXOffset = isRei ? -24 : -17;
-          const nozzleYOffset = isRei ? 12 : isInterceptor ? 9 : 8.5;
-          const cosA = Math.cos(p.angle);
-          const sinA = Math.sin(p.angle);
-          const leftNozzleX = p.x + (nozzleXOffset * cosA - -nozzleYOffset * sinA);
-          const leftNozzleY = p.y + (nozzleXOffset * sinA + -nozzleYOffset * cosA);
-          const rightNozzleX = p.x + (nozzleXOffset * cosA - nozzleYOffset * sinA);
-          const rightNozzleY = p.y + (nozzleXOffset * sinA + nozzleYOffset * cosA);
-
-          const movingNow = Math.hypot(p.vx || 0, p.vy || 0) > 8;
-          const trailMaxLife = ds.warpActive ? 0.56 : 0.36;
-
-          // Decay existing thruster trail nodes
-          for (let ti = 0; ti < ds.leftTrail.length; ti++) {
-            ds.leftTrail[ti].life -= dt;
-          }
-          for (let ti = 0; ti < ds.rightTrail.length; ti++) {
-            ds.rightTrail[ti].life -= dt;
-          }
-          ds.leftTrail = ds.leftTrail.filter((pt) => pt.life > 0);
-          ds.rightTrail = ds.rightTrail.filter((pt) => pt.life > 0);
-
-          if (movingNow || ds.warpActive) {
-            ds.leftTrail.push({
-              x: leftNozzleX,
-              y: leftNozzleY,
-              life: trailMaxLife,
-              maxLife: trailMaxLife,
-              warp: ds.warpActive,
-            });
-            ds.rightTrail.push({
-              x: rightNozzleX,
-              y: rightNozzleY,
-              life: trailMaxLife,
-              maxLife: trailMaxLife,
-              warp: ds.warpActive,
-            });
-            const maxPts = ds.warpActive ? 42 : 28;
-            if (ds.leftTrail.length > maxPts) ds.leftTrail.splice(0, ds.leftTrail.length - maxPts);
-            if (ds.rightTrail.length > maxPts) ds.rightTrail.splice(0, ds.rightTrail.length - maxPts);
-          }
-
-          // High-speed Warp / Fury Mode plasma afterburner streaks
-          if (ds.warpActive && (Math.abs(p.vx) > 20 || Math.abs(p.vy) > 20)) {
-            for (let ws = 0; ws < 2; ws++) {
-              particlesRef.current.push({
-                id: `warp-spark-${Date.now()}-${ws}-${Math.random()}`,
-                type: 'SPARK',
-                x: p.x - Math.cos(p.angle) * (isRei ? 24 : 18) + (Math.random() - 0.5) * 18,
-                y: p.y - Math.sin(p.angle) * (isRei ? 24 : 18) + (Math.random() - 0.5) * 18,
-                vx: -p.vx * 0.28 + (Math.random() - 0.5) * 45,
-                vy: -p.vy * 0.28 + (Math.random() - 0.5) * 45,
-                radius: 2.2 + Math.random() * 2.2,
-                color: isRei ? (ws % 2 === 0 ? '#ef4444' : '#fbbf24') : ws % 2 === 0 ? '#e879f9' : isInterceptor ? '#00f5d4' : '#22d3ee',
-                alpha: 0.9,
-                decay: 0.06,
-              });
-            }
-          }
-        } else {
-          ds.leftTrail = [];
-          ds.rightTrail = [];
-        }
-      } else {
-        ds.leftTrail = [];
-        ds.rightTrail = [];
-      }
-
-      // Update East Dragon articulated worm-like serpentine body segments & forward-extending fire beam
-      if (isEastDragon && !dyingRef.current?.active) {
-        const nowSec = nowMs * 0.001;
-        const movingNow = Math.hypot(p.vx || 0, p.vy || 0) > 8;
-        const wasEdFiring = ed.isFiring;
-        ed.isFiring = shouldFire;
-        if (shouldFire) {
-          if (!wasEdFiring) {
-            ed.beamExtension = 0.04;
-          } else {
-            ed.beamExtension = Math.min(1, ed.beamExtension + dt / 0.22);
-          }
-        } else {
-          ed.beamExtension = 0;
-        }
-        const effDragonBeamLen = 980 * Math.max(0.04, ed.beamExtension);
-        ed.muzzleX = p.x + Math.cos(p.angle) * 26;
-        ed.muzzleY = p.y + Math.sin(p.angle) * 26;
-        ed.beamEndX = ed.muzzleX + Math.cos(p.angle) * effDragonBeamLen;
-        ed.beamEndY = ed.muzzleY + Math.sin(p.angle) * effDragonBeamLen;
-
-        let targetX = p.x - Math.cos(p.angle) * 8;
-        let targetY = p.y - Math.sin(p.angle) * 8;
-        const segs = ed.segments;
-        for (let si = 0; si < segs.length; si++) {
-          const seg = segs[si];
-          const dxS = targetX - seg.x;
-          const dyS = targetY - seg.y;
-          const distS = Math.hypot(dxS, dyS) || 0.001;
-          const ang = Math.atan2(dyS, dxS);
-          const waveAmp = (movingNow ? 2.6 : 1.4) * Math.sin(nowSec * 7.2 - si * 0.62);
-          const perpX = -Math.sin(ang) * waveAmp;
-          const perpY = Math.cos(ang) * waveAmp;
-
-          seg.x = targetX - (dxS / distS) * DRAGON_SEGMENT_SPACING + perpX * dt * 16;
-          seg.y = targetY - (dyS / distS) * DRAGON_SEGMENT_SPACING + perpY * dt * 16;
-          seg.angle = ang;
-
-          targetX = seg.x;
-          targetY = seg.y;
-        }
-
-        // Ambient fire embers trailing off dragon spine & tail
-        ed.emberTimer += dt;
-        if (ed.emberTimer >= (movingNow || ed.isFiring ? 0.045 : 0.11)) {
-          ed.emberTimer = 0;
-          const randSeg = segs[Math.floor(Math.random() * segs.length)] || { x: p.x, y: p.y };
+        } else if (p.equippedSkin === 'skin_hazard_juggernaut') {
           particlesRef.current.push({
-            id: `ed-ember-${Date.now()}-${Math.random()}`,
-            type: Math.random() < 0.45 ? 'FLAME' : 'SPARK',
-            x: randSeg.x + (Math.random() - 0.5) * 14,
-            y: randSeg.y + (Math.random() - 0.5) * 14,
-            vx: -(p.vx || 0) * 0.18 + (Math.random() - 0.5) * 40,
-            vy: -(p.vy || 0) * 0.18 - 25 - Math.random() * 35,
-            radius: 2.2 + Math.random() * 2.5,
-            color: Math.random() < 0.5 ? '#f97316' : '#fde047',
-            alpha: 0.9,
-            decay: 0.055,
+            id: `haz-${Math.random()}`,
+            x: p.x,
+            y: p.y,
+            vx: (Math.random() - 0.5) * 16,
+            vy: (Math.random() - 0.5) * 16,
+            radius: 8,
+            color: 'rgba(132, 204, 22, 0.35)',
+            alpha: 0.45,
+            decay: 1.4,
+            type: 'SMOKE',
+          });
+        } else if (p.equippedSkin === 'skin_cryo_warden') {
+          particlesRef.current.push({
+            id: `cryo-${Math.random()}`,
+            x: p.x + (Math.random() - 0.5) * 18,
+            y: p.y + (Math.random() - 0.5) * 18,
+            vx: (Math.random() - 0.5) * 20,
+            vy: (Math.random() - 0.5) * 20,
+            radius: 2.5,
+            color: '#bae6fd',
+            alpha: 0.75,
+            decay: 2.5,
+            type: 'SPARK',
           });
         }
-      } else {
-        ed.isFiring = false;
-        ed.beamExtension = 0;
       }
 
-      // Update Iron Man jet trail & laser charge state
-      if (isIronMan && !dyingRef.current?.active) {
-        im.isFiring = shouldFire;
-        if (shouldFire && im.mode === 'LASER') {
-          im.laserChargeProgress = Math.min(1, im.laserChargeProgress + dt / 0.26);
-        } else {
-          im.laserChargeProgress = 0;
+      if (skinOrbitalTimerRef.current >= 0.35) {
+        skinOrbitalTimerRef.current = 0;
+        if (p.equippedSkin === 'skin_volt_cyber') {
+          for (let i = 0; i < zombiesRef.current.length; i++) {
+            const z = zombiesRef.current[i];
+            if (z.isDead) continue;
+            if ((z.x - p.x) ** 2 + (z.y - p.y) ** 2 < 78 * 78) {
+              damageZombie(z, 9 + p.level * 2, false, Math.atan2(z.y - p.y, z.x - p.x));
+              break;
+            }
+          }
         }
-        im.muzzleX = p.x + Math.cos(p.angle) * 20;
-        im.muzzleY = p.y + Math.sin(p.angle) * 20;
-        im.beamEndX = im.muzzleX + Math.cos(p.angle) * 950;
-        im.beamEndY = im.muzzleY + Math.sin(p.angle) * 950;
+      }
 
-        for (let ti = 0; ti < im.trail.length; ti++) {
-          im.trail[ti].life -= dt;
-        }
-        im.trail = im.trail.filter((pt) => pt.life > 0);
-        const movingNow = Math.hypot(p.vx || 0, p.vy || 0) > 8;
-        if (movingNow) {
-          const backX = p.x - Math.cos(p.angle) * 15;
-          const backY = p.y - Math.sin(p.angle) * 15;
-          im.trail.push({
-            x: backX,
-            y: backY,
-            life: 0.34,
-            maxLife: 0.34,
-            warp: im.mode === 'LASER',
+      // Gravity Vortex Pulse perk
+      if ((p.gravityPulseLevel || 0) > 0) {
+        gravityPulseTimerRef.current -= dt;
+        if (gravityPulseTimerRef.current <= 0) {
+          gravityPulseTimerRef.current = Math.max(2.2, 4.5 - (p.gravityPulseLevel || 1) * 0.45);
+          sound.playGravityPulse();
+          particlesRef.current.push({
+            id: `grav-${Math.random()}`,
+            x: p.x,
+            y: p.y,
+            vx: 0,
+            vy: 0,
+            radius: 24,
+            growthSpeed: 380,
+            color: '#818cf8',
+            alpha: 0.85,
+            decay: 2.1,
+            type: 'PLASMA_RING',
           });
-          if (im.trail.length > 28) im.trail.splice(0, im.trail.length - 28);
-        }
-      } else {
-        im.isFiring = false;
-        im.laserChargeProgress = 0;
-        im.trail = [];
-      }
-
-      // Update Ice & Fire Dragon dual companions & Mega Purple Dragon fusion
-      if (isIceFireDragon && !dyingRef.current?.active) {
-        const nowSec = nowMs * 0.001;
-        const movingNow = Math.hypot(p.vx || 0, p.vy || 0) > 8;
-
-        if (ifd.merged) {
-          ifd.mergeTimer -= dt;
-          if (ifd.mergeTimer <= 0) {
-            ifd.merged = false;
-            ifd.mergeTimer = 0;
-            ifd.mergeCooldown = ICE_FIRE_MERGE_COOLDOWN;
-            const splitX = ifd.megaHead.x;
-            const splitY = ifd.megaHead.y;
-            ifd.fireHead.x = splitX - Math.sin(p.angle) * -28;
-            ifd.fireHead.y = splitY + Math.cos(p.angle) * -28;
-            ifd.iceHead.x = splitX - Math.sin(p.angle) * 28;
-            ifd.iceHead.y = splitY + Math.cos(p.angle) * 28;
-            particlesRef.current.push({
-              id: `ifd-split-${Date.now()}-${Math.random()}`,
-              type: 'PLASMA_RING',
-              x: splitX,
-              y: splitY,
-              vx: 0,
-              vy: 0,
-              radius: 18,
-              growthSpeed: 320,
-              color: '#c084fc',
-              alpha: 0.9,
-              decay: 0.055,
-            });
-          }
-        } else if (ifd.mergeCooldown > 0) {
-          ifd.mergeCooldown = Math.max(0, ifd.mergeCooldown - dt);
-        }
-
-        const wasIfdFiring = ifd.isFiring;
-        ifd.isFiring = shouldFire;
-        if (shouldFire) {
-          if (!wasIfdFiring) {
-            ifd.beamExtension = 0.04;
-          } else {
-            ifd.beamExtension = Math.min(1, ifd.beamExtension + dt / 0.2);
-          }
-        } else {
-          ifd.beamExtension = 0;
-        }
-
-        let companionAimAngle = p.angle;
-        if (rightJoystick.current.active && Math.hypot(rightJoystick.current.x, rightJoystick.current.y) > 0.15) {
-          companionAimAngle = Math.atan2(rightJoystick.current.y, rightJoystick.current.x);
-        } else if (gp.connected && gp.aimActive) {
-          companionAimAngle = Math.atan2(gp.aimY, gp.aimX);
-        } else if (canvasRef.current && (hasMouseMovedRef.current || isMouseDown.current)) {
-          const camLeft = cameraRef.current.x - canvasRef.current.width / 2;
-          const camTop = cameraRef.current.y - canvasRef.current.height / 2;
-          companionAimAngle = Math.atan2(
-            mousePos.current.y - (p.y - camTop),
-            mousePos.current.x - (p.x - camLeft)
-          );
-        }
-
-        const updateSerpentineChain = (
-          headX: number,
-          headY: number,
-          headAngle: number,
-          segs: DragonSegment[],
-          spacing: number,
-          phaseOffset: number
-        ) => {
-          let tx = headX - Math.cos(headAngle) * (spacing * 0.7);
-          let ty = headY - Math.sin(headAngle) * (spacing * 0.7);
-          for (let si = 0; si < segs.length; si++) {
-            const seg = segs[si];
-            const dxS = tx - seg.x;
-            const dyS = ty - seg.y;
-            const distS = Math.hypot(dxS, dyS) || 0.001;
-            const ang = Math.atan2(dyS, dxS);
-            const waveAmp = (movingNow ? 2.4 : 1.4) * Math.sin(nowSec * 7.4 - si * 0.6 + phaseOffset);
-            seg.x = tx - (dxS / distS) * spacing - Math.sin(ang) * waveAmp * dt * 16;
-            seg.y = ty - (dyS / distS) * spacing + Math.cos(ang) * waveAmp * dt * 16;
-            seg.angle = ang;
-            tx = seg.x;
-            ty = seg.y;
-          }
-        };
-
-        const steerAngle = (cur: number, tgt: number, rate: number) => {
-          let diff = tgt - cur;
-          while (diff > Math.PI) diff -= Math.PI * 2;
-          while (diff < -Math.PI) diff += Math.PI * 2;
-          let next = cur + diff * (1 - Math.exp(-rate * dt));
-          while (next > Math.PI) next -= Math.PI * 2;
-          while (next < -Math.PI) next += Math.PI * 2;
-          return next;
-        };
-
-        const posFactor = 1 - Math.exp(-10.5 * dt);
-
-        if (!ifd.merged) {
-          const fireActive = ifd.activeDragon === 'FIRE';
-          const iceActive = ifd.activeDragon === 'ICE';
-          const bobF = Math.sin(nowSec * 4.2) * 5;
-          const bobI = Math.cos(nowSec * 4.2) * 5;
-
-          const fireTargetX = fireActive
-            ? p.x + Math.cos(companionAimAngle) * 34 - Math.sin(companionAimAngle) * -28
-            : p.x - Math.cos(p.angle) * 26 - Math.sin(p.angle) * -46;
-          const fireTargetY = (fireActive
-            ? p.y + Math.sin(companionAimAngle) * 34 + Math.cos(companionAimAngle) * -28
-            : p.y - Math.sin(p.angle) * 26 + Math.cos(p.angle) * -46) + bobF;
-          const fireDesiredAng = fireActive ? companionAimAngle : p.angle;
-
-          ifd.fireHead.x += (fireTargetX - ifd.fireHead.x) * posFactor;
-          ifd.fireHead.y += (fireTargetY - ifd.fireHead.y) * posFactor;
-          ifd.fireHead.angle = steerAngle(ifd.fireHead.angle, fireDesiredAng, 13);
-          updateSerpentineChain(ifd.fireHead.x, ifd.fireHead.y, ifd.fireHead.angle, ifd.fireSegments, 10, 0);
-
-          const iceTargetX = iceActive
-            ? p.x + Math.cos(companionAimAngle) * 34 - Math.sin(companionAimAngle) * 28
-            : p.x - Math.cos(p.angle) * 26 - Math.sin(p.angle) * 46;
-          const iceTargetY = (iceActive
-            ? p.y + Math.sin(companionAimAngle) * 34 + Math.cos(companionAimAngle) * 28
-            : p.y - Math.sin(p.angle) * 26 + Math.cos(p.angle) * 46) + bobI;
-          const iceDesiredAng = iceActive ? companionAimAngle : p.angle;
-
-          ifd.iceHead.x += (iceTargetX - ifd.iceHead.x) * posFactor;
-          ifd.iceHead.y += (iceTargetY - ifd.iceHead.y) * posFactor;
-          ifd.iceHead.angle = steerAngle(ifd.iceHead.angle, iceDesiredAng, 13);
-          updateSerpentineChain(ifd.iceHead.x, ifd.iceHead.y, ifd.iceHead.angle, ifd.iceSegments, 10, Math.PI);
-
-          const attackerHead = fireActive ? ifd.fireHead : ifd.iceHead;
-          const beamLen = 960 * Math.max(0.04, ifd.beamExtension);
-          ifd.muzzleX = attackerHead.x + Math.cos(attackerHead.angle) * 22;
-          ifd.muzzleY = attackerHead.y + Math.sin(attackerHead.angle) * 22;
-          ifd.beamEndX = ifd.muzzleX + Math.cos(attackerHead.angle) * beamLen;
-          ifd.beamEndY = ifd.muzzleY + Math.sin(attackerHead.angle) * beamLen;
-
-          ifd.emberTimer += dt;
-          if (ifd.emberTimer >= 0.065) {
-            ifd.emberTimer = 0;
-            const fs = ifd.fireSegments[Math.floor(Math.random() * ifd.fireSegments.length)] || ifd.fireHead;
-            particlesRef.current.push({
-              id: `ifd-femb-${Date.now()}-${Math.random()}`,
-              type: 'FLAME',
-              x: fs.x + (Math.random() - 0.5) * 10,
-              y: fs.y + (Math.random() - 0.5) * 10,
-              vx: (Math.random() - 0.5) * 26,
-              vy: -22 - Math.random() * 25,
-              radius: 2.0 + Math.random() * 2.0,
-              color: Math.random() < 0.5 ? '#f97316' : '#fde047',
-              alpha: 0.85,
-              decay: 0.065,
-            });
-            const isg = ifd.iceSegments[Math.floor(Math.random() * ifd.iceSegments.length)] || ifd.iceHead;
-            particlesRef.current.push({
-              id: `ifd-iemb-${Date.now()}-${Math.random()}`,
-              type: 'SPARK',
-              x: isg.x + (Math.random() - 0.5) * 10,
-              y: isg.y + (Math.random() - 0.5) * 10,
-              vx: (Math.random() - 0.5) * 26,
-              vy: -14 - Math.random() * 22,
-              radius: 2.0 + Math.random() * 1.8,
-              color: Math.random() < 0.5 ? '#38bdf8' : '#e0f2fe',
-              alpha: 0.85,
-              decay: 0.065,
-            });
-          }
-        } else {
-          // Mega Purple Dragon formation
-          const megaTargetX = p.x + Math.cos(companionAimAngle) * 48;
-          const megaTargetY = p.y + Math.sin(companionAimAngle) * 48 + Math.sin(nowSec * 3.8) * 5;
-          ifd.megaHead.x += (megaTargetX - ifd.megaHead.x) * posFactor;
-          ifd.megaHead.y += (megaTargetY - ifd.megaHead.y) * posFactor;
-          ifd.megaHead.angle = steerAngle(ifd.megaHead.angle, companionAimAngle, 12);
-          updateSerpentineChain(ifd.megaHead.x, ifd.megaHead.y, ifd.megaHead.angle, ifd.megaSegments, 15.5, 0);
-
-          const beamLen = 1120 * Math.max(0.04, ifd.beamExtension);
-          ifd.muzzleX = ifd.megaHead.x + Math.cos(ifd.megaHead.angle) * 40;
-          ifd.muzzleY = ifd.megaHead.y + Math.sin(ifd.megaHead.angle) * 40;
-          ifd.beamEndX = ifd.muzzleX + Math.cos(ifd.megaHead.angle) * beamLen;
-          ifd.beamEndY = ifd.muzzleY + Math.sin(ifd.megaHead.angle) * beamLen;
-
-          ifd.emberTimer += dt;
-          if (ifd.emberTimer >= 0.04) {
-            ifd.emberTimer = 0;
-            const ms = ifd.megaSegments[Math.floor(Math.random() * ifd.megaSegments.length)] || ifd.megaHead;
-            particlesRef.current.push({
-              id: `ifd-memb-${Date.now()}-${Math.random()}`,
-              type: 'SPARK',
-              x: ms.x + (Math.random() - 0.5) * 18,
-              y: ms.y + (Math.random() - 0.5) * 18,
-              vx: (Math.random() - 0.5) * 42,
-              vy: -25 - Math.random() * 32,
-              radius: 2.5 + Math.random() * 2.5,
-              color: Math.random() < 0.5 ? '#c084fc' : '#f0abfc',
-              alpha: 0.92,
-              decay: 0.055,
-            });
-          }
-        }
-
-        ifd.hudSyncTimer += dt;
-        if (ifd.hudSyncTimer >= 0.08) {
-          ifd.hudSyncTimer = 0;
-          setIceFireDragonHud({
-            activeDragon: ifd.activeDragon,
-            merged: ifd.merged,
-            mergeTimer: Math.max(0, ifd.mergeTimer),
-            mergeDuration: ICE_FIRE_MERGE_DURATION,
-            cooldown: Math.max(0, ifd.mergeCooldown),
-            maxCooldown: ICE_FIRE_MERGE_COOLDOWN,
-          });
-        }
-      } else {
-        if (ifd.isFiring || ifd.beamExtension > 0) {
-          ifd.isFiring = false;
-          ifd.beamExtension = 0;
-        }
-      }
-
-      // Update continuous flame stream spine points (for non-fireball liquid fire jet)
-      if (flameStreamRef.current.length > 0) {
-        const nextStream: FlameStreamPoint[] = [];
-        const streamList = flameStreamRef.current;
-        for (let f = 0; f < streamList.length; f++) {
-          const fp = streamList[f];
-          fp.age += dt;
-          if (fp.age < fp.maxAge) {
-            fp.x += fp.vx * dt;
-            fp.y += fp.vy * dt;
-            const drag = Math.exp(-1.15 * dt);
-            fp.vx *= drag;
-            fp.vy *= drag;
-            const curl = Math.sin(fp.age * 16 + fp.seed) * 32 * dt;
-            fp.x += -Math.sin(Math.atan2(fp.vy, fp.vx)) * curl;
-            fp.y += Math.cos(Math.atan2(fp.vy, fp.vx)) * curl;
-            nextStream.push(fp);
-          }
-        }
-        flameStreamRef.current = nextStream;
-      }
-
-      // Fire weapons: Destructor continuous twin laser beams vs regular projectiles
-      if (isDestructor) {
-        if (shouldFire && !dyingRef.current?.active) {
-          const dw = p.weapons[WeaponType.DESTRUCTOR] || INITIAL_WEAPONS[WeaponType.DESTRUCTOR];
-          const tickInterval = 1 / Math.max(1, dw.fireRate);
-          ds.beamTickTimer += dt;
-          ds.beamSoundTimer += dt;
-
-          if (ds.beamSoundTimer >= 0.085) {
-            ds.beamSoundTimer = 0;
-            sound.playDestructorLaserTick(ds.warpActive);
-          }
-
-          if (ds.beamTickTimer >= tickInterval) {
-            ds.beamTickTimer = 0;
-            const BEAM_RANGE = 950;
-            const lEndX = ds.leftMuzzleX + Math.cos(ds.leftBlasterAngle) * BEAM_RANGE;
-            const lEndY = ds.leftMuzzleY + Math.sin(ds.leftBlasterAngle) * BEAM_RANGE;
-            const rEndX = ds.rightMuzzleX + Math.cos(ds.rightBlasterAngle) * BEAM_RANGE;
-            const rEndY = ds.rightMuzzleY + Math.sin(ds.rightBlasterAngle) * BEAM_RANGE;
-
-            // MYTHIC CHRONO-REAPER: Flanking spectral plasma lances on Destructor fire cycles
-            if (p.mythicSplitShot && p.mythicSplitShot > 0) {
-              mythicCombatRef.current.destructorSplitCounter += 1;
-              if (mythicCombatRef.current.destructorSplitCounter >= 2) {
-                mythicCombatRef.current.destructorSplitCounter = 0;
-                const midAngle = shootingAngle;
-                [-0.22, 0.22].forEach((offset, idx) => {
-                  const sa = midAngle + offset;
-                  bulletsRef.current.push({
-                    id: `d-split-${Date.now()}-${idx}-${Math.random()}`,
-                    x: p.x + Math.cos(sa) * 24,
-                    y: p.y + Math.sin(sa) * 24,
-                    vx: Math.cos(sa) * 920,
-                    vy: Math.sin(sa) * 920,
-                    radius: 5.5,
-                    damage: Math.round(dw.damage * 1.15 * (p.mythicSplitShot || 1)),
-                    piercingRemaining: 4,
-                    color: '#e879f9',
-                    distanceTraveled: 0,
-                    maxDistance: 800,
-                    ownerAngle: sa,
-                    isRay: true,
-                  });
-                });
-              }
-            }
-
-            // MYTHIC SINGULARITY: Nova Shot every 3 Destructor beam cycles
-            if (p.mythicSingularity && p.mythicSingularity > 0) {
-              mythicCombatRef.current.novaShotCounter += 1;
-              if (mythicCombatRef.current.novaShotCounter >= 3) {
-                mythicCombatRef.current.novaShotCounter = 0;
-                const novaCount = 12;
-                const novaDmg = Math.round(dw.damage * 1.45 * p.mythicSingularity);
-                for (let ni = 0; ni < novaCount; ni++) {
-                  const na = (ni * Math.PI * 2) / novaCount + p.angle * 0.3;
-                  bulletsRef.current.push({
-                    id: `d-nova-${Date.now()}-${ni}-${Math.random()}`,
-                    x: p.x + Math.cos(na) * 22,
-                    y: p.y + Math.sin(na) * 22,
-                    vx: Math.cos(na) * 780,
-                    vy: Math.sin(na) * 780,
-                    radius: 6,
-                    damage: novaDmg,
-                    piercingRemaining: 4,
-                    color: ni % 2 === 0 ? '#38bdf8' : '#f0abfc',
-                    distanceTraveled: 0,
-                    maxDistance: 560,
-                    ownerAngle: na,
-                    isRay: true,
-                  });
-                }
-                particlesRef.current.push({
-                  id: `d-nova-ring-${Date.now()}-${Math.random()}`,
-                  type: 'MYTHIC_NOVA',
-                  x: p.x,
-                  y: p.y,
-                  vx: 0,
-                  vy: 0,
-                  radius: 16,
-                  growthSpeed: 420,
-                  color: '#38bdf8',
-                  alpha: 0.9,
-                  decay: 0.045,
-                });
-              }
-            }
-
-            const pointToSegDist = (
-              px: number,
-              py: number,
-              ax: number,
-              ay: number,
-              bx: number,
-              by: number
-            ) => {
-              const abx = bx - ax;
-              const aby = by - ay;
-              const abLenSq = abx * abx + aby * aby;
-              if (abLenSq <= 0.0001) return Math.hypot(px - ax, py - ay);
-              const t = Math.max(0, Math.min(1, ((px - ax) * abx + (py - ay) * aby) / abLenSq));
-              return Math.hypot(px - (ax + t * abx), py - (ay + t * aby));
-            };
-
-            const smBeam = shipMasteryRef.current;
-            const hasDestPrism = hasMasteryNode(smBeam, 'DESTRUCTOR', 'dest_prism');
-            const hasDestSingularity =
-              ds.warpActive && hasMasteryNode(smBeam, 'DESTRUCTOR', 'dest_singularity');
-            const cEndX = p.x + Math.cos(shootingAngle) * BEAM_RANGE;
-            const cEndY = p.y + Math.sin(shootingAngle) * BEAM_RANGE;
-
-            const enemyList = zombiesRef.current;
-            for (let zi = 0; zi < enemyList.length; zi++) {
-              const z = enemyList[zi];
-              if (z.hp <= 0) continue;
-
-              const hitRadius = z.radius + 9;
-              const hitLeft =
-                pointToSegDist(z.x, z.y, ds.leftMuzzleX, ds.leftMuzzleY, lEndX, lEndY) <= hitRadius;
-              const hitRight =
-                pointToSegDist(z.x, z.y, ds.rightMuzzleX, ds.rightMuzzleY, rEndX, rEndY) <= hitRadius;
-              const hitCenter =
-                hasDestSingularity &&
-                pointToSegDist(z.x, z.y, p.x, p.y, cEndX, cEndY) <= z.radius + 14;
-
-              if (!hitLeft && !hitRight && !hitCenter) continue;
-
-              const beamsHit = (hitLeft ? 1 : 0) + (hitRight ? 1 : 0) + (hitCenter ? 2 : 0);
-              let tickDmg = dw.damage * beamsHit * (ds.warpActive ? 1.25 : 1.0);
-              const effCrit = (p.critChance || 0) + (hasDestPrism ? 0.12 : 0);
-              if (effCrit > 0 && Math.random() < effCrit) {
-                tickDmg = Math.round(tickDmg * (p.critMultiplier || 2));
-                particlesRef.current.push({
-                  id: `dcrit-${Date.now()}-${Math.random()}`,
-                  type: 'SPARK',
-                  x: z.x,
-                  y: z.y - 12,
-                  vx: (Math.random() - 0.5) * 40,
-                  vy: -60,
-                  radius: 3.5,
-                  color: '#fbbf24',
-                  alpha: 1,
-                  decay: 0.05,
-                });
-              }
-
-              z.hp -= Math.round(tickDmg);
-              const hitAngle = hitLeft ? ds.leftBlasterAngle : ds.rightBlasterAngle;
-              const kbBoost = (p.knockbackMult || 1) * (hasDestPrism ? 1.35 : 1);
-              z.knockbackX += Math.cos(hitAngle) * 45 * kbBoost;
-              z.knockbackY += Math.sin(hitAngle) * 45 * kbBoost;
+          const pulseRange = 175 + (p.gravityPulseLevel || 1) * 20;
+          for (let i = 0; i < zombiesRef.current.length; i++) {
+            const z = zombiesRef.current[i];
+            if (z.isDead) continue;
+            const d = Math.hypot(z.x - p.x, z.y - p.y);
+            if (d < pulseRange) {
+              const pa = Math.atan2(z.y - p.y, z.x - p.x);
+              z.knockbackX += Math.cos(pa) * 340;
+              z.knockbackY += Math.sin(pa) * 340;
               z.isStunned = true;
-              z.stunTimer = 0.04;
-
-              if (p.chainLightningLevel && p.chainLightningLevel > 0) {
-                triggerChainLightning(z, tickDmg, p.chainLightningLevel);
-              }
-
-              for (let k = 0; k < 2; k++) {
-                const sAng = hitAngle + Math.PI + (Math.random() * 1.4 - 0.7);
-                const sSpd = 65 + Math.random() * 105;
-                particlesRef.current.push({
-                  id: `dlhit-${Date.now()}-${k}-${Math.random()}`,
-                  type: 'SPARK',
-                  x: z.x + (Math.random() - 0.5) * z.radius,
-                  y: z.y + (Math.random() - 0.5) * z.radius,
-                  vx: Math.cos(sAng) * sSpd,
-                  vy: Math.sin(sAng) * sSpd,
-                  radius: 1.6 + Math.random() * 1.6,
-                  color: ds.warpActive ? '#e879f9' : '#22d3ee',
-                  alpha: 1,
-                  decay: 0.06,
-                });
-              }
-
-              if (z.hp <= 0) {
-                handleZombieDeath(z);
-              }
-            }
-          }
-        } else {
-          ds.beamTickTimer = 0.06;
-          ds.beamSoundTimer = 0.085;
-        }
-      } else if (isInterceptor) {
-        if (shouldFire && !dyingRef.current?.active) {
-          const iw = p.weapons[WeaponType.INTERCEPTOR] || INITIAL_WEAPONS[WeaponType.INTERCEPTOR];
-          const effRate = iw.fireRate * (ds.warpActive ? 1.35 : 1.0);
-          const shotInterval = 1 / Math.max(1, effRate);
-          ds.beamTickTimer += dt;
-          ds.beamSoundTimer += dt;
-
-          if (ds.beamTickTimer >= shotInterval) {
-            ds.beamTickTimer = 0;
-            const orbColor = ds.warpActive ? '#e879f9' : iw.color || '#00f5d4';
-            const orbSpeed = iw.bulletSpeed * (ds.warpActive ? 1.2 : 1.0);
-            const spread = iw.spread || 0.025;
-
-            if (ds.beamSoundTimer >= 0.05) {
-              ds.beamSoundTimer = 0;
-              sound.playInterceptorOrb(ds.warpActive);
-            }
-
-            const smInt = shipMasteryRef.current;
-            const hasIntHoming = hasMasteryNode(smInt, 'INTERCEPTOR', 'int_homing');
-            const hasIntFrenzy = ds.warpActive && hasMasteryNode(smInt, 'INTERCEPTOR', 'int_frenzy');
-            const hasIntNova = hasMasteryNode(smInt, 'INTERCEPTOR', 'int_nova_orb');
-            const hasIntSwarm = ds.warpActive && hasMasteryNode(smInt, 'INTERCEPTOR', 'int_swarm');
-
-            masteryCombatTimersRef.current.orbBurstCount += 1;
-            const isExplosiveBurst = hasIntNova && masteryCombatTimersRef.current.orbBurstCount >= 5;
-            if (isExplosiveBurst) {
-              masteryCombatTimersRef.current.orbBurstCount = 0;
-            }
-
-            // Fire twin rapid plasma orbs from BOTH long-wingtip blasters (+2 parallel in Swarm Warp)
-            const blasters = [
-              { x: ds.leftMuzzleX, y: ds.leftMuzzleY, angle: ds.leftBlasterAngle },
-              { x: ds.rightMuzzleX, y: ds.rightMuzzleY, angle: ds.rightBlasterAngle },
-            ];
-            const swarmOffsets = hasIntSwarm ? [-0.085, 0.085] : [0];
-            const baseOrbDmg = Math.round(
-              iw.damage * (ds.warpActive ? 1.25 : 1.0) * (hasIntFrenzy ? 1.25 : 1.0)
-            );
-            for (let bi = 0; bi < blasters.length; bi++) {
-              const bl = blasters[bi];
-              for (let si = 0; si < swarmOffsets.length; si++) {
-                const a = bl.angle + swarmOffsets[si] + (Math.random() * spread * 2 - spread);
-                bulletsRef.current.push({
-                  id: `iorb-${Date.now()}-${bi}-${si}-${Math.random()}`,
-                  x: bl.x,
-                  y: bl.y,
-                  vx: Math.cos(a) * orbSpeed,
-                  vy: Math.sin(a) * orbSpeed,
-                  radius: isExplosiveBurst ? 7.5 : ds.warpActive ? 6.2 : 5.4,
-                  damage: isExplosiveBurst ? Math.round(baseOrbDmg * 1.45) : baseOrbDmg,
-                  piercingRemaining: iw.piercing,
-                  color: isExplosiveBurst ? '#fbbf24' : orbColor,
-                  distanceTraveled: 0,
-                  maxDistance: 900,
-                  ownerAngle: a,
-                  isOrb: true,
-                  isBomb: isExplosiveBurst && si === 0,
-                  homingStrength: hasIntHoming ? 4.2 : 0,
-                  weaponType: WeaponType.INTERCEPTOR,
-                });
-              }
-            }
-
-            // MYTHIC CHRONO-REAPER: Flanking spectral orbs
-            if (p.mythicSplitShot && p.mythicSplitShot > 0) {
-              mythicCombatRef.current.destructorSplitCounter += 1;
-              if (mythicCombatRef.current.destructorSplitCounter >= 2) {
-                mythicCombatRef.current.destructorSplitCounter = 0;
-                [-0.22, 0.22].forEach((offset, idx) => {
-                  const sa = shootingAngle + offset;
-                  bulletsRef.current.push({
-                    id: `i-split-${Date.now()}-${idx}-${Math.random()}`,
-                    x: p.x + Math.cos(sa) * 24,
-                    y: p.y + Math.sin(sa) * 24,
-                    vx: Math.cos(sa) * 1100,
-                    vy: Math.sin(sa) * 1100,
-                    radius: 5.5,
-                    damage: Math.round(iw.damage * 1.3 * (p.mythicSplitShot || 1)),
-                    piercingRemaining: 4,
-                    color: '#e879f9',
-                    distanceTraveled: 0,
-                    maxDistance: 840,
-                    ownerAngle: sa,
-                    isOrb: true,
-                  });
-                });
-              }
-            }
-
-            // MYTHIC SINGULARITY: Nova Shot every 3 Interceptor orb cycles
-            if (p.mythicSingularity && p.mythicSingularity > 0) {
-              mythicCombatRef.current.novaShotCounter += 1;
-              if (mythicCombatRef.current.novaShotCounter >= 4) {
-                mythicCombatRef.current.novaShotCounter = 0;
-                const novaCount = 12;
-                const novaDmg = Math.round(iw.damage * 1.65 * p.mythicSingularity);
-                for (let ni = 0; ni < novaCount; ni++) {
-                  const na = (ni * Math.PI * 2) / novaCount + p.angle * 0.3;
-                  bulletsRef.current.push({
-                    id: `i-nova-${Date.now()}-${ni}-${Math.random()}`,
-                    x: p.x + Math.cos(na) * 22,
-                    y: p.y + Math.sin(na) * 22,
-                    vx: Math.cos(na) * 860,
-                    vy: Math.sin(na) * 860,
-                    radius: 6,
-                    damage: novaDmg,
-                    piercingRemaining: 4,
-                    color: ni % 2 === 0 ? '#00f5d4' : '#e879f9',
-                    distanceTraveled: 0,
-                    maxDistance: 580,
-                    ownerAngle: na,
-                    isOrb: true,
-                  });
-                }
-              }
-            }
-          }
-        } else {
-          ds.beamTickTimer = 0.05;
-          ds.beamSoundTimer = 0.05;
-        }
-      } else if (isRei) {
-        if (shouldFire && !dyingRef.current?.active && ds.reiBlasters.length === 4) {
-          const rw = p.weapons[WeaponType.NAVE_REI] || INITIAL_WEAPONS[WeaponType.NAVE_REI];
-          const tickInterval = 1 / Math.max(1, rw.fireRate * (ds.warpActive ? 1.25 : 1.0));
-          ds.beamTickTimer += dt;
-          ds.beamSoundTimer += dt;
-
-          if (ds.beamSoundTimer >= 0.09) {
-            ds.beamSoundTimer = 0;
-            sound.playReiLaserTick(ds.warpActive);
-          }
-
-          if (ds.beamTickTimer >= tickInterval) {
-            ds.beamTickTimer = 0;
-            const BEAM_RANGE = ds.warpActive ? 1150 : 980;
-            const beamEnds = ds.reiBlasters.map((b) => ({
-              ax: b.muzzleX,
-              ay: b.muzzleY,
-              bx: b.muzzleX + Math.cos(b.angle) * BEAM_RANGE,
-              by: b.muzzleY + Math.sin(b.angle) * BEAM_RANGE,
-              angle: b.angle,
-            }));
-
-            // MYTHIC CHRONO-REAPER & SINGULARITY support for Nave Rei
-            if (p.mythicSplitShot && p.mythicSplitShot > 0) {
-              mythicCombatRef.current.destructorSplitCounter += 1;
-              if (mythicCombatRef.current.destructorSplitCounter >= 2) {
-                mythicCombatRef.current.destructorSplitCounter = 0;
-                [-0.24, 0.24].forEach((offset, idx) => {
-                  const sa = shootingAngle + offset;
-                  bulletsRef.current.push({
-                    id: `r-split-${Date.now()}-${idx}-${Math.random()}`,
-                    x: p.x + Math.cos(sa) * 32,
-                    y: p.y + Math.sin(sa) * 32,
-                    vx: Math.cos(sa) * 980,
-                    vy: Math.sin(sa) * 980,
-                    radius: 6,
-                    damage: Math.round(rw.damage * 1.25 * (p.mythicSplitShot || 1)),
-                    piercingRemaining: 4,
-                    color: ds.warpActive ? '#ef4444' : '#fbbf24',
-                    distanceTraveled: 0,
-                    maxDistance: 840,
-                    ownerAngle: sa,
-                    isRay: true,
-                  });
-                });
-              }
-            }
-
-            if (p.mythicSingularity && p.mythicSingularity > 0) {
-              mythicCombatRef.current.novaShotCounter += 1;
-              if (mythicCombatRef.current.novaShotCounter >= 3) {
-                mythicCombatRef.current.novaShotCounter = 0;
-                const novaCount = 12;
-                const novaDmg = Math.round(rw.damage * 1.55 * p.mythicSingularity);
-                for (let ni = 0; ni < novaCount; ni++) {
-                  const na = (ni * Math.PI * 2) / novaCount + p.angle * 0.3;
-                  bulletsRef.current.push({
-                    id: `r-nova-${Date.now()}-${ni}-${Math.random()}`,
-                    x: p.x + Math.cos(na) * 28,
-                    y: p.y + Math.sin(na) * 28,
-                    vx: Math.cos(na) * 820,
-                    vy: Math.sin(na) * 820,
-                    radius: 6.5,
-                    damage: novaDmg,
-                    piercingRemaining: 4,
-                    color: ds.warpActive ? '#ef4444' : '#fbbf24',
-                    distanceTraveled: 0,
-                    maxDistance: 600,
-                    ownerAngle: na,
-                    isRay: true,
-                  });
-                }
-              }
-            }
-
-            const pointToSegDist = (
-              px: number,
-              py: number,
-              ax: number,
-              ay: number,
-              bx: number,
-              by: number
-            ) => {
-              const abx = bx - ax;
-              const aby = by - ay;
-              const abLenSq = abx * abx + aby * aby;
-              if (abLenSq <= 0.0001) return Math.hypot(px - ax, py - ay);
-              const t = Math.max(0, Math.min(1, ((px - ax) * abx + (py - ay) * aby) / abLenSq));
-              return Math.hypot(px - (ax + t * abx), py - (ay + t * aby));
-            };
-
-            const smRei = shipMasteryRef.current;
-            const hasReiLethal = hasMasteryNode(smRei, 'NAVE_REI', 'rei_lethal');
-            const hasReiEmperor = ds.warpActive && hasMasteryNode(smRei, 'NAVE_REI', 'rei_emperor');
-            if (hasReiEmperor) {
-              [-0.18, 0.18].forEach((flankOff) => {
-                const fa = shootingAngle + flankOff;
-                beamEnds.push({
-                  ax: p.x + Math.cos(fa) * 28,
-                  ay: p.y + Math.sin(fa) * 28,
-                  bx: p.x + Math.cos(fa) * BEAM_RANGE,
-                  by: p.y + Math.sin(fa) * BEAM_RANGE,
-                  angle: fa,
-                });
-              });
-            }
-
-            const furyMult = ds.warpActive ? (hasReiLethal ? 3.25 : 2.5) : 1.0;
-            const beamExtraRadius = ds.warpActive ? 20 : 10;
-            const enemyList = zombiesRef.current;
-
-            for (let zi = 0; zi < enemyList.length; zi++) {
-              const z = enemyList[zi];
-              if (z.hp <= 0) continue;
-
-              const hitRadius = z.radius + beamExtraRadius;
-              let beamsHit = 0;
-              let hitAngle = shootingAngle;
-              for (let bi = 0; bi < beamEnds.length; bi++) {
-                const be = beamEnds[bi];
-                if (pointToSegDist(z.x, z.y, be.ax, be.ay, be.bx, be.by) <= hitRadius) {
-                  beamsHit += 1;
-                  hitAngle = be.angle;
-                }
-              }
-              if (beamsHit === 0) continue;
-
-              let tickDmg = rw.damage * beamsHit * furyMult;
-              if (p.critChance && Math.random() < p.critChance) {
-                tickDmg = Math.round(tickDmg * (p.critMultiplier || 2));
-              }
-
-              z.hp -= Math.round(tickDmg);
-              if (hasReiLethal && p.hp < p.maxHp) {
-                p.hp = Math.min(p.maxHp, p.hp + Math.max(0.5, tickDmg * 0.008));
-              }
-              z.knockbackX += Math.cos(hitAngle) * (ds.warpActive ? 95 : 52) * (p.knockbackMult || 1);
-              z.knockbackY += Math.sin(hitAngle) * (ds.warpActive ? 95 : 52) * (p.knockbackMult || 1);
-              z.isStunned = true;
-              z.stunTimer = ds.warpActive ? 0.08 : 0.04;
-
-              if (p.chainLightningLevel && p.chainLightningLevel > 0) {
-                triggerChainLightning(z, tickDmg, p.chainLightningLevel);
-              }
-
-              for (let k = 0; k < (ds.warpActive ? 3 : 2); k++) {
-                const sAng = hitAngle + Math.PI + (Math.random() * 1.4 - 0.7);
-                const sSpd = 80 + Math.random() * 130;
-                particlesRef.current.push({
-                  id: `rlhit-${Date.now()}-${k}-${Math.random()}`,
-                  type: 'SPARK',
-                  x: z.x + (Math.random() - 0.5) * z.radius,
-                  y: z.y + (Math.random() - 0.5) * z.radius,
-                  vx: Math.cos(sAng) * sSpd,
-                  vy: Math.sin(sAng) * sSpd,
-                  radius: ds.warpActive ? 2.4 + Math.random() * 2.2 : 1.7 + Math.random() * 1.5,
-                  color: ds.warpActive ? (k % 2 === 0 ? '#ef4444' : '#fca5a5') : '#fbbf24',
-                  alpha: 1,
-                  decay: 0.055,
-                });
-              }
-
-              if (z.hp <= 0) {
-                handleZombieDeath(z);
-              }
-            }
-          }
-        } else {
-          ds.beamTickTimer = 0.05;
-          ds.beamSoundTimer = 0.09;
-        }
-      } else if (isTroper) {
-        if (shouldFire && !dyingRef.current?.active) {
-          const tw = p.weapons[WeaponType.TROPER] || INITIAL_WEAPONS[WeaponType.TROPER];
-          const shotInterval = 1 / Math.max(0.6, tw.fireRate);
-          ds.beamTickTimer += dt;
-
-          if (ds.beamTickTimer >= shotInterval) {
-            ds.beamTickTimer = 0;
-            sound.playTroperOrb();
-
-            const smTrop = shipMasteryRef.current;
-            const hasTropHoming = hasMasteryNode(smTrop, 'TROPER', 'trop_homing');
-            const hasTropTwin = hasMasteryNode(smTrop, 'TROPER', 'trop_twin');
-            const hasTropHeavy = hasMasteryNode(smTrop, 'TROPER', 'trop_heavy_core');
-
-            masteryCombatTimersRef.current.orbBurstCount += 1;
-            const isDenseOrb = hasTropHeavy && masteryCombatTimersRef.current.orbBurstCount >= 4;
-            if (isDenseOrb) {
-              masteryCombatTimersRef.current.orbBurstCount = 0;
-            }
-
-            const muzzleX = p.x + Math.cos(p.angle) * 16;
-            const muzzleY = p.y + Math.sin(p.angle) * 16;
-            const perpA = shootingAngle + Math.PI / 2;
-            const offsets = hasTropTwin ? [-5.5, 5.5] : [0];
-            const orbSpeed = tw.bulletSpeed || 440;
-            const spread = tw.spread || 0.02;
-
-            for (let oi = 0; oi < offsets.length; oi++) {
-              const finalA = shootingAngle + (Math.random() * spread * 2 - spread);
-              const ox = muzzleX + Math.cos(perpA) * offsets[oi];
-              const oy = muzzleY + Math.sin(perpA) * offsets[oi];
-              const useDense = isDenseOrb && oi === 0;
-              bulletsRef.current.push({
-                id: `trop-orb-${Date.now()}-${oi}-${Math.random()}`,
-                x: ox,
-                y: oy,
-                vx: Math.cos(finalA) * orbSpeed,
-                vy: Math.sin(finalA) * orbSpeed,
-                radius: useDense ? 5.2 : 3.6,
-                damage: useDense ? Math.round(tw.damage * 1.6) : tw.damage,
-                piercingRemaining: tw.piercing,
-                color: useDense ? '#7dd3fc' : tw.color || '#38bdf8',
-                distanceTraveled: 0,
-                maxDistance: 720,
-                ownerAngle: finalA,
-                isOrb: true,
-                homingStrength: hasTropHoming ? 3.0 : 0,
-                weaponType: WeaponType.TROPER,
-              });
-            }
-          }
-        } else {
-          ds.beamTickTimer = 0.25;
-        }
-      } else if (isEastDragon) {
-        if (shouldFire && !dyingRef.current?.active) {
-          const edw = p.weapons[WeaponType.EAST_DRAGON] || INITIAL_WEAPONS[WeaponType.EAST_DRAGON];
-          const tickInterval = 1 / Math.max(1, edw.fireRate);
-          ed.beamTickTimer += dt;
-          ed.beamSoundTimer += dt;
-
-          if (ed.beamSoundTimer >= 0.085) {
-            ed.beamSoundTimer = 0;
-            sound.playEastDragonFireLaserTick();
-          }
-
-          // Stream vivid flame tongues & fire sparks radiating along the fire-laser beam every frame
-          const beamDx = ed.beamEndX - ed.muzzleX;
-          const beamDy = ed.beamEndY - ed.muzzleY;
-          for (let fb = 0; fb < 2; fb++) {
-            const distFrac = Math.random() * 0.65;
-            const spreadPerp = (Math.random() - 0.5) * 14;
-            const px = ed.muzzleX + beamDx * distFrac - Math.sin(p.angle) * spreadPerp;
-            const py = ed.muzzleY + beamDy * distFrac + Math.cos(p.angle) * spreadPerp;
-            const flameSpd = 210 + Math.random() * 230;
-            const fAng = p.angle + (Math.random() - 0.5) * 0.22;
-            particlesRef.current.push({
-              id: `ed-flame-${Date.now()}-${fb}-${Math.random()}`,
-              type: 'FLAME',
-              x: px,
-              y: py,
-              vx: Math.cos(fAng) * flameSpd,
-              vy: Math.sin(fAng) * flameSpd,
-              radius: 3.4 + Math.random() * 3.8,
-              color: Math.random() < 0.45 ? '#fde047' : Math.random() < 0.7 ? '#f97316' : '#ef4444',
-              alpha: 0.95,
-              decay: 0.075,
-            });
-          }
-
-          if (ed.beamTickTimer >= tickInterval) {
-            ed.beamTickTimer = 0;
-
-            // MYTHIC CHRONO-REAPER & SINGULARITY support for East Dragon
-            if (p.mythicSplitShot && p.mythicSplitShot > 0) {
-              mythicCombatRef.current.destructorSplitCounter += 1;
-              if (mythicCombatRef.current.destructorSplitCounter >= 2) {
-                mythicCombatRef.current.destructorSplitCounter = 0;
-                [-0.22, 0.22].forEach((offset, idx) => {
-                  const sa = p.angle + offset;
-                  bulletsRef.current.push({
-                    id: `ed-split-${Date.now()}-${idx}-${Math.random()}`,
-                    x: ed.muzzleX,
-                    y: ed.muzzleY,
-                    vx: Math.cos(sa) * 960,
-                    vy: Math.sin(sa) * 960,
-                    radius: 6,
-                    damage: Math.round(edw.damage * 1.2 * (p.mythicSplitShot || 1)),
-                    piercingRemaining: 4,
-                    color: '#f97316',
-                    distanceTraveled: 0,
-                    maxDistance: 800,
-                    ownerAngle: sa,
-                    isRay: true,
-                  });
-                });
-              }
-            }
-
-            if (p.mythicSingularity && p.mythicSingularity > 0) {
-              mythicCombatRef.current.novaShotCounter += 1;
-              if (mythicCombatRef.current.novaShotCounter >= 3) {
-                mythicCombatRef.current.novaShotCounter = 0;
-                const novaCount = 12;
-                const novaDmg = Math.round(edw.damage * 1.5 * p.mythicSingularity);
-                for (let ni = 0; ni < novaCount; ni++) {
-                  const na = (ni * Math.PI * 2) / novaCount + p.angle * 0.3;
-                  bulletsRef.current.push({
-                    id: `ed-nova-${Date.now()}-${ni}-${Math.random()}`,
-                    x: p.x + Math.cos(na) * 24,
-                    y: p.y + Math.sin(na) * 24,
-                    vx: Math.cos(na) * 800,
-                    vy: Math.sin(na) * 800,
-                    radius: 6.5,
-                    damage: novaDmg,
-                    piercingRemaining: 4,
-                    color: ni % 2 === 0 ? '#f97316' : '#fde047',
-                    distanceTraveled: 0,
-                    maxDistance: 580,
-                    ownerAngle: na,
-                    isRay: true,
-                  });
-                }
-              }
-            }
-
-            const pointToSegDist = (
-              px: number,
-              py: number,
-              ax: number,
-              ay: number,
-              bx: number,
-              by: number
-            ) => {
-              const abx = bx - ax;
-              const aby = by - ay;
-              const abLenSq = abx * abx + aby * aby;
-              if (abLenSq <= 0.0001) return Math.hypot(px - ax, py - ay);
-              const t = Math.max(0, Math.min(1, ((px - ax) * abx + (py - ay) * aby) / abLenSq));
-              return Math.hypot(px - (ax + t * abx), py - (ay + t * aby));
-            };
-
-            const enemyList = zombiesRef.current;
-            for (let zi = 0; zi < enemyList.length; zi++) {
-              const z = enemyList[zi];
-              if (z.hp <= 0) continue;
-
-              const hitRadius = z.radius + 16;
-              if (
-                pointToSegDist(z.x, z.y, ed.muzzleX, ed.muzzleY, ed.beamEndX, ed.beamEndY) > hitRadius
-              ) {
-                continue;
-              }
-
-              let tickDmg = edw.damage;
-              if (p.critChance && Math.random() < p.critChance) {
-                tickDmg = Math.round(tickDmg * (p.critMultiplier || 2));
-              }
-
-              z.hp -= Math.round(tickDmg);
-              // Ignite every monster hit by East Dragon's fire laser!
-              z.isOnFire = true;
-              z.burnTimer = 4.0;
-
-              z.knockbackX += Math.cos(p.angle) * 58 * (p.knockbackMult || 1);
-              z.knockbackY += Math.sin(p.angle) * 58 * (p.knockbackMult || 1);
-              z.isStunned = true;
-              z.stunTimer = 0.04;
-
-              if (p.chainLightningLevel && p.chainLightningLevel > 0) {
-                triggerChainLightning(z, tickDmg, p.chainLightningLevel);
-              }
-
-              // Fiery impact burst (flames + sparks + occasional fire shockwave ring)
-              for (let k = 0; k < 3; k++) {
-                const sAng = p.angle + Math.PI + (Math.random() * 1.8 - 0.9);
-                const sSpd = 75 + Math.random() * 125;
-                particlesRef.current.push({
-                  id: `edhit-${Date.now()}-${k}-${Math.random()}`,
-                  type: k === 0 ? 'FLAME' : 'SPARK',
-                  x: z.x + (Math.random() - 0.5) * z.radius,
-                  y: z.y + (Math.random() - 0.5) * z.radius,
-                  vx: Math.cos(sAng) * sSpd,
-                  vy: Math.sin(sAng) * sSpd,
-                  radius: k === 0 ? 4.2 + Math.random() * 2.5 : 2 + Math.random() * 2,
-                  color: k % 2 === 0 ? '#f97316' : '#fde047',
-                  alpha: 1,
-                  decay: 0.06,
-                });
-              }
-
-              if (Math.random() < 0.22) {
-                particlesRef.current.push({
-                  id: `edring-${Date.now()}-${Math.random()}`,
-                  type: 'FIRE_RING',
-                  x: z.x,
-                  y: z.y,
-                  vx: 0,
-                  vy: 0,
-                  radius: 10,
-                  growthSpeed: 190,
-                  color: '#f97316',
-                  alpha: 0.85,
-                  decay: 0.08,
-                });
-              }
-
-              if (z.hp <= 0) {
-                handleZombieDeath(z);
-              }
-            }
-          }
-        } else {
-          ed.beamTickTimer = 0.04;
-          ed.beamSoundTimer = 0.085;
-        }
-      } else if (isIronMan) {
-        if (shouldFire && !dyingRef.current?.active) {
-          const imw = p.weapons[WeaponType.IRON_MAN] || INITIAL_WEAPONS[WeaponType.IRON_MAN];
-          if (im.mode === 'REPULSOR') {
-            // MODO REPULSOR: High-velocity alternating palm repulsor plasma blasts
-            const shotInterval = 1 / Math.max(1, imw.fireRate);
-            im.repulsorTimer += dt;
-            if (im.repulsorTimer >= shotInterval) {
-              im.repulsorTimer = 0;
-              im.handToggle = im.handToggle === 0 ? 1 : 0;
-              const sideSign = im.handToggle === 0 ? -1 : 1;
-              const cosA = Math.cos(p.angle);
-              const sinA = Math.sin(p.angle);
-              const spawnX = p.x + cosA * 22 - sinA * (sideSign * 13.5);
-              const spawnY = p.y + sinA * 22 + cosA * (sideSign * 13.5);
-              const spreadA = (Math.random() * 2 - 1) * (imw.spread || 0.02);
-              const shotA = shootingAngle + spreadA;
-              const repulsorDmg = Math.round(imw.damage * 1.45);
-
-              sound.playIronManRepulsor();
-              bulletsRef.current.push({
-                id: `im-rep-${Date.now()}-${Math.random()}`,
-                x: spawnX,
-                y: spawnY,
-                vx: Math.cos(shotA) * imw.bulletSpeed,
-                vy: Math.sin(shotA) * imw.bulletSpeed,
-                radius: 6.2,
-                damage: repulsorDmg,
-                piercingRemaining: imw.piercing,
-                color: '#38bdf8',
-                distanceTraveled: 0,
-                maxDistance: 920,
-                ownerAngle: shotA,
-                isOrb: true,
-                weaponType: WeaponType.IRON_MAN,
-              });
-
-              for (let sp = 0; sp < 3; sp++) {
-                const sA = shotA + (Math.random() - 0.5) * 0.7;
-                const sSpd = 120 + Math.random() * 140;
-                particlesRef.current.push({
-                  id: `im-muzz-${Date.now()}-${sp}-${Math.random()}`,
-                  type: 'SPARK',
-                  x: spawnX,
-                  y: spawnY,
-                  vx: Math.cos(sA) * sSpd,
-                  vy: Math.sin(sA) * sSpd,
-                  radius: 2 + Math.random() * 1.5,
-                  color: sp === 0 ? '#ffffff' : '#38bdf8',
-                  alpha: 0.95,
-                  decay: 0.08,
-                });
-              }
-
-              // Mythic support (Chrono-Reaper split + Singularity nova)
-              if (p.mythicSplitShot && p.mythicSplitShot > 0) {
-                [-0.18, 0.18].forEach((offset, idx) => {
-                  const sa = shotA + offset;
-                  bulletsRef.current.push({
-                    id: `im-split-${Date.now()}-${idx}-${Math.random()}`,
-                    x: spawnX,
-                    y: spawnY,
-                    vx: Math.cos(sa) * imw.bulletSpeed,
-                    vy: Math.sin(sa) * imw.bulletSpeed,
-                    radius: 5.5,
-                    damage: Math.round(repulsorDmg * 0.85 * (p.mythicSplitShot || 1)),
-                    piercingRemaining: 4,
-                    color: '#e879f9',
-                    distanceTraveled: 0,
-                    maxDistance: 860,
-                    ownerAngle: sa,
-                    isOrb: true,
-                  });
-                });
-              }
-              if (p.mythicSingularity && p.mythicSingularity > 0) {
-                mythicCombatRef.current.novaShotCounter += 1;
-                if (mythicCombatRef.current.novaShotCounter >= 5) {
-                  mythicCombatRef.current.novaShotCounter = 0;
-                  const novaCount = 12;
-                  const novaDmg = Math.round(repulsorDmg * 1.45 * p.mythicSingularity);
-                  for (let ni = 0; ni < novaCount; ni++) {
-                    const na = (ni * Math.PI * 2) / novaCount + p.angle * 0.3;
-                    bulletsRef.current.push({
-                      id: `im-rnova-${Date.now()}-${ni}-${Math.random()}`,
-                      x: p.x + Math.cos(na) * 20,
-                      y: p.y + Math.sin(na) * 20,
-                      vx: Math.cos(na) * 900,
-                      vy: Math.sin(na) * 900,
-                      radius: 6,
-                      damage: novaDmg,
-                      piercingRemaining: 4,
-                      color: ni % 2 === 0 ? '#38bdf8' : '#e879f9',
-                      distanceTraveled: 0,
-                      maxDistance: 600,
-                      ownerAngle: na,
-                      isOrb: true,
-                    });
-                  }
-                }
-              }
-            }
-          } else {
-            // MODO LASER: Continuous thermal crimson-gold laser beam (starts thin -> swells thick)
-            const tickInterval = 1 / 20;
-            im.beamTickTimer += dt;
-            im.beamSoundTimer += dt;
-
-            if (im.beamSoundTimer >= 0.085) {
-              im.beamSoundTimer = 0;
-              sound.playIronManLaserTick();
-            }
-
-            if (im.beamTickTimer >= tickInterval) {
-              im.beamTickTimer = 0;
-
-              if (p.mythicSplitShot && p.mythicSplitShot > 0) {
-                mythicCombatRef.current.destructorSplitCounter += 1;
-                if (mythicCombatRef.current.destructorSplitCounter >= 2) {
-                  mythicCombatRef.current.destructorSplitCounter = 0;
-                  [-0.22, 0.22].forEach((offset, idx) => {
-                    const sa = p.angle + offset;
-                    bulletsRef.current.push({
-                      id: `im-lsplit-${Date.now()}-${idx}-${Math.random()}`,
-                      x: im.muzzleX,
-                      y: im.muzzleY,
-                      vx: Math.cos(sa) * 980,
-                      vy: Math.sin(sa) * 980,
-                      radius: 5.5,
-                      damage: Math.round(imw.damage * 1.15 * (p.mythicSplitShot || 1)),
-                      piercingRemaining: 4,
-                      color: '#ef4444',
-                      distanceTraveled: 0,
-                      maxDistance: 820,
-                      ownerAngle: sa,
-                      isRay: true,
-                    });
-                  });
-                }
-              }
-
-              if (p.mythicSingularity && p.mythicSingularity > 0) {
-                mythicCombatRef.current.novaShotCounter += 1;
-                if (mythicCombatRef.current.novaShotCounter >= 3) {
-                  mythicCombatRef.current.novaShotCounter = 0;
-                  const novaCount = 12;
-                  const novaDmg = Math.round(imw.damage * 1.5 * p.mythicSingularity);
-                  for (let ni = 0; ni < novaCount; ni++) {
-                    const na = (ni * Math.PI * 2) / novaCount + p.angle * 0.3;
-                    bulletsRef.current.push({
-                      id: `im-lnova-${Date.now()}-${ni}-${Math.random()}`,
-                      x: p.x + Math.cos(na) * 20,
-                      y: p.y + Math.sin(na) * 20,
-                      vx: Math.cos(na) * 840,
-                      vy: Math.sin(na) * 840,
-                      radius: 6,
-                      damage: novaDmg,
-                      piercingRemaining: 4,
-                      color: ni % 2 === 0 ? '#ef4444' : '#fbbf24',
-                      distanceTraveled: 0,
-                      maxDistance: 580,
-                      ownerAngle: na,
-                      isRay: true,
-                    });
-                  }
-                }
-              }
-
-              const pointToSegDist = (
-                px: number,
-                py: number,
-                ax: number,
-                ay: number,
-                bx: number,
-                by: number
-              ) => {
-                const abx = bx - ax;
-                const aby = by - ay;
-                const abLenSq = abx * abx + aby * aby;
-                if (abLenSq <= 0.0001) return Math.hypot(px - ax, py - ay);
-                const t = Math.max(0, Math.min(1, ((px - ax) * abx + (py - ay) * aby) / abLenSq));
-                return Math.hypot(px - (ax + t * abx), py - (ay + t * aby));
-              };
-
-              const enemyList = zombiesRef.current;
-              for (let zi = 0; zi < enemyList.length; zi++) {
-                const z = enemyList[zi];
-                if (z.hp <= 0) continue;
-
-                const hitRadius = z.radius + 14;
-                if (
-                  pointToSegDist(z.x, z.y, im.muzzleX, im.muzzleY, im.beamEndX, im.beamEndY) > hitRadius
-                ) {
-                  continue;
-                }
-
-                let tickDmg = imw.damage * 0.95;
-                if (p.critChance && Math.random() < p.critChance) {
-                  tickDmg = Math.round(tickDmg * (p.critMultiplier || 2));
-                }
-
-                z.hp -= Math.round(tickDmg);
-                z.knockbackX += Math.cos(p.angle) * 50 * (p.knockbackMult || 1);
-                z.knockbackY += Math.sin(p.angle) * 50 * (p.knockbackMult || 1);
-                z.isStunned = true;
-                z.stunTimer = 0.04;
-
-                if (p.chainLightningLevel && p.chainLightningLevel > 0) {
-                  triggerChainLightning(z, tickDmg, p.chainLightningLevel);
-                }
-
-                for (let k = 0; k < 2; k++) {
-                  const sAng = p.angle + Math.PI + (Math.random() * 1.4 - 0.7);
-                  const sSpd = 70 + Math.random() * 115;
-                  particlesRef.current.push({
-                    id: `im-lhit-${Date.now()}-${k}-${Math.random()}`,
-                    type: 'SPARK',
-                    x: z.x + (Math.random() - 0.5) * z.radius,
-                    y: z.y + (Math.random() - 0.5) * z.radius,
-                    vx: Math.cos(sAng) * sSpd,
-                    vy: Math.sin(sAng) * sSpd,
-                    radius: 1.8 + Math.random() * 1.8,
-                    color: k === 0 ? '#fbbf24' : '#ef4444',
-                    alpha: 1,
-                    decay: 0.06,
-                  });
-                }
-
-                if (z.hp <= 0) {
-                  handleZombieDeath(z);
-                }
-              }
-            }
-          }
-        } else {
-          im.repulsorTimer = 0.08;
-          im.beamTickTimer = 0.04;
-          im.beamSoundTimer = 0.085;
-        }
-      } else if (isIceFireDragon) {
-        if (shouldFire && !dyingRef.current?.active) {
-          const ifdw =
-            p.weapons[WeaponType.ICE_AND_FIRE_DRAGON] ||
-            INITIAL_WEAPONS[WeaponType.ICE_AND_FIRE_DRAGON];
-          const tickInterval = 1 / Math.max(1, ifdw.fireRate);
-          ifd.beamTickTimer += dt;
-          ifd.beamSoundTimer += dt;
-
-          const activeAng = ifd.merged
-            ? ifd.megaHead.angle
-            : ifd.activeDragon === 'FIRE'
-              ? ifd.fireHead.angle
-              : ifd.iceHead.angle;
-
-          if (ifd.beamSoundTimer >= 0.095) {
-            ifd.beamSoundTimer = 0;
-            if (ifd.merged) {
-              sound.playPurpleMegaLaser();
-            } else if (ifd.activeDragon === 'FIRE') {
-              sound.playDragonBeam();
-            } else {
-              sound.playDragonIceBeam();
-            }
-          }
-
-          // Stream elemental particles along the active dragon beam
-          const bDx = ifd.beamEndX - ifd.muzzleX;
-          const bDy = ifd.beamEndY - ifd.muzzleY;
-          for (let fb = 0; fb < 2; fb++) {
-            const frac = Math.random() * 0.7;
-            const perp = (Math.random() - 0.5) * (ifd.merged ? 26 : 14);
-            const px = ifd.muzzleX + bDx * frac - Math.sin(activeAng) * perp;
-            const py = ifd.muzzleY + bDy * frac + Math.cos(activeAng) * perp;
-            const spd = (ifd.merged ? 260 : 210) + Math.random() * 200;
-            const fAng = activeAng + (Math.random() - 0.5) * 0.22;
-            const pColor = ifd.merged
-              ? fb === 0
-                ? '#e879f9'
-                : '#a855f7'
-              : ifd.activeDragon === 'FIRE'
-                ? fb === 0
-                  ? '#fde047'
-                  : '#f97316'
-                : fb === 0
-                  ? '#e0f2fe'
-                  : '#38bdf8';
-            particlesRef.current.push({
-              id: `ifd-beam-pt-${Date.now()}-${fb}-${Math.random()}`,
-              type: ifd.activeDragon === 'FIRE' && !ifd.merged ? 'FLAME' : 'SPARK',
-              x: px,
-              y: py,
-              vx: Math.cos(fAng) * spd,
-              vy: Math.sin(fAng) * spd,
-              radius: (ifd.merged ? 4.2 : 3.0) + Math.random() * 2.8,
-              color: pColor,
-              alpha: 0.95,
-              decay: 0.075,
-            });
-          }
-
-          if (ifd.beamTickTimer >= tickInterval) {
-            ifd.beamTickTimer = 0;
-
-            if (p.mythicSplitShot && p.mythicSplitShot > 0) {
-              mythicCombatRef.current.destructorSplitCounter += 1;
-              if (mythicCombatRef.current.destructorSplitCounter >= 2) {
-                mythicCombatRef.current.destructorSplitCounter = 0;
-                [-0.22, 0.22].forEach((offset, idx) => {
-                  const sa = activeAng + offset;
-                  bulletsRef.current.push({
-                    id: `ifd-split-${Date.now()}-${idx}-${Math.random()}`,
-                    x: ifd.muzzleX,
-                    y: ifd.muzzleY,
-                    vx: Math.cos(sa) * 980,
-                    vy: Math.sin(sa) * 980,
-                    radius: 6,
-                    damage: Math.round(ifdw.damage * (ifd.merged ? 1.8 : 1.15) * (p.mythicSplitShot || 1)),
-                    piercingRemaining: 4,
-                    color: ifd.merged ? '#c084fc' : ifd.activeDragon === 'FIRE' ? '#f97316' : '#38bdf8',
-                    distanceTraveled: 0,
-                    maxDistance: 820,
-                    ownerAngle: sa,
-                    isRay: true,
-                  });
-                });
-              }
-            }
-
-            if (p.mythicSingularity && p.mythicSingularity > 0) {
-              mythicCombatRef.current.novaShotCounter += 1;
-              if (mythicCombatRef.current.novaShotCounter >= 3) {
-                mythicCombatRef.current.novaShotCounter = 0;
-                const novaCount = 12;
-                const novaDmg = Math.round(ifdw.damage * 1.5 * p.mythicSingularity);
-                for (let ni = 0; ni < novaCount; ni++) {
-                  const na = (ni * Math.PI * 2) / novaCount + activeAng * 0.3;
-                  bulletsRef.current.push({
-                    id: `ifd-nova-${Date.now()}-${ni}-${Math.random()}`,
-                    x: ifd.muzzleX,
-                    y: ifd.muzzleY,
-                    vx: Math.cos(na) * 820,
-                    vy: Math.sin(na) * 820,
-                    radius: 6.5,
-                    damage: novaDmg,
-                    piercingRemaining: 4,
-                    color: ni % 2 === 0 ? '#a855f7' : ifd.activeDragon === 'FIRE' ? '#f97316' : '#38bdf8',
-                    distanceTraveled: 0,
-                    maxDistance: 600,
-                    ownerAngle: na,
-                    isRay: true,
-                  });
-                }
-              }
-            }
-
-            const pointToSegDist = (
-              px: number,
-              py: number,
-              ax: number,
-              ay: number,
-              bx: number,
-              by: number
-            ) => {
-              const abx = bx - ax;
-              const aby = by - ay;
-              const abLenSq = abx * abx + aby * aby;
-              if (abLenSq <= 0.0001) return Math.hypot(px - ax, py - ay);
-              const t = Math.max(0, Math.min(1, ((px - ax) * abx + (py - ay) * aby) / abLenSq));
-              return Math.hypot(px - (ax + t * abx), py - (ay + t * aby));
-            };
-
-            const enemyList = zombiesRef.current;
-            for (let zi = 0; zi < enemyList.length; zi++) {
-              const z = enemyList[zi];
-              if (z.hp <= 0) continue;
-
-              const hitRadius = z.radius + (ifd.merged ? 30 : 17);
-              if (
-                pointToSegDist(z.x, z.y, ifd.muzzleX, ifd.muzzleY, ifd.beamEndX, ifd.beamEndY) > hitRadius
-              ) {
-                continue;
-              }
-
-              let tickDmg = ifdw.damage * (ifd.merged ? 2.6 : 1.0);
-              if (p.critChance && Math.random() < p.critChance) {
-                tickDmg = Math.round(tickDmg * (p.critMultiplier || 2));
-              }
-
-              z.hp -= Math.round(tickDmg);
-
-              if (ifd.merged || ifd.activeDragon === 'FIRE') {
-                z.isOnFire = true;
-                z.burnTimer = 4.5;
-              }
-              if (ifd.merged || ifd.activeDragon === 'ICE') {
-                z.isStunned = true;
-                z.stunTimer = Math.max(z.stunTimer, ifd.merged ? 0.55 : 0.45);
-              } else {
-                z.isStunned = true;
-                z.stunTimer = Math.max(z.stunTimer, 0.04);
-              }
-
-              z.knockbackX += Math.cos(activeAng) * (ifd.merged ? 82 : 56) * (p.knockbackMult || 1);
-              z.knockbackY += Math.sin(activeAng) * (ifd.merged ? 82 : 56) * (p.knockbackMult || 1);
-
-              if (p.chainLightningLevel && p.chainLightningLevel > 0) {
-                triggerChainLightning(z, tickDmg, p.chainLightningLevel);
-              }
-
-              for (let k = 0; k < 3; k++) {
-                const sAng = activeAng + Math.PI + (Math.random() * 1.8 - 0.9);
-                const sSpd = 80 + Math.random() * 130;
-                particlesRef.current.push({
-                  id: `ifdhit-${Date.now()}-${k}-${Math.random()}`,
-                  type: ifd.activeDragon === 'FIRE' && !ifd.merged && k === 0 ? 'FLAME' : 'SPARK',
-                  x: z.x + (Math.random() - 0.5) * z.radius,
-                  y: z.y + (Math.random() - 0.5) * z.radius,
-                  vx: Math.cos(sAng) * sSpd,
-                  vy: Math.sin(sAng) * sSpd,
-                  radius: k === 0 ? 4.0 + Math.random() * 2.2 : 2.0 + Math.random() * 2.0,
-                  color: ifd.merged
-                    ? k % 2 === 0
-                      ? '#e879f9'
-                      : '#a855f7'
-                    : ifd.activeDragon === 'FIRE'
-                      ? k % 2 === 0
-                        ? '#f97316'
-                        : '#fde047'
-                      : k % 2 === 0
-                        ? '#38bdf8'
-                        : '#e0f2fe',
-                  alpha: 1,
-                  decay: 0.06,
-                });
-              }
-
-              if (Math.random() < (ifd.merged ? 0.3 : 0.2)) {
-                particlesRef.current.push({
-                  id: `ifdring-${Date.now()}-${Math.random()}`,
-                  type: ifd.activeDragon === 'FIRE' && !ifd.merged ? 'FIRE_RING' : 'PLASMA_RING',
-                  x: z.x,
-                  y: z.y,
-                  vx: 0,
-                  vy: 0,
-                  radius: 10,
-                  growthSpeed: ifd.merged ? 230 : 185,
-                  color: ifd.merged ? '#c084fc' : ifd.activeDragon === 'FIRE' ? '#f97316' : '#38bdf8',
-                  alpha: 0.85,
-                  decay: 0.08,
-                });
-              }
-
-              if (z.hp <= 0) {
-                handleZombieDeath(z);
-              }
-            }
-          }
-        } else {
-          ifd.beamTickTimer = 0.04;
-          ifd.beamSoundTimer = 0.095;
-        }
-      } else if (shouldFire) {
-        fireActiveWeapon(shootingAngle);
-      }
-
-      // Shield passive regeneration
-      if (p.maxShield > 0 && p.shield < p.maxShield) {
-        shieldRegenTimer += dt;
-        if (shieldRegenTimer >= 4.0) {
-          p.shield = Math.min(p.maxShield, p.shield + 8 * dt);
-        }
-      }
-
-      // Health passive regeneration (from Nanite Regen / Phoenix Protocol perks)
-      if (p.regenHpRate && p.regenHpRate > 0 && p.hp < p.maxHp) {
-        p.hp = Math.min(p.maxHp, p.hp + p.regenHpRate * dt);
-      }
-
-      // Operator Skin Special Runtime Perks (Cryo Chill & Volt Static Zap)
-      if (!dyingRef.current?.active && p.equippedSkin) {
-        if (p.equippedSkin === 'skin_cryo_warden') {
-          skinEffectTimerRef.current.cryoChill += dt;
-          if (skinEffectTimerRef.current.cryoChill >= 0.25) {
-            skinEffectTimerRef.current.cryoChill = 0;
-            for (let zi = 0; zi < zombiesRef.current.length; zi++) {
-              const cz = zombiesRef.current[zi];
-              if (cz.hp <= 0) continue;
-              if (Math.hypot(cz.x - p.x, cz.y - p.y) <= 105 + cz.radius) {
-                cz.isStunned = true;
-                cz.stunTimer = Math.max(cz.stunTimer, 0.14);
-              }
-            }
-          }
-        } else if (p.equippedSkin === 'skin_volt_cyber') {
-          skinEffectTimerRef.current.voltZap += dt;
-          if (skinEffectTimerRef.current.voltZap >= 1.1) {
-            skinEffectTimerRef.current.voltZap = 0;
-            let zapped = 0;
-            const shockDmg = 18 + waveRef.current * 3;
-            for (let zi = 0; zi < zombiesRef.current.length && zapped < 2; zi++) {
-              const vz = zombiesRef.current[zi];
-              if (vz.hp <= 0) continue;
-              if (Math.hypot(vz.x - p.x, vz.y - p.y) <= 125 + vz.radius) {
-                zapped++;
-                vz.hp -= shockDmg;
-                vz.isStunned = true;
-                vz.stunTimer = Math.max(vz.stunTimer, 0.22);
-                const midX = (p.x + vz.x) * 0.5 + (Math.random() - 0.5) * 18;
-                const midY = (p.y + vz.y) * 0.5 + (Math.random() - 0.5) * 18;
-                particlesRef.current.push({
-                  id: `volt-skin-${Date.now()}-${zi}-${Math.random()}`,
-                  type: 'ENERGY_ARC',
-                  x: p.x,
-                  y: p.y,
-                  vx: 0,
-                  vy: 0,
-                  radius: 2,
-                  color: '#22d3ee',
-                  alpha: 1,
-                  decay: 0.16,
-                  points: [
-                    { x: midX, y: midY },
-                    { x: vz.x, y: vz.y },
-                  ],
-                });
-                if (vz.hp <= 0) handleZombieDeath(vz, 1);
-              }
+              z.stunTimer = 0.7;
+              damageZombie(z, 18 * (p.gravityPulseLevel || 1), false, pa);
             }
           }
         }
       }
 
-      // ============================================================
-      // 2b. ACTIVE MYTHIC & LEGENDARY POWER-UPS COMBAT RUNTIME
-      // ============================================================
-      if (!dyingRef.current?.active) {
-        const mc = mythicCombatRef.current;
-
-        // A. MYTHIC SINGULARITY: 5 Orbiting Cosmic Scythe Blades
-        if (p.mythicSingularity && p.mythicSingularity > 0) {
-          mc.orbitalAngle = (mc.orbitalAngle + 4.3 * dt) % (Math.PI * 200);
-          const bladeCount = 5;
-          const orbitR = 78;
-          const activeW = p.weapons[p.currentWeapon] || INITIAL_WEAPONS[WeaponType.PISTOL];
-          const sliceDmg = Math.max(32, Math.round((36 + activeW.damage * 0.75) * p.mythicSingularity));
-
-          for (let bi = 0; bi < bladeCount; bi++) {
-            const ba = mc.orbitalAngle + (bi * Math.PI * 2) / bladeCount;
-            const bx = p.x + Math.cos(ba) * orbitR;
-            const by = p.y + Math.sin(ba) * orbitR;
-            for (let zi = 0; zi < zombiesRef.current.length; zi++) {
-              const z = zombiesRef.current[zi];
-              if (z.hp <= 0) continue;
-              if (Math.hypot(z.x - bx, z.y - by) <= z.radius + 18) {
-                const lastHit = mc.orbitalHitCooldowns[z.id] || 0;
-                if (nowMs - lastHit >= 260) {
-                  mc.orbitalHitCooldowns[z.id] = nowMs;
-                  z.hp -= sliceDmg;
-                  const ka = Math.atan2(z.y - p.y, z.x - p.x);
-                  z.knockbackX += Math.cos(ka) * 260 * (p.knockbackMult || 1);
-                  z.knockbackY += Math.sin(ka) * 260 * (p.knockbackMult || 1);
-                  for (let sp = 0; sp < 4; sp++) {
-                    const sa = Math.random() * Math.PI * 2;
-                    particlesRef.current.push({
-                      id: `blade-sp-${Date.now()}-${sp}-${Math.random()}`,
-                      type: 'SPARK',
-                      x: bx,
-                      y: by,
-                      vx: Math.cos(sa) * 110,
-                      vy: Math.sin(sa) * 110,
-                      radius: 2.2,
-                      color: sp % 2 === 0 ? '#38bdf8' : '#f0abfc',
-                      alpha: 1,
-                      decay: 0.08,
-                    });
-                  }
-                  if (z.hp <= 0) handleZombieDeath(z);
-                }
-              }
-            }
-          }
-        }
-
-        // B. MYTHIC SOLAR PHOENIX: Continuous Solar Corona Aura burn
-        if (p.mythicSolarAura && p.mythicSolarAura > 0) {
-          mc.solarBurnTimer += dt;
-          if (mc.solarBurnTimer >= 0.25) {
-            mc.solarBurnTimer = 0;
-            const auraR = 140 + Math.min(3, p.mythicSolarAura - 1) * 18;
-            const activeW = p.weapons[p.currentWeapon] || INITIAL_WEAPONS[WeaponType.PISTOL];
-            const auraDmg = Math.max(14, Math.round((16 + activeW.damage * 0.28) * p.mythicSolarAura));
-            for (let zi = 0; zi < zombiesRef.current.length; zi++) {
-              const z = zombiesRef.current[zi];
-              if (z.hp <= 0) continue;
-              if (Math.hypot(z.x - p.x, z.y - p.y) <= auraR + z.radius) {
-                z.hp -= auraDmg;
-                z.isOnFire = true;
-                z.burnTimer = 3.5;
-                if (z.hp <= 0) handleZombieDeath(z);
-              }
-            }
-          }
-        }
-
-        // C. LEGENDARY GRAVITY PULSE: Periodic Kinetic Repelling Shockwave
-        if (p.gravityPulseLevel && p.gravityPulseLevel > 0) {
-          const pulseCooldown = Math.max(2.0, 4.6 - p.gravityPulseLevel * 0.45);
-          mc.gravityPulseTimer += dt;
-          if (mc.gravityPulseTimer >= pulseCooldown) {
-            mc.gravityPulseTimer = 0;
-            sound.playGravityPulse();
-            const gRadius = 215 + p.gravityPulseLevel * 24;
-            const gDmg = 24 * p.gravityPulseLevel;
-
-            particlesRef.current.push({
-              id: `grav-pulse-${Date.now()}-${Math.random()}`,
-              type: 'PLASMA_RING',
-              x: p.x,
-              y: p.y,
-              vx: 0,
-              vy: 0,
-              radius: 22,
-              growthSpeed: 540,
-              color: '#818cf8',
-              alpha: 0.95,
-              decay: 0.045,
-            });
-
-            for (let zi = 0; zi < zombiesRef.current.length; zi++) {
-              const z = zombiesRef.current[zi];
-              if (z.hp <= 0) continue;
-              const d = Math.hypot(z.x - p.x, z.y - p.y);
-              if (d <= gRadius + z.radius) {
-                const pa = Math.atan2(z.y - p.y, z.x - p.x);
-                z.knockbackX += Math.cos(pa) * 560 * (p.knockbackMult || 1);
-                z.knockbackY += Math.sin(pa) * 560 * (p.knockbackMult || 1);
-                z.isStunned = true;
-                z.stunTimer = Math.max(z.stunTimer, 0.9);
-                z.hp -= gDmg;
-                if (z.hp <= 0) handleZombieDeath(z);
-              }
-            }
-          }
-        }
-
-        // D. MYTHIC VOID MONARCH: 3 Autonomous Hunter Drones firing Homing Void Lances
-        if (p.mythicVoidDrones && p.mythicVoidDrones > 0) {
-          const activeW = p.weapons[p.currentWeapon] || INITIAL_WEAPONS[WeaponType.PISTOL];
-          const droneDmg = Math.max(24, Math.round((28 + activeW.damage * 0.65) * p.mythicVoidDrones));
-          const droneCount = mc.voidDrones.length;
-
-          for (let di = 0; di < droneCount; di++) {
-            const dr = mc.voidDrones[di];
-            const orbitA = nowMs * 0.0022 + (di * Math.PI * 2) / droneCount;
-            const desiredX = p.x + Math.cos(orbitA) * 56;
-            const desiredY = p.y + Math.sin(orbitA) * 56 + Math.sin(nowMs * 0.006 + di) * 6;
-            dr.x += (desiredX - dr.x) * Math.min(1, dt * 8);
-            dr.y += (desiredY - dr.y) * Math.min(1, dt * 8);
-
-            // Find nearest enemy within 580px
-            let targetZ: Zombie | null = null;
-            let bestDist = 580;
-            for (let zi = 0; zi < zombiesRef.current.length; zi++) {
-              const z = zombiesRef.current[zi];
-              if (z.hp <= 0) continue;
-              const d = Math.hypot(z.x - dr.x, z.y - dr.y);
-              if (d < bestDist) {
-                bestDist = d;
-                targetZ = z;
-              }
-            }
-
-            if (targetZ) {
-              dr.angle = Math.atan2(targetZ.y - dr.y, targetZ.x - dr.x);
-              dr.fireTimer -= dt;
-              if (dr.fireTimer <= 0) {
-                dr.fireTimer = Math.max(0.32, 0.68 - (p.mythicVoidDrones - 1) * 0.1);
-                bulletsRef.current.push({
-                  id: `void-lance-${Date.now()}-${di}-${Math.random()}`,
-                  x: dr.x + Math.cos(dr.angle) * 12,
-                  y: dr.y + Math.sin(dr.angle) * 12,
-                  vx: Math.cos(dr.angle) * 640,
-                  vy: Math.sin(dr.angle) * 640,
-                  radius: 6,
-                  damage: droneDmg,
-                  piercingRemaining: 2,
-                  color: '#c084fc',
-                  distanceTraveled: 0,
-                  maxDistance: 720,
-                  ownerAngle: dr.angle,
-                  isVoidLance: true,
-                  homingStrength: 7.8,
-                });
-              }
-            } else {
-              dr.angle = orbitA + Math.PI / 2;
-              dr.fireTimer = Math.max(0, dr.fireTimer - dt);
-            }
-          }
-        }
-      }
-
-      // 3. UPDATE BULLETS
-      const activeBullets: Bullet[] = [];
-      const bullets = bulletsRef.current;
-
-      for (let i = 0; i < bullets.length; i++) {
-        const b = bullets[i];
-        const oldX = b.x;
-        const oldY = b.y;
-
-        // Homing Void Lance steering toward nearest live enemy
-        if (b.homingStrength && !b.isEnemy && zombiesRef.current.length > 0) {
-          let nearest: Zombie | null = null;
-          let minD = 420;
+      // Mythic Singularity Blades orbiting contact damage
+      if ((p.mythicSingularity || 0) > 0) {
+        mythicOrbitAngleRef.current += dt * 3.8;
+        const bladeCount = 5;
+        const orbitR = 78;
+        for (let b = 0; b < bladeCount; b++) {
+          const ba = mythicOrbitAngleRef.current + (b * Math.PI * 2) / bladeCount;
+          const bx = p.x + Math.cos(ba) * orbitR;
+          const by = p.y + Math.sin(ba) * orbitR;
           for (let zi = 0; zi < zombiesRef.current.length; zi++) {
-            const cand = zombiesRef.current[zi];
-            if (cand.hp <= 0) continue;
-            const d = Math.hypot(cand.x - b.x, cand.y - b.y);
-            if (d < minD) {
-              minD = d;
-              nearest = cand;
+            const z = zombiesRef.current[zi];
+            if (z.isDead) continue;
+            const hitR = z.radius + 14;
+            if ((z.x - bx) ** 2 + (z.y - by) ** 2 < hitR * hitR) {
+              damageZombie(
+                z,
+                (16 + (p.mythicSingularity || 1) * 8) * dt * 8,
+                false,
+                ba + Math.PI / 2
+              );
+            }
+          }
+        }
+      }
+
+      // Mythic Solar Corona continuous burn aura
+      if ((p.mythicSolarAura || 0) > 0) {
+        mythicSolarDamageTimerRef.current += dt;
+        if (mythicSolarDamageTimerRef.current >= 0.25) {
+          mythicSolarDamageTimerRef.current = 0;
+          const auraR = 140 + Math.min(3, (p.mythicSolarAura || 1) - 1) * 18;
+          for (let zi = 0; zi < zombiesRef.current.length; zi++) {
+            const z = zombiesRef.current[zi];
+            if (z.isDead) continue;
+            if ((z.x - p.x) ** 2 + (z.y - p.y) ** 2 <= auraR * auraR) {
+              z.isOnFire = true;
+              z.burnTimer = 2.5;
+              damageZombie(z, 14 * (p.mythicSolarAura || 1), false, Math.atan2(z.y - p.y, z.x - p.x));
+            }
+          }
+        }
+      }
+
+      // Mythic Void Monarch Drones autonomous hunter lances
+      if ((p.mythicVoidDrones || 0) > 0 && voidDronesRef.current.length > 0) {
+        for (let di = 0; di < voidDronesRef.current.length; di++) {
+          const drone = voidDronesRef.current[di];
+          const orbitA = nowSec * 1.9 + (di * Math.PI * 2) / voidDronesRef.current.length;
+          const tx = p.x + Math.cos(orbitA) * 52;
+          const ty = p.y + Math.sin(orbitA) * 52;
+          drone.x += (tx - drone.x) * Math.min(1, dt * 8);
+          drone.y += (ty - drone.y) * Math.min(1, dt * 8);
+          drone.fireTimer -= dt;
+
+          // Target closest zombie
+          let bestZ: Zombie | null = null;
+          let bestDSq = 520 * 520;
+          for (let zi = 0; zi < zombiesRef.current.length; zi++) {
+            const z = zombiesRef.current[zi];
+            if (z.isDead) continue;
+            const dSq = (z.x - drone.x) ** 2 + (z.y - drone.y) ** 2;
+            if (dSq < bestDSq) {
+              bestDSq = dSq;
+              bestZ = z;
+            }
+          }
+
+          if (bestZ) {
+            drone.angle = Math.atan2(bestZ.y - drone.y, bestZ.x - drone.x);
+            if (drone.fireTimer <= 0) {
+              drone.fireTimer = Math.max(0.28, 0.72 - (p.mythicVoidDrones || 1) * 0.1);
+              bulletsRef.current.push({
+                id: `void-${Math.random()}`,
+                x: drone.x,
+                y: drone.y,
+                vx: Math.cos(drone.angle) * 620,
+                vy: Math.sin(drone.angle) * 620,
+                radius: 5,
+                damage: Math.round(24 * (p.mythicVoidDrones || 1)),
+                piercingRemaining: 2,
+                color: '#c084fc',
+                distanceTraveled: 0,
+                maxDistance: 640,
+                ownerAngle: drone.angle,
+                isVoidLance: true,
+                homingStrength: 4.5,
+              });
+            }
+          } else {
+            drone.angle = orbitA + Math.PI / 2;
+          }
+        }
+      }
+
+      // ==========================================
+      // CAMERA REALISTIC KINEMATICS & FOOTSTEPS
+      // ==========================================
+      const speedNow = Math.hypot(vx, vy);
+      const speedNorm = Math.min(1.5, speedNow / Math.max(1, p.speed));
+      cam.swayTime += dt;
+
+      if (speedNow > 22) {
+        const strideFreq = 6.2 + speedNorm * 4.4;
+        cam.walkPhase += dt * strideFreq;
+        const stepSign = Math.sin(cam.walkPhase) >= 0 ? 1 : -1;
+
+        if (stepSign !== cam.prevStepSign && cam.stepCadenceSoundTimer <= 0) {
+          cam.prevStepSign = stepSign;
+          const surfaceKind = getTerrainSurfaceKind(p.x, p.y);
+          const waterDepthNow = getWaterDepth(p.x, p.y);
+
+          if (surfaceKind === 'WATER' && waterDepthNow > 6.0) {
+            cam.stepCadenceSoundTimer = 0.28;
+            sound.playSwimStroke();
+            threeRendererRef.current?.triggerWaterRipple(
+              p.x + Math.cos(p.angle + stepSign * 0.75) * 12,
+              p.y + Math.sin(p.angle + stepSign * 0.75) * 12,
+              0.46
+            );
+            if (Math.random() < 0.75) {
+              particlesRef.current.push({
+                id: `wstroke-${Math.random()}`,
+                x: p.x + Math.cos(p.angle + stepSign * 0.75) * 14,
+                y: p.y + Math.sin(p.angle + stepSign * 0.75) * 14,
+                z: 4,
+                vx: (Math.random() - 0.5) * 48,
+                vy: (Math.random() - 0.5) * 48,
+                vz: 45 + Math.random() * 45,
+                drag: 3.8,
+                radius: 1.9 + Math.random() * 1.4,
+                color: '#e0f2fe',
+                alpha: 0.85,
+                decay: 2.2,
+                type: 'WATER_SPLASH',
+              });
+            }
+          } else {
+            cam.stepCadenceSoundTimer = 0.16;
+            const footSurface =
+              surfaceKind === 'WATER'
+                ? 'water'
+                : surfaceKind === 'SAND'
+                  ? 'sand'
+                  : surfaceKind === 'PIER'
+                    ? 'concrete'
+                    : 'grass';
+            sound.playFootstep(footSurface);
+          }
+
+          // Heel-strike lateral/vertical camera micro-impulse
+          const moveAngle = Math.atan2(vy, vx);
+          const perpAngle = moveAngle + Math.PI / 2;
+          cam.stepVx += Math.cos(perpAngle) * stepSign * 14 * speedNorm;
+          cam.stepVy += (Math.sin(perpAngle) * stepSign * 8 + 16) * speedNorm;
+          cam.rollVel += stepSign * 0.009 * speedNorm;
+          cam.zoomImpulse -= 0.0018 * speedNorm;
+
+          if (surfaceKind !== 'WATER') {
+            // Check if boot stepped in fresh liquid blood puddle
+            for (let si = splatsRef.current.length - 1; si >= Math.max(0, splatsRef.current.length - 60); si--) {
+              const sp = splatsRef.current[si];
+              if (!sp.isLiquid || sp.alpha < 0.25 || sp.color.includes('84cc16') || sp.color.includes('65a30d')) continue;
+              const dSq = (p.x - sp.x) ** 2 + (p.y - sp.y) ** 2;
+              const rHit = sp.radius * 1.15;
+              if (dSq <= rHit * rHit) {
+                wetBloodStepsRef.current = 4;
+                break;
+              }
+            }
+            const isWetStep = wetBloodStepsRef.current > 0;
+            if (isWetStep) wetBloodStepsRef.current -= 1;
+
+            // Spawn realistic boot tread footprint behind stride foot (crimson when tracking through blood)
+            if (footprintsRef.current.length > 140) {
+              footprintsRef.current.shift();
+            }
+            footprintsRef.current.push({
+              x: p.x + Math.cos(perpAngle) * stepSign * 6.5,
+              y: p.y + Math.sin(perpAngle) * stepSign * 6.5,
+              angle: moveAngle,
+              side: stepSign as -1 | 1,
+              alpha: isWetStep ? 0.85 : 0.42,
+              wet: isWetStep,
+              scale: 1,
+            });
+          }
+        }
+      }
+      if (cam.stepCadenceSoundTimer > 0) cam.stepCadenceSoundTimer -= dt;
+
+      // Damped harmonic springs for step bounce, recoil kick, trauma & zoom
+      const springStiffness = 125;
+      const springDamping = 14;
+      cam.springVx += (-springStiffness * cam.springX - springDamping * cam.springVx) * dt;
+      cam.springVy += (-springStiffness * cam.springY - springDamping * cam.springVy) * dt;
+      cam.springX += (cam.springVx + cam.stepVx + cam.recoilVx) * dt;
+      cam.springY += (cam.springVy + cam.stepVy + cam.recoilVy) * dt;
+      cam.stepVx *= Math.exp(-16 * dt);
+      cam.stepVy *= Math.exp(-16 * dt);
+      cam.recoilVx *= Math.exp(-18 * dt);
+      cam.recoilVy *= Math.exp(-18 * dt);
+
+      cam.rollVel += (-95 * cam.roll - 13 * cam.rollVel) * dt;
+      cam.roll = Math.max(-0.045, Math.min(0.045, cam.roll + cam.rollVel * dt));
+
+      const targetZoom = 1 + cam.zoomImpulse;
+      cam.zoomVel += (110 * (targetZoom - cam.zoom) - 16 * cam.zoomVel) * dt;
+      cam.zoom = Math.max(0.92, Math.min(1.06, cam.zoom + cam.zoomVel * dt));
+      cam.zoomImpulse *= Math.exp(-9 * dt);
+
+      cam.trauma = Math.max(0, cam.trauma - dt * 1.9);
+      cam.shake = Math.max(0, cam.shake - dt * 26);
+
+      // Lead camera smoothly ahead in aim direction
+      const aimLeadDist = 42 + (p.currentWeapon === WeaponType.SCAR_L ? 22 : 0);
+      const targetCamX = p.x + Math.cos(p.angle) * aimLeadDist - width / 2;
+      const targetCamY = p.y + Math.sin(p.angle) * aimLeadDist - height / 2;
+      const camFollow = 1 - Math.exp(-8.5 * dt);
+      cam.x += (targetCamX - cam.x) * camFollow;
+      cam.y += (targetCamY - cam.y) * camFollow;
+
+      // Clamp camera cleanly within Island & Surrounding Ocean margins
+      cam.x = Math.max(-300, Math.min(ARENA_SIZE - width + 300, cam.x));
+      cam.y = Math.max(-300, Math.min(ARENA_SIZE - height + 300, cam.y));
+
+      // Decay weapon bloom, recoil & muzzle flash
+      weaponBloomRef.current = Math.max(0, weaponBloomRef.current - dt * 0.24);
+      weaponRecoilRef.current = Math.max(0, weaponRecoilRef.current - dt * 28);
+      muzzleFlashRef.current = Math.max(0, muzzleFlashRef.current - dt * 14);
+      playerDamageFlashRef.current = Math.max(0, playerDamageFlashRef.current - dt * 3.4);
+
+      // ==========================================
+      // WAVE & ZOMBIE SPAWNING
+      // ==========================================
+      if (zombiesToSpawnRef.current > 0) {
+        spawnTimerRef.current -= dt;
+        if (spawnTimerRef.current <= 0 && zombiesRef.current.length < 95) {
+          spawnZombieForWave(waveRef.current, false);
+          zombiesToSpawnRef.current -= 1;
+          spawnTimerRef.current = Math.max(0.24, 0.92 - waveRef.current * 0.045);
+        }
+      } else if (zombiesRef.current.length === 0) {
+        waveTransitionTimerRef.current += dt;
+        if (waveTransitionTimerRef.current >= 1.35) {
+          waveTransitionTimerRef.current = 0;
+          startNextWave();
+        }
+      }
+
+      // ==========================================
+      // BULLETS SIMULATION & COLLISIONS
+      // ==========================================
+      for (let bi = bulletsRef.current.length - 1; bi >= 0; bi--) {
+        const b = bulletsRef.current[bi];
+
+        // Void lance gentle homing
+        if (b.isVoidLance && b.homingStrength && zombiesRef.current.length > 0) {
+          let nearest: Zombie | null = null;
+          let nearDSq = 380 * 380;
+          for (let zi = 0; zi < zombiesRef.current.length; zi++) {
+            const z = zombiesRef.current[zi];
+            if (z.isDead) continue;
+            const dSq = (z.x - b.x) ** 2 + (z.y - b.y) ** 2;
+            if (dSq < nearDSq) {
+              nearDSq = dSq;
+              nearest = z;
             }
           }
           if (nearest) {
-            const speed = Math.hypot(b.vx, b.vy);
-            const curAng = Math.atan2(b.vy, b.vx);
-            const tgtAng = Math.atan2(nearest.y - b.y, nearest.x - b.x);
-            let diff = tgtAng - curAng;
+            const desired = Math.atan2(nearest.y - b.y, nearest.x - b.x);
+            const curA = Math.atan2(b.vy, b.vx);
+            let diff = desired - curA;
             while (diff > Math.PI) diff -= Math.PI * 2;
             while (diff < -Math.PI) diff += Math.PI * 2;
-            const nextAng = curAng + Math.max(-b.homingStrength * dt, Math.min(b.homingStrength * dt, diff));
-            b.vx = Math.cos(nextAng) * speed;
-            b.vy = Math.sin(nextAng) * speed;
-            b.ownerAngle = nextAng;
+            const nextA = curA + Math.max(-b.homingStrength * dt, Math.min(b.homingStrength * dt, diff));
+            const spd = Math.hypot(b.vx, b.vy);
+            b.vx = Math.cos(nextA) * spd;
+            b.vy = Math.sin(nextA) * spd;
+            b.ownerAngle = nextA;
           }
         }
 
+        const stepDist = Math.hypot(b.vx * dt, b.vy * dt);
         b.x += b.vx * dt;
         b.y += b.vy * dt;
+        b.distanceTraveled += stepDist;
 
-        if (b.isRocket || b.isMissile) {
-          // Accelerate rocket slightly
-          b.vx *= Math.pow(1.02, dt * 60);
-          b.vy *= Math.pow(1.02, dt * 60);
-
-          // Rocket tail smoke
-          particlesRef.current.push({
-            id: `rsmoke-${Date.now()}-${Math.random()}`,
-            type: 'SMOKE',
-            x: b.x - Math.cos(b.ownerAngle) * 12,
-            y: b.y - Math.sin(b.ownerAngle) * 12,
-            vx: -Math.cos(b.ownerAngle) * 40 + (Math.random() * 20 - 10),
-            vy: -Math.sin(b.ownerAngle) * 40 + (Math.random() * 20 - 10),
-            radius: b.isMissile ? 3.5 : 5 + Math.random() * 4,
-            growthSpeed: 20,
-            color: b.isMissile ? 'rgba(224, 242, 254, 0.75)' : 'rgba(100, 116, 139, 0.55)',
-            alpha: 0.75,
-            decay: 0.05,
-          });
-
-          // Rocket tail flame
-          particlesRef.current.push({
-            id: `rfire-${Date.now()}-${Math.random()}`,
-            type: 'FLAME',
-            x: b.x - Math.cos(b.ownerAngle) * 10,
-            y: b.y - Math.sin(b.ownerAngle) * 10,
-            vx: -Math.cos(b.ownerAngle) * 60 + (Math.random() * 30 - 15),
-            vy: -Math.sin(b.ownerAngle) * 60 + (Math.random() * 30 - 15),
-            radius: 4 + Math.random() * 3,
-            color: b.isMissile ? '#38bdf8' : Math.random() < 0.5 ? '#fef08a' : '#f97316',
-            alpha: 0.9,
-            decay: 0.12,
-          });
-        } else if (b.isCosmic) {
-          // Cosmic galaxy stardust trail
-          particlesRef.current.push({
-            id: `cstar-${Date.now()}-${Math.random()}`,
-            type: 'SPARK',
-            x: b.x - Math.cos(b.ownerAngle) * 6 + (Math.random() * 8 - 4),
-            y: b.y - Math.sin(b.ownerAngle) * 6 + (Math.random() * 8 - 4),
-            vx: -Math.cos(b.ownerAngle) * 40,
-            vy: -Math.sin(b.ownerAngle) * 40,
-            radius: 2 + Math.random() * 2,
-            color: Math.random() < 0.5 ? '#38bdf8' : '#f43f5e',
-            alpha: 1,
-            decay: 0.08,
-          });
-        } else if (b.isFlame) {
-          // Expand flame cone size downrange
-          if (b.flameMaxRadius) {
-            b.radius = Math.min(b.flameMaxRadius, b.radius + 70 * dt);
-          }
-          // Air resistance slows flame jet slightly
-          b.vx *= Math.exp(-0.7 * dt);
-          b.vy *= Math.exp(-0.7 * dt);
-
-          // Dissipating smoke
-          if (b.distanceTraveled > b.maxDistance * 0.5 && Math.random() < 0.35) {
-            particlesRef.current.push({
-              id: `fsmoke-${Date.now()}-${Math.random()}`,
-              type: 'SMOKE',
-              x: b.x,
-              y: b.y,
-              vx: b.vx * 0.2,
-              vy: b.vy * 0.2 - 15,
-              radius: b.radius * 0.5,
-              growthSpeed: 16,
-              color: 'rgba(71, 85, 105, 0.45)',
-              alpha: 0.5,
-              decay: 0.04,
-            });
-          }
-        }
-
-        // Calculate travel distance
-        const dx = b.x - oldX;
-        const dy = b.y - oldY;
-        b.distanceTraveled += Math.sqrt(dx * dx + dy * dy);
-
-        // Enemy Bullet hitting player
-        if (b.isEnemy) {
-          const distP = Math.hypot(p.x - b.x, p.y - b.y);
-          if (distP < p.radius + b.radius) {
-            b.piercingRemaining = 0;
-
-            // TEMPORAL DODGE OR VENOM ROAD DASH INVULNERABILITY check
-            if (venomFruitStateRef.current.dashTimer > 0 || (p.dodgeChance && Math.random() < p.dodgeChance)) {
-              sound.playTemporalDodge();
-              particlesRef.current.push({
-                id: `dodge-ring-${Date.now()}-${Math.random()}`,
-                type: 'RAY_RING',
-                x: p.x,
-                y: p.y,
-                vx: 0,
-                vy: 0,
-                radius: p.radius,
-                growthSpeed: 260,
-                color: venomFruitStateRef.current.dashTimer > 0 ? '#a855f7' : '#38bdf8',
-                alpha: 0.9,
-                decay: 0.08,
-              });
-            } else {
-              sound.playPlayerHit();
-              screenShakeRef.current = Math.min(25, screenShakeRef.current + 12);
-              const hadShield = p.shield > 0;
-              const demonRes =
-                p.currentWeapon === WeaponType.VENOM_FRUIT && venomFruitStateRef.current.demonActive
-                  ? 0.55
-                  : 1.0;
-              const incomingDmg = Math.max(1, Math.round(b.damage * demonRes));
-
-              if (p.shield > 0) {
-                p.shield -= incomingDmg;
-                if (p.shield < 0) {
-                  p.hp += p.shield;
-                  p.shield = 0;
-                }
-              } else {
-                p.hp -= incomingDmg;
-              }
-
-              if (hadShield) {
-                triggerShieldShock();
-              }
-
-              shieldRegenTimer = 0;
-
-              for (let pk = 0; pk < 6; pk++) {
-                const sparkAngle = Math.random() * Math.PI * 2;
-                particlesRef.current.push({
-                  id: `ehit-${Date.now()}-${pk}-${Math.random()}`,
-                  type: 'SPARK',
-                  x: p.x,
-                  y: p.y,
-                  vx: Math.cos(sparkAngle) * 90,
-                  vy: Math.sin(sparkAngle) * 90,
-                  radius: 3,
-                  color: b.color,
-                  alpha: 1,
-                  decay: 0.08,
-                });
-              }
-
-              syncHudPlayer();
-
-              if (p.hp <= 0) {
-                p.hp = 0;
-                triggerPlayerDeath(p, Math.atan2(b.vy, b.vx));
-                return;
-              }
-            }
-          }
-        }
-
-        // Keep bullets if they are inside arena bounds and under range
         if (
-          b.x >= 0 &&
-          b.x <= ARENA_SIZE &&
-          b.y >= 0 &&
-          b.y <= ARENA_SIZE &&
-          b.distanceTraveled < b.maxDistance &&
-          b.piercingRemaining > 0
+          b.distanceTraveled >= b.maxDistance ||
+          b.x < -40 ||
+          b.x > ARENA_SIZE + 40 ||
+          b.y < -40 ||
+          b.y > ARENA_SIZE + 40
         ) {
-          activeBullets.push(b);
-        } else {
-          if (b.isBomb) {
-            triggerCarpetBombExplosion(b.x, b.y, b.damage);
-          } else if (b.isRocket || b.isMissile || b.isCosmic) {
-            triggerRocketExplosion(b.x, b.y, b.damage);
-          } else if (b.isChloroBall) {
-            const vf = venomFruitStateRef.current;
-            const vw = p.weapons[WeaponType.VENOM_FRUIT] || INITIAL_WEAPONS[WeaponType.VENOM_FRUIT];
-            const isKinjite = vf.demonActive;
-            vf.clouds.push({
-              x: b.x,
-              y: b.y,
-              radius: 120,
-              timer: 4.8,
-              maxTimer: 4.8,
-              tickTimer: 0.28,
-              damage: Math.max(8, Math.round(vw.damage * (isKinjite ? 1.15 : 0.78))),
-              isKinjite,
-            });
-            if (vf.clouds.length > 6) vf.clouds.shift();
-            particlesRef.current.push({
-              id: `chloro-burst-${Date.now()}-${Math.random()}`,
-              type: 'PLASMA_RING',
-              x: b.x,
-              y: b.y,
-              vx: 0,
-              vy: 0,
-              radius: 18,
-              growthSpeed: 380,
-              color: isKinjite ? '#f43f5e' : '#a3e635',
-              alpha: 0.95,
-              decay: 0.06,
-            });
-          }
-        }
-      }
-      if (activeBullets.length > 320) {
-        activeBullets.splice(0, activeBullets.length - 320);
-      }
-      bulletsRef.current = activeBullets;
-
-      // 4. UPDATE ZOMBIES
-      const activeZombies: Zombie[] = [];
-      const zombies = zombiesRef.current;
-      const now = Date.now();
-
-      for (let i = 0; i < zombies.length; i++) {
-        const z = zombies[i];
-        if (z.hp <= 0) {
-          if (!z.isDead) handleZombieDeath(z, 1);
-          continue;
-        }
-
-        // Apply stun states
-        if (z.isStunned) {
-          z.stunTimer -= dt;
-          if (z.stunTimer <= 0) {
-            z.isStunned = false;
-          }
-        }
-
-        // Apply zombie burning DOT (damage over time)
-        if (z.isOnFire) {
-          z.burnTimer = (z.burnTimer || 0) - dt;
-          z.burnDamageTimer = (z.burnDamageTimer || 0) + dt;
-
-          if (z.burnDamageTimer >= 0.2) {
-            const wasAliveBurn = z.hp > 0;
-            z.hp -= 6;
-            z.burnDamageTimer = 0;
-
-            // Rising flame tongue sparks from burning zombie
-            particlesRef.current.push({
-              id: `zburn-${Date.now()}-${Math.random()}`,
-              type: 'FLAME',
-              x: z.x + (Math.random() * z.radius - z.radius / 2),
-              y: z.y + (Math.random() * z.radius - z.radius / 2),
-              vx: (Math.random() - 0.5) * 35,
-              vy: -65 - Math.random() * 45,
-              radius: 3.5 + Math.random() * 3.5,
-              color: Math.random() < 0.5 ? '#ff4500' : '#fef08a',
-              alpha: 1.0,
-              decay: 0.08,
-            });
-
-            if (wasAliveBurn && z.hp <= 0) {
-              handleZombieDeath(z);
-              continue;
-            }
-          }
-
-          if (z.burnTimer <= 0) {
-            z.isOnFire = false;
-          }
-        }
-
-        // Apply Venom Fruit Poison DOT (Doku Doku / Kinjite)
-        if (z.isPoisoned) {
-          z.poisonTimer = (z.poisonTimer || 0) - dt;
-          z.poisonTickTimer = (z.poisonTickTimer || 0) + dt;
-
-          if (z.poisonTickTimer >= 0.25) {
-            const wasAlivePoison = z.hp > 0;
-            z.hp -= Math.max(2, Math.round((z.poisonDps || 14) * 0.25));
-            z.poisonTickTimer = 0;
-
-            particlesRef.current.push({
-              id: `zpoison-${Date.now()}-${Math.random()}`,
-              type: 'TOXIC_ACID',
-              x: z.x + (Math.random() - 0.5) * z.radius,
-              y: z.y + (Math.random() - 0.5) * z.radius,
-              vx: (Math.random() - 0.5) * 32,
-              vy: -42 - Math.random() * 35,
-              radius: 2.5 + Math.random() * 2.5,
-              color: z.isKinjitePoison ? '#fb7185' : Math.random() < 0.65 ? '#c084fc' : '#a3e635',
-              alpha: 0.95,
-              decay: 0.065,
-            });
-
-            if (wasAlivePoison && z.hp <= 0) {
-              handleZombieDeath(z);
-              continue;
-            }
-          }
-
-          if (z.poisonTimer <= 0) {
-            z.isPoisoned = false;
-            z.isKinjitePoison = false;
-          }
-        }
-
-        // Apply knockback deceleration
-        z.knockbackX *= 0.85;
-        z.knockbackY *= 0.85;
-
-        if (Math.abs(z.knockbackX) < 0.1) z.knockbackX = 0;
-        if (Math.abs(z.knockbackY) < 0.1) z.knockbackY = 0;
-
-        // Standard zombie tracking movement
-        if (!z.isStunned) {
-          // Angle from zombie to player
-          const zAngle = Math.atan2(p.y - z.y, p.x - z.x);
-          z.angle = zAngle;
-
-          // Normal speed + knockback vector
-          z.x += (Math.cos(zAngle) * z.speed + z.knockbackX) * dt;
-          z.y += (Math.sin(zAngle) * z.speed + z.knockbackY) * dt;
-        } else {
-          // Move only with knockback if stunned
-          z.x += z.knockbackX * dt;
-          z.y += z.knockbackY * dt;
-        }
-
-        // Constrain to arena
-        z.x = Math.max(z.radius, Math.min(ARENA_SIZE - z.radius, z.x));
-        z.y = Math.max(z.radius, Math.min(ARENA_SIZE - z.radius, z.y));
-
-        // Enemy Ranged Shooting logic (Toxic Spitter in Zombie Mode & Alien units in Alien Mode)
-        if (z.shootsProjectiles && !z.isStunned) {
-          const distToP = Math.hypot(p.x - z.x, p.y - z.y);
-          if (distToP < 700) {
-            let shootInterval = 1400;
-            if (z.type === ZombieType.TOXIC_SPITTER) shootInterval = 2100;
-            else if (z.type === ZombieType.BOSS_BUTCHER) shootInterval = 1700;
-            else if (z.type === ZombieType.BOSS_NECROTITAN) shootInterval = 2100;
-            else if (z.type === ZombieType.ALIEN_DRONE) shootInterval = 1500;
-            else if (z.type === ZombieType.ALIEN_SCOUT) shootInterval = 1350;
-            else if (z.type === ZombieType.ALIEN_SHOOTER) shootInterval = 1750;
-            else if (z.type === ZombieType.ALIEN_OVERLORD) shootInterval = 1300;
-            else if (z.type === ZombieType.ALIEN_DREADNOUGHT) shootInterval = 1400;
-            else if (z.type === ZombieType.ALIEN_LEVIATHAN) shootInterval = 1500;
-
-            if (now - (z.lastShootTime || 0) > shootInterval) {
-              z.lastShootTime = now;
-              const aimAngle = Math.atan2(p.y - z.y, p.x - z.x);
-
-              if (z.type === ZombieType.TOXIC_SPITTER) {
-                // Toxic Spitter biological acid spit
-                sound.playZombieHit();
-                bulletsRef.current.push({
-                  id: `acid-bullet-${Date.now()}-${Math.random()}`,
-                  x: z.x + Math.cos(aimAngle) * (z.radius + 6),
-                  y: z.y + Math.sin(aimAngle) * (z.radius + 6),
-                  vx: Math.cos(aimAngle) * 380,
-                  vy: Math.sin(aimAngle) * 380,
-                  radius: 7,
-                  damage: z.damage,
-                  piercingRemaining: 1,
-                  color: '#84cc16', // Lime acidic green
-                  distanceTraveled: 0,
-                  maxDistance: 620,
-                  ownerAngle: aimAngle,
-                  isEnemy: true,
-                });
-
-                // Acid droplets splash
-                for (let sp = 0; sp < 4; sp++) {
-                  const spAngle = aimAngle + (Math.random() * 0.8 - 0.4);
-                  particlesRef.current.push({
-                    id: `acid-sp-${Date.now()}-${sp}-${Math.random()}`,
-                    type: 'TOXIC_ACID',
-                    x: z.x + Math.cos(aimAngle) * z.radius,
-                    y: z.y + Math.sin(aimAngle) * z.radius,
-                    vx: Math.cos(spAngle) * 60,
-                    vy: Math.sin(spAngle) * 60,
-                    radius: 2 + Math.random() * 3,
-                    color: '#84cc16',
-                    alpha: 1,
-                    decay: 0.08,
-                  });
-                }
-              } else if (z.type === ZombieType.BOSS_BUTCHER) {
-                // Golias Açougueiro triple cleaver shockwave
-                sound.playZombieRoar();
-                [-0.22, 0, 0.22].forEach(off => {
-                  const finalA = aimAngle + off;
-                  bulletsRef.current.push({
-                    id: `cleaver-bullet-${Date.now()}-${Math.random()}`,
-                    x: z.x + Math.cos(finalA) * (z.radius + 12),
-                    y: z.y + Math.sin(finalA) * (z.radius + 12),
-                    vx: Math.cos(finalA) * 440,
-                    vy: Math.sin(finalA) * 440,
-                    radius: 9,
-                    damage: z.damage,
-                    piercingRemaining: 1,
-                    color: '#ef4444',
-                    distanceTraveled: 0,
-                    maxDistance: 680,
-                    ownerAngle: finalA,
-                    isEnemy: true,
-                  });
-                });
-              } else if (z.type === ZombieType.BOSS_NECROTITAN) {
-                // Necro-Titã 8-way radial bone spike burst
-                sound.playZombieRoar();
-                for (let k = 0; k < 8; k++) {
-                  const spikeAngle = (k * Math.PI * 2) / 8 + (now * 0.001);
-                  bulletsRef.current.push({
-                    id: `bonespike-${Date.now()}-${k}-${Math.random()}`,
-                    x: z.x + Math.cos(spikeAngle) * (z.radius + 14),
-                    y: z.y + Math.sin(spikeAngle) * (z.radius + 14),
-                    vx: Math.cos(spikeAngle) * 420,
-                    vy: Math.sin(spikeAngle) * 420,
-                    radius: 8,
-                    damage: z.damage,
-                    piercingRemaining: 1,
-                    color: '#c084fc',
-                    distanceTraveled: 0,
-                    maxDistance: 700,
-                    ownerAngle: spikeAngle,
-                    isEnemy: true,
-                  });
-                }
-              } else if (z.type === ZombieType.ALIEN_OVERLORD) {
-                // Alien Overlord Triple spread plasma burst
-                sound.playAlienBossRoar();
-                [-0.24, 0, 0.24].forEach(off => {
-                  const finalA = aimAngle + off;
-                  bulletsRef.current.push({
-                    id: `alien-bullet-${Date.now()}-${Math.random()}`,
-                    x: z.x + Math.cos(finalA) * (z.radius + 10),
-                    y: z.y + Math.sin(finalA) * (z.radius + 10),
-                    vx: Math.cos(finalA) * 520,
-                    vy: Math.sin(finalA) * 520,
-                    radius: 8,
-                    damage: z.damage,
-                    piercingRemaining: 1,
-                    color: '#ec4899', // Bright Magenta
-                    distanceTraveled: 0,
-                    maxDistance: 700,
-                    ownerAngle: finalA,
-                    isEnemy: true,
-                  });
-                });
-              } else if (z.type === ZombieType.ALIEN_DREADNOUGHT) {
-                // Dreadnought Quad rotating laser cannons
-                sound.playAlienShoot();
-                for (let q = 0; q < 4; q++) {
-                  const qAngle = aimAngle + (q * Math.PI) / 2;
-                  bulletsRef.current.push({
-                    id: `dread-bullet-${Date.now()}-${q}-${Math.random()}`,
-                    x: z.x + Math.cos(qAngle) * (z.radius + 12),
-                    y: z.y + Math.sin(qAngle) * (z.radius + 12),
-                    vx: Math.cos(qAngle) * 480,
-                    vy: Math.sin(qAngle) * 480,
-                    radius: 8,
-                    damage: z.damage,
-                    piercingRemaining: 1,
-                    color: '#00ffcc', // Electric Cyan Laser
-                    distanceTraveled: 0,
-                    maxDistance: 720,
-                    ownerAngle: qAngle,
-                    isEnemy: true,
-                  });
-                }
-              } else if (z.type === ZombieType.ALIEN_LEVIATHAN) {
-                // Leviatã Void 5-way nova singularity spread
-                sound.playAlienBossRoar();
-                [-0.36, -0.18, 0, 0.18, 0.36].forEach(off => {
-                  const finalA = aimAngle + off;
-                  bulletsRef.current.push({
-                    id: `leviathan-bullet-${Date.now()}-${Math.random()}`,
-                    x: z.x + Math.cos(finalA) * (z.radius + 16),
-                    y: z.y + Math.sin(finalA) * (z.radius + 16),
-                    vx: Math.cos(finalA) * 530,
-                    vy: Math.sin(finalA) * 530,
-                    radius: 11,
-                    damage: z.damage,
-                    piercingRemaining: 1,
-                    color: '#e879f9', // Cosmic Nova
-                    distanceTraveled: 0,
-                    maxDistance: 750,
-                    ownerAngle: finalA,
-                    isEnemy: true,
-                  });
-                });
-              } else {
-                // Alien Scout, Drone, or Shooter
-                sound.playAlienShoot();
-                let bulletColor = '#00ffcc';
-                let bulletSpeed = 480;
-                let bulletRadius = 6;
-
-                if (z.type === ZombieType.ALIEN_DRONE) {
-                  bulletColor = '#c084fc'; // Purple Drone dart
-                  bulletSpeed = 510;
-                  bulletRadius = 5;
-                } else if (z.type === ZombieType.ALIEN_SHOOTER) {
-                  bulletColor = '#06b6d4'; // Deep Cyan Plasma
-                  bulletSpeed = 420;
-                  bulletRadius = 9;
-                }
-
-                bulletsRef.current.push({
-                  id: `alien-bullet-${Date.now()}-${Math.random()}`,
-                  x: z.x + Math.cos(aimAngle) * (z.radius + 8),
-                  y: z.y + Math.sin(aimAngle) * (z.radius + 8),
-                  vx: Math.cos(aimAngle) * bulletSpeed,
-                  vy: Math.sin(aimAngle) * bulletSpeed,
-                  radius: bulletRadius,
-                  damage: z.damage,
-                  piercingRemaining: 1,
-                  color: bulletColor,
-                  distanceTraveled: 0,
-                  maxDistance: 650,
-                  ownerAngle: aimAngle,
-                  isEnemy: true,
-                });
-
-                // Alien muzzle spark
-                for (let sp = 0; sp < 4; sp++) {
-                  const spAngle = aimAngle + (Math.random() * 0.8 - 0.4);
-                  particlesRef.current.push({
-                    id: `aspark-${Date.now()}-${sp}-${Math.random()}`,
-                    type: 'ALIEN_PLASMA',
-                    x: z.x + Math.cos(aimAngle) * z.radius,
-                    y: z.y + Math.sin(aimAngle) * z.radius,
-                    vx: Math.cos(spAngle) * 80,
-                    vy: Math.sin(spAngle) * 80,
-                    radius: 3 + Math.random() * 3,
-                    color: bulletColor,
-                    alpha: 1,
-                    decay: 0.1,
-                  });
-                }
-              }
-            }
-          }
-        }
-
-        // Attack Player collision check
-        const distToPlayer = Math.hypot(p.x - z.x, p.y - z.y);
-        if (distToPlayer < p.radius + z.radius) {
-          if (now - z.lastAttackTime > 800) { // attack rate limit 0.8s
-            z.lastAttackTime = now;
-
-            // TEMPORAL DODGE OR VENOM ROAD DASH INVULNERABILITY check
-            if (venomFruitStateRef.current.dashTimer > 0 || (p.dodgeChance && Math.random() < p.dodgeChance)) {
-              sound.playTemporalDodge();
+          if (!b.isRay && b.distanceTraveled >= b.maxDistance && getWaterDepth(b.x, b.y) > 0.6) {
+            threeRendererRef.current?.triggerWaterRipple(b.x, b.y, b.isShrapnel ? 0.42 : 0.68);
+            if (particlesRef.current.length < 180) {
               particlesRef.current.push({
-                id: `mdodge-ring-${Date.now()}-${Math.random()}`,
-                type: 'RAY_RING',
-                x: p.x,
-                y: p.y,
-                vx: 0,
-                vy: 0,
-                radius: p.radius,
-                growthSpeed: 280,
-                color: venomFruitStateRef.current.dashTimer > 0 ? '#a855f7' : '#38bdf8',
-                alpha: 0.95,
-                decay: 0.08,
-              });
-            } else {
-              // Damage calculation: shields absorb 100% until depleted (+ Venom Demon 45% defense)
-              const demonRes =
-                p.currentWeapon === WeaponType.VENOM_FRUIT && venomFruitStateRef.current.demonActive
-                  ? 0.55
-                  : 1.0;
-              const damageDealt = Math.max(1, Math.round(z.damage * demonRes));
-              sound.playPlayerHit();
-              const hadShield = p.shield > 0;
-
-              if (p.shield > 0) {
-                p.shield -= damageDealt;
-                if (p.shield < 0) {
-                  p.hp += p.shield; // Overflow to HP
-                  p.shield = 0;
-                }
-              } else {
-                p.hp -= damageDealt;
-              }
-
-              if (hadShield) {
-                triggerShieldShock();
-              }
-
-              shieldRegenTimer = 0; // reset shield recharge cooldown on damage
-
-              // Screen hit flash particles (Red)
-              for (let k = 0; k < 12; k++) {
-                const bloodAngle = Math.random() * Math.PI * 2;
-                const bSpeed = 60 + Math.random() * 120;
-                particlesRef.current.push({
-                  id: `player-blood-${Date.now()}-${k}-${Math.random()}`,
-                  type: 'BLOOD',
-                  x: p.x,
-                  y: p.y,
-                  vx: Math.cos(bloodAngle) * bSpeed,
-                  vy: Math.sin(bloodAngle) * bSpeed,
-                  radius: 3 + Math.random() * 3,
-                  color: '#ef4444', // Red blood
-                  alpha: 1,
-                  decay: 0.03 + Math.random() * 0.03,
-                });
-              }
-
-              syncHudPlayer();
-
-              // Game over check via dramatic slow-motion death sequence
-              if (p.hp <= 0) {
-                p.hp = 0;
-                triggerPlayerDeath(p, Math.atan2(p.y - z.y, p.x - z.x));
-                return;
-              }
-            }
-          }
-
-          // Push zombies away from each other so they don't overlay
-          const pushAngle = Math.atan2(z.y - p.y, z.x - p.x);
-          z.x = p.x + Math.cos(pushAngle) * (p.radius + z.radius + 1);
-          z.y = p.y + Math.sin(pushAngle) * (p.radius + z.radius + 1);
-        }
-
-        // Avoid overlap with other zombies (fast pairwise push-away physics with AABB + squared distance)
-        for (let j = i + 1; j < zombies.length; j++) {
-          const other = zombies[j];
-          const minDist = z.radius + other.radius;
-          const zdx = other.x - z.x;
-          if (zdx > minDist || zdx < -minDist) continue;
-          const zdy = other.y - z.y;
-          if (zdy > minDist || zdy < -minDist) continue;
-          const distSq = zdx * zdx + zdy * zdy;
-          if (distSq < minDist * minDist) {
-            if (distSq > 0.0001) {
-              const dist = Math.sqrt(distSq);
-              const push = ((minDist - dist) * 0.5) / dist;
-              const px = zdx * push;
-              const py = zdy * push;
-              z.x -= px;
-              z.y -= py;
-              other.x += px;
-              other.y += py;
-            } else {
-              z.x -= 0.5;
-              other.x += 0.5;
-            }
-          }
-        }
-
-        // Check collision against bullets (fast AABB + squared distance)
-        const bulletList = bulletsRef.current;
-        for (let j = bulletList.length - 1; j >= 0; j--) {
-          const b = bulletList[j];
-          if (b.isEnemy) continue; // Enemy projectiles don't hit zombies/aliens
-          const hitR = z.radius + b.radius;
-          const bdx = b.x - z.x;
-          if (bdx > hitR || bdx < -hitR) continue;
-          const bdy = b.y - z.y;
-          if (bdy > hitR || bdy < -hitR) continue;
-
-          if (bdx * bdx + bdy * bdy < hitR * hitR) {
-            // Bullet Hit Zombie!
-            let hitDamage = b.damage;
-            if (p.critChance && Math.random() < p.critChance) {
-              hitDamage = Math.round(hitDamage * (p.critMultiplier || 2));
-              // Gold crit hit particles
-              particlesRef.current.push({
-                id: `crit-${Date.now()}-${Math.random()}`,
-                type: 'SPARK',
-                x: z.x,
-                y: z.y - 12,
-                vx: (Math.random() - 0.5) * 40,
-                vy: -60,
-                radius: 3.5,
-                color: '#fbbf24',
-                alpha: 1,
-                decay: 0.05,
-              });
-            }
-
-            if (b.isBomb) {
-              triggerCarpetBombExplosion(b.x, b.y, hitDamage);
-              b.piercingRemaining = 0;
-            } else if (b.isRocket || b.isMissile || b.isCosmic) {
-              triggerRocketExplosion(b.x, b.y, hitDamage);
-              b.piercingRemaining = 0;
-            } else if (b.isFlame) {
-              z.hp -= hitDamage;
-              z.isOnFire = true;
-              z.burnTimer = 3.5;
-              b.piercingRemaining--;
-
-              // Spawns hit flame sparks
-              for (let fk = 0; fk < 2; fk++) {
-                particlesRef.current.push({
-                  id: `fhit-${Date.now()}-${fk}-${Math.random()}`,
-                  type: 'FLAME',
-                  x: z.x + (Math.random() * 12 - 6),
-                  y: z.y + (Math.random() * 12 - 6),
-                  vx: (Math.random() - 0.5) * 60,
-                  vy: -30 - Math.random() * 40,
-                  radius: 4 + Math.random() * 4,
-                  color: '#ff4500',
-                  alpha: 1.0,
-                  decay: 0.08,
-                });
-              }
-            } else {
-              z.hp -= hitDamage;
-              if (b.isIgnite) {
-                z.isOnFire = true;
-                z.burnTimer = Math.max(z.burnTimer || 0, 2.8);
-              }
-              if (b.isVenom || b.isHydra || b.isVenomWave || b.isChloroBall) {
-                const isKinjiteHit = Boolean(b.isVenomWave || (b.isHydra && b.color === '#f43f5e'));
-                z.isPoisoned = true;
-                z.poisonTimer = Math.max(z.poisonTimer || 0, b.isHydra ? 5.0 : 4.0);
-                z.poisonDps = Math.max(z.poisonDps || 0, isKinjiteHit ? 36 : 16);
-                if (isKinjiteHit) z.isKinjitePoison = true;
-              }
-              if (b.weaponType === WeaponType.TROPER && b.radius >= 5.0) {
-                const splashDmg = Math.max(4, Math.round(hitDamage * 0.6));
-                particlesRef.current.push({
-                  id: `trop-dense-ring-${Date.now()}-${Math.random()}`,
-                  type: 'PLASMA_RING',
-                  x: b.x,
-                  y: b.y,
-                  vx: 0,
-                  vy: 0,
-                  radius: 8,
-                  growthSpeed: 280,
-                  color: '#38bdf8',
-                  alpha: 0.85,
-                  decay: 0.075,
-                });
-                zombiesRef.current.forEach((nz) => {
-                  if (nz.id !== z.id && nz.hp > 0 && Math.hypot(nz.x - b.x, nz.y - b.y) <= 72 + nz.radius) {
-                    nz.hp -= splashDmg;
-                    if (nz.hp <= 0) handleZombieDeath(nz);
-                  }
-                });
-              }
-              b.piercingRemaining--;
-            }
-
-            // LEGENDARY CHAIN LIGHTNING arc jumps
-            if (p.chainLightningLevel && p.chainLightningLevel > 0) {
-              triggerChainLightning(z, hitDamage, p.chainLightningLevel);
-            }
-
-            // Hit audio (mode dependent)
-            if (modeRef.current === GameMode.ALIEN) {
-              sound.playAlienShoot();
-            } else {
-              sound.playZombieHit();
-            }
-
-            // Apply bullet impact knockback (honoring p.knockbackMult)
-            const baseKb = b.isFlame ? 35 : p.currentWeapon === WeaponType.PLASMA_RIFLE ? 300 : 150;
-            const kbStrength = baseKb * (p.knockbackMult || 1);
-            z.knockbackX += Math.cos(b.ownerAngle) * kbStrength;
-            z.knockbackY += Math.sin(b.ownerAngle) * kbStrength;
-            z.isStunned = true;
-            z.stunTimer = b.isFlame ? 0.05 : 0.15; // Brief hitstun
-
-            // Spark hit particles (Golden or Plasma Cyan)
-            for (let k = 0; k < 6; k++) {
-              const sparkAngle = b.ownerAngle + Math.PI + (Math.random() * 1.2 - 0.6);
-              const sparkSpeed = 80 + Math.random() * 120;
-              particlesRef.current.push({
-                id: `spark-${Date.now()}-${k}-${Math.random()}`,
-                type: 'SPARK',
+                id: `bwat-${Math.random()}`,
                 x: b.x,
                 y: b.y,
-                vx: Math.cos(sparkAngle) * sparkSpeed,
-                vy: Math.sin(sparkAngle) * sparkSpeed,
-                radius: 1.5 + Math.random() * 1.5,
-                color: b.color,
-                alpha: 1,
-                decay: 0.04 + Math.random() * 0.04,
+                vx: 0,
+                vy: 0,
+                radius: 7,
+                growthSpeed: 52,
+                color: '#e0f2fe',
+                alpha: 0.65,
+                decay: 1.8,
+                type: 'WATER_RING',
               });
-            }
-
-            // Mode-specific realistic impact blood / alien ichor droplets (no continuous arterial gushing)
-            const isAlienUnit = modeRef.current === GameMode.ALIEN;
-            const bloodPalette = isAlienUnit
-              ? (z.isBoss || z.type === ZombieType.ALIEN_OVERLORD
-                  ? ['#ec4899', '#f43f5e', '#9d174d']
-                  : z.type === ZombieType.ALIEN_DRONE
-                    ? ['#c084fc', '#a855f7', '#06b6d4']
-                    : ['#00ffcc', '#2dd4bf', '#0e7490'])
-              : (z.isBoss
-                  ? ['#991b1b', '#7f1d1d', '#be123c']
-                  : z.type === ZombieType.TOXIC_SPITTER
-                    ? ['#84cc16', '#65a30d', '#3f6212']
-                    : ['#450a0a', '#7f1d1d', '#991b1b', '#b91c1c', '#dc2626']);
-
-            const exitAngle = b.ownerAngle;
-            const woundX = z.x + Math.cos(b.ownerAngle) * (z.radius * 0.45);
-            const woundY = z.y + Math.sin(b.ownerAngle) * (z.radius * 0.45);
-            const isHeavyImpact = b.damage >= 35 || p.currentWeapon === WeaponType.SHOTGUN || p.currentWeapon === WeaponType.SNIPER;
-
-            // Natural kinetic exit/impact blood droplets
-            const dropCount = isHeavyImpact ? 8 : 5;
-            for (let k = 0; k < dropCount; k++) {
-              const sprayAngle = exitAngle + (Math.random() - 0.5) * 1.15;
-              const spraySpeed = (isHeavyImpact ? 75 : 50) + Math.random() * 115;
-              particlesRef.current.push({
-                id: `blood-drop-${Date.now()}-${k}-${Math.random()}`,
-                type: isAlienUnit ? 'ALIEN_BLOOD' : z.type === ZombieType.TOXIC_SPITTER ? 'TOXIC_ACID' : 'BLOOD',
-                x: woundX + (Math.random() - 0.5) * 6,
-                y: woundY + (Math.random() - 0.5) * 6,
-                vx: Math.cos(sprayAngle) * spraySpeed,
-                vy: Math.sin(sprayAngle) * spraySpeed,
-                radius: 1.4 + Math.random() * 1.9,
-                color: bloodPalette[k % bloodPalette.length],
-                alpha: 0.94,
-                decay: 0.025 + Math.random() * 0.02,
-              });
-            }
-
-            // Compact organic floor splatter near wound
-            const floorColor = isAlienUnit
-              ? (z.isBoss || z.type === ZombieType.ALIEN_OVERLORD ? '#9d174d' : z.type === ZombieType.ALIEN_DRONE ? '#6b21a8' : '#0e7490')
-              : (z.isBoss ? '#450a0a' : z.type === ZombieType.TOXIC_SPITTER ? '#3f6212' : '#7f1d1d');
-            if (isHeavyImpact || Math.random() < 0.6) {
-              const splatA = exitAngle + (Math.random() - 0.5) * 0.85;
-              const splatDist = z.radius * 0.5 + Math.random() * 16;
-              bloodSplatsRef.current.push({
-                x: woundX + Math.cos(splatA) * splatDist,
-                y: woundY + Math.sin(splatA) * splatDist,
-                radius: 2.8 + Math.random() * 3.4,
-                alpha: 0.56 + Math.random() * 0.2,
-                color: Math.random() < 0.45 && !isAlienUnit && z.type !== ZombieType.TOXIC_SPITTER ? '#450a0a' : floorColor,
-                angle: splatA,
-                stretch: 1.0 + Math.random() * 0.3,
-              });
-            }
-            while (bloodSplatsRef.current.length > 160) {
-              bloodSplatsRef.current.shift();
-            }
-
-            // Enemy Death Trigger
-            if (z.hp <= 0) {
-              handleZombieDeath(z);
-              break; // exit bullet check for this zombie since it died
-            }
-          }
-        }
-
-        // Only retain live zombies
-        if (z.hp > 0) {
-          activeZombies.push(z);
-        }
-      }
-      zombiesRef.current = activeZombies;
-
-      // Update active boss state for HUD (throttled to avoid 60Hz React re-renders)
-      const liveBoss = activeZombies.find(z => z.isBoss && z.hp > 0);
-      if (liveBoss) {
-        const roundedHp = Math.round(liveBoss.hp);
-        const lastSync = lastBossHudSyncRef.current;
-        if (
-          lastSync.id !== liveBoss.id ||
-          (roundedHp !== lastSync.hp && now - lastSync.ts >= 120)
-        ) {
-          lastSync.id = liveBoss.id;
-          lastSync.hp = roundedHp;
-          lastSync.ts = now;
-          setActiveBoss({
-            id: liveBoss.id,
-            name: liveBoss.bossName || 'CHEFE SUPREMO',
-            title: liveBoss.bossTitle || 'AMEAÇA DE NÍVEL ALFA',
-            hp: roundedHp,
-            maxHp: Math.round(liveBoss.maxHp),
-            type: liveBoss.type,
-            color: liveBoss.color,
-          });
-        }
-      } else if (lastBossHudSyncRef.current.id !== null) {
-        lastBossHudSyncRef.current.id = null;
-        lastBossHudSyncRef.current.hp = -1;
-        setActiveBoss(prev => (prev ? null : prev));
-      }
-
-      // 5. UPDATE CONSUMABLE ITEM DROPS
-      const activeDrops: ItemDrop[] = [];
-      const drops = itemDropsRef.current;
-      for (let i = 0; i < drops.length; i++) {
-        const d = drops[i];
-        d.pulseTimer += dt * 5; // Pulse animation rate
-
-        const distToPlayer = Math.hypot(p.x - d.x, p.y - d.y);
-        
-        // Attract drops slightly to player if very close (vacuum effect!)
-        if (distToPlayer < 120) {
-          const vacuumAngle = Math.atan2(p.y - d.y, p.x - d.x);
-          const vacuumSpeed = 160 * (1 - distToPlayer / 120);
-          d.x += Math.cos(vacuumAngle) * vacuumSpeed * dt;
-          d.y += Math.sin(vacuumAngle) * vacuumSpeed * dt;
-        }
-
-        if (distToPlayer < p.radius + d.radius) {
-          // Collect item!
-          sound.playPowerup();
-
-          if (d.type === DropType.HEALTH) {
-            p.hp = Math.min(p.maxHp, p.hp + 25);
-            // green particles
-            createCollectParticles(d.x, d.y, '#10b981');
-          } else if (d.type === DropType.AMMO || d.type === DropType.PISTOL_CLIP) {
-            // Ammo is infinite, so collecting ammo crates rewards bonus credits!
-            p.coinsEarned = (p.coinsEarned || 0) + 50;
-            p.score = p.coinsEarned;
-            createCollectParticles(d.x, d.y, '#fbbf24');
-          } else if (d.type === DropType.SHIELD) {
-            if (p.maxShield === 0) {
-              p.maxShield = 25; // Unlock standard shield if not yet owned
-            }
-            p.shield = Math.min(p.maxShield, p.shield + 25);
-            createCollectParticles(d.x, d.y, '#22d3ee');
-          }
-
-          p.score = p.coinsEarned || 0;
-          syncHudPlayer();
-        } else {
-          activeDrops.push(d);
-        }
-      }
-      itemDropsRef.current = activeDrops;
-
-      // 6. UPDATE PARTICLES
-      const activeParticles: Particle[] = [];
-      const particles = particlesRef.current;
-      for (let i = 0; i < particles.length; i++) {
-        const pt = particles[i];
-        pt.x += pt.vx * dt;
-        pt.y += pt.vy * dt;
-        pt.alpha -= pt.decay;
-
-        if ((pt.type === 'PLASMA_RING' || pt.type === 'FIRE_RING' || pt.type === 'EXPLOSION' || pt.type === 'RAY_RING' || pt.type === 'MYTHIC_NOVA') && pt.growthSpeed !== undefined) {
-          pt.radius += pt.growthSpeed * dt;
-        }
-
-        if (pt.type === 'FLAME') {
-          pt.radius += (pt.growthSpeed || 8) * dt;
-          pt.vx *= Math.exp(-2 * dt);
-          pt.vy *= Math.exp(-2 * dt);
-        }
-
-        if (pt.type === 'SMOKE') {
-          if (pt.growthSpeed !== undefined) pt.radius += pt.growthSpeed * dt;
-          // Swirling turbulent curl + upward thermal drift
-          if (pt.rotation !== undefined) {
-            pt.vx += Math.cos(pt.rotation) * 20 * dt;
-            pt.vy += (Math.sin(pt.rotation) * 14 - 16) * dt;
-          }
-          pt.vx *= Math.exp(-2.8 * dt);
-          pt.vy *= Math.exp(-2.8 * dt);
-        }
-
-        if (pt.type === 'BLOOD' || pt.type === 'ALIEN_BLOOD' || pt.type === 'ALIEN_PLASMA' || pt.type === 'TOXIC_ACID') {
-          pt.vx *= Math.exp(-3.1 * dt);
-          pt.vy *= Math.exp(-3.1 * dt);
-
-          // Settle small organic blood drop onto the floor when heavy droplet finishes
-          if (pt.alpha <= 0.06 && pt.alpha > 0 && Math.random() < 0.18 && bloodSplatsRef.current.length < 160) {
-            bloodSplatsRef.current.push({
-              x: pt.x,
-              y: pt.y,
-              radius: Math.max(2.2, pt.radius * 1.15),
-              alpha: 0.5,
-              color: pt.color,
-            });
-          }
-        }
-
-        if (pt.type === 'MUZZLE_FLARE' && pt.growthSpeed !== undefined) {
-          pt.radius += pt.growthSpeed * dt;
-        }
-
-        if (pt.rotation !== undefined && pt.rotSpeed !== undefined) {
-          pt.rotation += pt.rotSpeed;
-        }
-
-        if (pt.alpha > 0) {
-          activeParticles.push(pt);
-        }
-      }
-      if (activeParticles.length > 320) {
-        activeParticles.splice(0, activeParticles.length - 320);
-      }
-      particlesRef.current = activeParticles;
-
-      // 7. SMOOTH CAMERA INTERPOLATION (LERP)
-      cameraRef.current.x += (p.x - cameraRef.current.x) * 0.1;
-      cameraRef.current.y += (p.y - cameraRef.current.y) * 0.1;
-
-      // Keep camera inside arena boundaries
-      if (canvasRef.current) {
-        const halfW = canvasRef.current.width / 2;
-        const halfH = canvasRef.current.height / 2;
-        cameraRef.current.x = Math.max(halfW, Math.min(ARENA_SIZE - halfW, cameraRef.current.x));
-        cameraRef.current.y = Math.max(halfH, Math.min(ARENA_SIZE - halfH, cameraRef.current.y));
-      }
-
-      // 8. DECAY WEAPON & GAME-FEEL RECOIL PARAMETERS
-      screenShakeRef.current *= Math.exp(-12 * dt);
-      if (screenShakeRef.current < 0.1) screenShakeRef.current = 0;
-
-      muzzleFlashIntensityRef.current *= Math.exp(-22 * dt);
-      if (muzzleFlashIntensityRef.current < 0.05) muzzleFlashIntensityRef.current = 0;
-
-      gunRecoilRef.current *= Math.exp(-18 * dt);
-      if (gunRecoilRef.current < 0.1) gunRecoilRef.current = 0;
-
-      dynamicSpreadRef.current *= Math.exp(-6 * dt);
-      if (dynamicSpreadRef.current < 0.001) dynamicSpreadRef.current = 0;
-
-      // Decay transient explosion/impact flash lights
-      if (flashLightsRef.current.length > 0) {
-        const nextLights: SceneFlashLight[] = [];
-        for (let i = 0; i < flashLightsRef.current.length; i++) {
-          const fl = flashLightsRef.current[i];
-          fl.alpha -= fl.decay * dt;
-          if (fl.alpha > 0.01) nextLights.push(fl);
-        }
-        flashLightsRef.current = nextLights;
-      }
-    };
-
-    // Spawn sparkles on item collection
-    const createCollectParticles = (cx: number, cy: number, color: string) => {
-      for (let i = 0; i < 15; i++) {
-        const angle = Math.random() * Math.PI * 2;
-        const speed = 40 + Math.random() * 80;
-        particlesRef.current.push({
-          id: `collect-${Date.now()}-${i}-${Math.random()}`,
-          type: 'SPARK',
-          x: cx,
-          y: cy,
-          vx: Math.cos(angle) * speed,
-          vy: Math.sin(angle) * speed,
-          radius: 2 + Math.random() * 2,
-          color,
-          alpha: 1,
-          decay: 0.03 + Math.random() * 0.03,
-        });
-      }
-    };
-
-    // Draw grid arena backgrounds, blood splats, entities, hud effects
-    const drawGame = (time: number) => {
-      const canvas = canvasRef.current;
-      if (!canvas) return;
-      const ctx = canvas.getContext('2d', { alpha: false }) as CanvasRenderingContext2D | null;
-      if (!ctx) return;
-
-      const p = playerRef.current;
-
-      // Fill screen background dark slate
-      ctx.fillStyle = '#020617'; // slate-950 background
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-      // Camera translations offset coordinates
-      let camX = cameraRef.current.x - canvas.width / 2;
-      let camY = cameraRef.current.y - canvas.height / 2;
-
-      // Apply screen shake (dynamic, Snappy camera shake)
-      if (screenShakeRef.current > 0) {
-        camX += (Math.random() * 2 - 1) * screenShakeRef.current;
-        camY += (Math.random() * 2 - 1) * screenShakeRef.current;
-      }
-
-      // Camera viewport bounds for frustum culling
-      const viewLeft = camX;
-      const viewTop = camY;
-      const viewRight = camX + canvas.width;
-      const viewBottom = camY + canvas.height;
-
-      // 1. DRAW REALISTIC TEXTURED ARENA SURFACE & PERIMETER WALLS (Pre-cached offscreen tile)
-      const isAlienStage = modeRef.current === GameMode.ALIEN;
-      renderArenaGround(ctx, camX, camY, canvas.width, canvas.height, ARENA_SIZE, isAlienStage);
-
-      // 2. DRAW ORGANIC BLOOD SPLATTERS & SCORCH CRATERS (Culled)
-      renderRealisticSplats(
-        ctx,
-        bloodSplatsRef.current,
-        camX,
-        camY,
-        viewLeft,
-        viewTop,
-        viewRight,
-        viewBottom
-      );
-
-      // 3. DRAW GROUNDED CAST SHADOWS UNDER ALL ENTITIES
-      renderGroundCastShadows(
-        ctx,
-        p,
-        zombiesRef.current,
-        itemDropsRef.current,
-        camX,
-        camY,
-        viewLeft,
-        viewTop,
-        viewRight,
-        viewBottom,
-        Boolean(dyingRef.current?.active)
-      );
-
-      // 4. DRAW CONSUMABLE ITEM DROPS (Culled + fast glow ring instead of shadowBlur)
-      const drops = itemDropsRef.current;
-      for (let i = 0; i < drops.length; i++) {
-        const d = drops[i];
-        if (
-          d.x + 28 < viewLeft ||
-          d.x - 28 > viewRight ||
-          d.y + 28 < viewTop ||
-          d.y - 28 > viewBottom
-        ) {
-          continue;
-        }
-        ctx.save();
-        
-        // Pulse scaling animation
-        const pulse = 1 + Math.sin(d.pulseTimer) * 0.15;
-        const screenX = d.x - camX;
-        const screenY = d.y - camY;
-
-        ctx.translate(screenX, screenY);
-        ctx.scale(pulse, pulse);
-
-        // Fast translucent halo ring (replaces shadowBlur)
-        ctx.globalAlpha = 0.25;
-        ctx.fillStyle = d.color;
-        ctx.beginPath();
-        ctx.arc(0, 0, 14, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.globalAlpha = 1;
-
-        ctx.fillStyle = d.color;
-        ctx.beginPath();
-
-        if (d.type === DropType.HEALTH) {
-          // Draw Medical Cross Crate
-          ctx.roundRect(-8, -8, 16, 16, 3);
-          ctx.fill();
-          // Draw inner cross
-          ctx.fillStyle = '#ffffff';
-          ctx.fillRect(-2, -6, 4, 12);
-          ctx.fillRect(-6, -2, 12, 4);
-        } else if (d.type === DropType.AMMO) {
-          // Draw Bullet Crate
-          ctx.roundRect(-9, -7, 18, 14, 2);
-          ctx.fill();
-          // Draw simple ammo details
-          ctx.fillStyle = '#000000';
-          ctx.fillRect(-5, -3, 2, 6);
-          ctx.fillRect(-1, -3, 2, 6);
-          ctx.fillRect(3, -3, 2, 6);
-        } else if (d.type === DropType.PISTOL_CLIP) {
-          // Draw Pistol Clip (vertical ammo clip)
-          ctx.roundRect(-6, -10, 12, 20, 2);
-          ctx.fill();
-          // Draw metallic highlights/bullets inside the clip
-          ctx.fillStyle = '#1e293b'; // dark clip background
-          ctx.fillRect(-3, -7, 6, 14);
-          ctx.fillStyle = '#fbbf24'; // gold bullet tips visible at the top
-          ctx.fillRect(-2, -6, 4, 3);
-          ctx.fillRect(-2, -1, 4, 3);
-          ctx.fillRect(-2, 4, 4, 3);
-        } else if (d.type === DropType.SHIELD) {
-          // Draw Energy shield orb
-          ctx.arc(0, 0, 7, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.strokeStyle = '#ffffff';
-          ctx.lineWidth = 1.5;
-          ctx.beginPath();
-          ctx.moveTo(-3, -1);
-          ctx.lineTo(0, 3);
-          ctx.lineTo(3, -1);
-          ctx.stroke();
-        } else {
-          // Weapon Unlock crate!
-          ctx.roundRect(-10, -10, 20, 20, 4);
-          ctx.fill();
-          ctx.strokeStyle = '#ffffff';
-          ctx.lineWidth = 2;
-          ctx.beginPath();
-          ctx.arc(0, -2, 3, 0, Math.PI * 2);
-          ctx.stroke();
-          ctx.fillStyle = '#ffffff';
-          ctx.fillRect(-1, 2, 2, 2);
-        }
-
-        ctx.restore();
-      }
-
-      // 5. DRAW TOXIC CHLORO GAS CLOUDS, FLAMETHROWER STREAM AND BULLETS (Culled to viewport)
-      const vClouds = venomFruitStateRef.current.clouds;
-      for (let ci = 0; ci < vClouds.length; ci++) {
-        const cl = vClouds[ci];
-        renderToxicChloroCloud(
-          ctx,
-          cl.x,
-          cl.y,
-          cl.radius,
-          Math.max(0, cl.timer / Math.max(0.1, cl.maxTimer)),
-          cl.isKinjite,
-          camX,
-          camY,
-          time
-        );
-      }
-
-      renderFlamethrowerStream(ctx, flameStreamRef.current, camX, camY, time);
-
-      const bullets = bulletsRef.current;
-      for (let i = 0; i < bullets.length; i++) {
-        const b = bullets[i];
-        const bPad = b.radius + 36;
-        if (
-          b.x + bPad < viewLeft ||
-          b.x - bPad > viewRight ||
-          b.y + bPad < viewTop ||
-          b.y - bPad > viewBottom
-        ) {
-          continue;
-        }
-        renderBulletVisual(ctx, b, camX, camY, time);
-      }
-
-      // 6. DRAW ZOMBIES (Frustum culled + cached shading instead of radial gradient & shadowBlur)
-      const zombies = zombiesRef.current;
-      for (let i = 0; i < zombies.length; i++) {
-        const z = zombies[i];
-        const zPad = z.radius + 45;
-        if (
-          z.x + zPad < viewLeft ||
-          z.x - zPad > viewRight ||
-          z.y + zPad < viewTop ||
-          z.y - zPad > viewBottom
-        ) {
-          continue;
-        }
-        const szX = z.x - camX;
-        const szY = z.y - camY;
-
-        ctx.save();
-        ctx.translate(szX, szY);
-        ctx.rotate(z.angle);
-
-        // Draw zombie body shadow
-        ctx.fillStyle = 'rgba(0,0,0,0.3)';
-        ctx.beginPath();
-        ctx.arc(4, 4, z.radius, 0, Math.PI * 2);
-        ctx.fill();
-
-        const isAlien = z.type === ZombieType.ALIEN_SCOUT || 
-                        z.type === ZombieType.ALIEN_DRONE || 
-                        z.type === ZombieType.ALIEN_SHOOTER || 
-                        z.type === ZombieType.ALIEN_COLOSSUS || 
-                        z.type === ZombieType.ALIEN_OVERLORD ||
-                        z.type === ZombieType.ALIEN_DREADNOUGHT ||
-                        z.type === ZombieType.ALIEN_LEVIATHAN;
-
-        // Fast layered shading (replaces expensive per-zombie createRadialGradient)
-        ctx.fillStyle = darkenColor(z.color, 35);
-        ctx.beginPath();
-        ctx.arc(0, 0, z.radius, 0, Math.PI * 2);
-        ctx.fill();
-
-        ctx.fillStyle = z.color;
-        ctx.beginPath();
-        ctx.arc(0, 0, z.radius * 0.78, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Realistic flickering multi-tongue fire on ignited enemies
-        if (z.isOnFire) {
-          const fWave = time * 0.018 + i * 1.7;
-          ctx.fillStyle = 'rgba(249, 115, 22, 0.36)';
-          ctx.beginPath();
-          ctx.arc(0, 0, z.radius + 5 + Math.sin(fWave) * 1.5, 0, Math.PI * 2);
-          ctx.fill();
-          for (let ft = 0; ft < 3; ft++) {
-            const ta = fWave * 0.6 + (ft * Math.PI * 2) / 3;
-            const fx = Math.cos(ta) * (z.radius * 0.65);
-            const fy = Math.sin(ta) * (z.radius * 0.65);
-            ctx.fillStyle = ft === 0 ? 'rgba(254, 240, 138, 0.72)' : 'rgba(251, 146, 60, 0.68)';
-            ctx.beginPath();
-            ctx.arc(fx, fy, 4 + Math.sin(fWave + ft) * 1.6, 0, Math.PI * 2);
-            ctx.fill();
-          }
-        }
-
-        // Dripping Toxic Purple / Kinjite Crimson Venom aura on poisoned enemies
-        if (z.isPoisoned) {
-          const pWave = time * 0.015 + i * 1.4;
-          ctx.fillStyle = z.isKinjitePoison ? 'rgba(244, 63, 94, 0.30)' : 'rgba(168, 85, 247, 0.28)';
-          ctx.beginPath();
-          ctx.arc(0, 0, z.radius + 4 + Math.sin(pWave) * 1.3, 0, Math.PI * 2);
-          ctx.fill();
-          for (let pt = 0; pt < 3; pt++) {
-            const pa = pWave * 0.5 + (pt * Math.PI * 2) / 3;
-            const px = Math.cos(pa) * (z.radius * 0.72);
-            const py = Math.sin(pa) * (z.radius * 0.72);
-            ctx.fillStyle = z.isKinjitePoison
-              ? (pt === 0 ? 'rgba(253, 164, 175, 0.78)' : 'rgba(225, 29, 72, 0.72)')
-              : (pt === 0 ? 'rgba(217, 249, 157, 0.75)' : 'rgba(192, 132, 252, 0.72)');
-            ctx.beginPath();
-            ctx.arc(px, py, 3 + Math.sin(pWave + pt) * 1.2, 0, Math.PI * 2);
-            ctx.fill();
-          }
-        }
-
-        // Stroke outline
-        ctx.strokeStyle = isAlien 
-          ? (z.isBoss ? '#f43f5e' : '#083344') 
-          : (z.isBoss ? '#7f1d1d' : '#052e16');
-        ctx.lineWidth = z.isBoss ? 5 : (z.type === ZombieType.TANK || z.type === ZombieType.ALIEN_COLOSSUS) ? 3 : 2;
-        ctx.stroke();
-
-        if (isAlien) {
-          // ==========================================
-          // ALIEN VISUALS
-          // ==========================================
-          if (z.type === ZombieType.ALIEN_DRONE) {
-            // Rotating outer cyber-thruster pods
-            const spin = time * 0.005;
-            for (let a = 0; a < 3; a++) {
-              const podAngle = spin + (a * Math.PI * 2) / 3;
-              const px = Math.cos(podAngle) * (z.radius + 4);
-              const py = Math.sin(podAngle) * (z.radius + 4);
-              ctx.fillStyle = '#c084fc';
-              ctx.beginPath();
-              ctx.arc(px, py, 3, 0, Math.PI * 2);
-              ctx.fill();
-            }
-
-            // Central pulsing violet ocular sensor
-            ctx.fillStyle = '#e879f9';
-            ctx.beginPath();
-            ctx.arc(z.radius * 0.35, 0, 3.5, 0, Math.PI * 2);
-            ctx.fill();
-          } else if (z.type === ZombieType.ALIEN_COLOSSUS) {
-            // Armored heavy chitin carapace ridges
-            ctx.strokeStyle = '#38bdf8';
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.arc(-z.radius * 0.2, 0, z.radius * 0.7, -Math.PI / 2, Math.PI / 2);
-            ctx.stroke();
-
-            // Heavy mandible claws
-            ctx.fillStyle = '#4338ca';
-            ctx.beginPath();
-            ctx.arc(z.radius * 0.8, -z.radius * 0.45, 5, 0, Math.PI * 2);
-            ctx.arc(z.radius * 0.8, z.radius * 0.45, 5, 0, Math.PI * 2);
-            ctx.fill();
-
-            // Glowing green sensory slits
-            ctx.fillStyle = '#22d3ee';
-            ctx.beginPath();
-            ctx.arc(z.radius * 0.5, -z.radius * 0.25, 2.5, 0, Math.PI * 2);
-            ctx.arc(z.radius * 0.5, z.radius * 0.25, 2.5, 0, Math.PI * 2);
-            ctx.fill();
-          } else if (z.type === ZombieType.ALIEN_OVERLORD) {
-            // Psychic crown horns / crest
-            ctx.fillStyle = '#be185d';
-            ctx.beginPath();
-            ctx.moveTo(z.radius * 0.8, 0);
-            ctx.lineTo(z.radius * 1.3, -z.radius * 0.4);
-            ctx.lineTo(z.radius * 1.1, 0);
-            ctx.lineTo(z.radius * 1.3, z.radius * 0.4);
-            ctx.closePath();
-            ctx.fill();
-
-            // 3 psychic glowing eyes
-            ctx.fillStyle = '#f43f5e';
-            ctx.beginPath();
-            ctx.arc(z.radius * 0.5, -z.radius * 0.3, 3.5, 0, Math.PI * 2);
-            ctx.arc(z.radius * 0.5, z.radius * 0.3, 3.5, 0, Math.PI * 2);
-            ctx.arc(z.radius * 0.65, 0, 4, 0, Math.PI * 2);
-            ctx.fill();
-          } else if (z.type === ZombieType.ALIEN_DREADNOUGHT) {
-            // Dreadnought Floating Warship: Hex Carapace
-            ctx.strokeStyle = '#00ffcc';
-            ctx.lineWidth = 2;
-            ctx.strokeRect(-z.radius * 0.45, -z.radius * 0.45, z.radius * 0.9, z.radius * 0.9);
-
-            // 4 rotating outer engine thrusters
-            const dreadSpin = time * 0.004;
-            for (let a = 0; a < 4; a++) {
-              const podAngle = dreadSpin + (a * Math.PI) / 2;
-              const px = Math.cos(podAngle) * (z.radius + 6);
-              const py = Math.sin(podAngle) * (z.radius + 6);
-              ctx.fillStyle = '#06b6d4';
-              ctx.beginPath();
-              ctx.arc(px, py, 4.5, 0, Math.PI * 2);
-              ctx.fill();
-              // Blue ion flame
-              ctx.fillStyle = '#00ffcc';
-              ctx.beginPath();
-              ctx.arc(px * 1.1, py * 1.1, 2.5, 0, Math.PI * 2);
-              ctx.fill();
-            }
-
-            // Dual Front Heavy Plasma Cannons
-            ctx.fillStyle = '#0e7490';
-            ctx.fillRect(z.radius * 0.6, -11, 14, 5);
-            ctx.fillRect(z.radius * 0.6, 6, 14, 5);
-
-            // Core Reactor
-            ctx.fillStyle = '#38bdf8';
-            ctx.beginPath();
-            ctx.arc(0, 0, 6, 0, Math.PI * 2);
-            ctx.fill();
-          } else if (z.type === ZombieType.ALIEN_LEVIATHAN) {
-            // Leviathan Cosmic Void Entity
-            // 3 radiating cosmic energy crests
-            ctx.fillStyle = '#7e22ce';
-            for (let c = -1; c <= 1; c++) {
-              ctx.beginPath();
-              ctx.moveTo(z.radius * 0.7, c * 15);
-              ctx.lineTo(z.radius * 1.35, c * 22);
-              ctx.lineTo(z.radius * 0.9, c * 5);
-              ctx.closePath();
-              ctx.fill();
-            }
-
-            // 4 orbiting cosmic particle motes
-            const leviSpin = time * 0.003;
-            for (let m = 0; m < 4; m++) {
-              const moteAngle = leviSpin + (m * Math.PI) / 2;
-              const mx = Math.cos(moteAngle) * (z.radius + 8);
-              const my = Math.sin(moteAngle) * (z.radius + 8);
-              ctx.fillStyle = '#e879f9';
-              ctx.beginPath();
-              ctx.arc(mx, my, 4, 0, Math.PI * 2);
-              ctx.fill();
-            }
-
-            // 5 multi-spectral glowing celestial eyes
-            ctx.fillStyle = '#f43f5e';
-            ctx.beginPath();
-            ctx.arc(z.radius * 0.5, -14, 3.5, 0, Math.PI * 2);
-            ctx.arc(z.radius * 0.5, 14, 3.5, 0, Math.PI * 2);
-            ctx.fillStyle = '#38bdf8';
-            ctx.arc(z.radius * 0.6, -7, 3, 0, Math.PI * 2);
-            ctx.arc(z.radius * 0.6, 7, 3, 0, Math.PI * 2);
-            ctx.fillStyle = '#fbbf24';
-            ctx.arc(z.radius * 0.7, 0, 4, 0, Math.PI * 2);
-            ctx.fill();
-          } else {
-            // Alien Scout & Alien Shooter
-            ctx.fillStyle = z.type === ZombieType.ALIEN_SHOOTER ? '#0e7490' : '#00ffcc';
-            ctx.beginPath();
-            ctx.arc(z.radius * 0.8, -z.radius * 0.35, 3.5, 0, Math.PI * 2);
-            ctx.arc(z.radius * 0.8, z.radius * 0.35, 3.5, 0, Math.PI * 2);
-            ctx.fill();
-
-            // Sleek glowing alien ocular slit eyes
-            ctx.fillStyle = '#000000';
-            ctx.beginPath();
-            ctx.ellipse(z.radius * 0.4, -z.radius * 0.35, z.radius * 0.28, z.radius * 0.16, Math.PI / 4, 0, Math.PI * 2);
-            ctx.ellipse(z.radius * 0.4, z.radius * 0.35, z.radius * 0.28, z.radius * 0.16, -Math.PI / 4, 0, Math.PI * 2);
-            ctx.fill();
-
-            ctx.fillStyle = '#00ffcc';
-            ctx.beginPath();
-            ctx.arc(z.radius * 0.45, -z.radius * 0.35, 2, 0, Math.PI * 2);
-            ctx.arc(z.radius * 0.45, z.radius * 0.35, 2, 0, Math.PI * 2);
-            ctx.fill();
-          }
-        } else {
-          // ==========================================
-          // ZOMBIE VISUALS
-          // ==========================================
-          // Reaching decaying undead hands
-          ctx.fillStyle = z.color;
-          ctx.beginPath();
-          ctx.arc(z.radius * 0.7, -z.radius * 0.4, 4, 0, Math.PI * 2);
-          ctx.arc(z.radius * 0.7, z.radius * 0.4, 4, 0, Math.PI * 2);
-          ctx.fill();
-
-          if (z.type === ZombieType.BOSS) {
-            // Tirano Necrótico: Bone shoulder plates & White Eyes
-            ctx.fillStyle = '#e2e8f0';
-            ctx.beginPath();
-            ctx.arc(-z.radius * 0.2, -z.radius * 0.6, 6, 0, Math.PI * 2);
-            ctx.arc(-z.radius * 0.2, z.radius * 0.6, 6, 0, Math.PI * 2);
-            ctx.fill();
-
-            // Glowing dead white eyes
-            ctx.fillStyle = '#ffffff';
-            ctx.beginPath();
-            ctx.arc(z.radius * 0.4, -z.radius * 0.3, 4, 0, Math.PI * 2);
-            ctx.arc(z.radius * 0.4, z.radius * 0.3, 4, 0, Math.PI * 2);
-            ctx.fill();
-          } else if (z.type === ZombieType.BOSS_BUTCHER) {
-            // Golias Açougueiro: Giant rusted steel cleaver blade strapped on right arm
-            ctx.fillStyle = '#94a3b8';
-            ctx.fillRect(z.radius * 0.4, z.radius * 0.25, z.radius * 0.75, 10);
-            ctx.fillStyle = '#cbd5e1';
-            ctx.fillRect(z.radius * 0.4, z.radius * 0.25, z.radius * 0.75, 2);
-
-            // Metal jaw staples
-            ctx.strokeStyle = '#e2e8f0';
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.moveTo(z.radius * 0.5, -6);
-            ctx.lineTo(z.radius * 0.5, 6);
-            ctx.stroke();
-
-            // Glowing yellow butcher eyes
-            ctx.fillStyle = '#facc15';
-            ctx.beginPath();
-            ctx.arc(z.radius * 0.4, -z.radius * 0.3, 4, 0, Math.PI * 2);
-            ctx.arc(z.radius * 0.4, z.radius * 0.3, 4, 0, Math.PI * 2);
-            ctx.fill();
-          } else if (z.type === ZombieType.BOSS_NECROTITAN) {
-            // Necro-Titã: 4 massive bone spikes jutting out of back
-            ctx.strokeStyle = '#f1f5f9';
-            ctx.lineWidth = 3.5;
-            for (let s = 0; s < 4; s++) {
-              const sy = (s - 1.5) * 16;
-              ctx.beginPath();
-              ctx.moveTo(-z.radius * 0.3, sy);
-              ctx.lineTo(-z.radius * 1.25, sy * 1.3);
-              ctx.stroke();
-            }
-
-            // Dark matter glowing violet core
-            ctx.fillStyle = '#c084fc';
-            ctx.beginPath();
-            ctx.arc(0, 0, 8, 0, Math.PI * 2);
-            ctx.fill();
-
-            // Glowing violet skull eyes
-            ctx.fillStyle = '#e879f9';
-            ctx.beginPath();
-            ctx.arc(z.radius * 0.4, -z.radius * 0.3, 4.5, 0, Math.PI * 2);
-            ctx.arc(z.radius * 0.4, z.radius * 0.3, 4.5, 0, Math.PI * 2);
-            ctx.fill();
-          } else if (z.type === ZombieType.TOXIC_SPITTER) {
-            // Acid pustules on back
-            ctx.fillStyle = '#bef264';
-            ctx.beginPath();
-            ctx.arc(-z.radius * 0.3, -z.radius * 0.3, 4, 0, Math.PI * 2);
-            ctx.arc(-z.radius * 0.4, 0, 5, 0, Math.PI * 2);
-            ctx.arc(-z.radius * 0.3, z.radius * 0.3, 4, 0, Math.PI * 2);
-            ctx.fill();
-
-            // Acid drooling jaws
-            ctx.fillStyle = '#a3e635';
-            ctx.beginPath();
-            ctx.arc(z.radius * 0.6, 0, 3, 0, Math.PI * 2);
-            ctx.fill();
-
-            // Glowing lime eyes
-            ctx.fillStyle = '#ecfccb';
-            ctx.beginPath();
-            ctx.arc(z.radius * 0.4, -z.radius * 0.3, 2.5, 0, Math.PI * 2);
-            ctx.arc(z.radius * 0.4, z.radius * 0.3, 2.5, 0, Math.PI * 2);
-            ctx.fill();
-          } else {
-            // Standard / Runner / Tank eyes
-            ctx.fillStyle = z.type === ZombieType.RUNNER ? '#f97316' : '#f87171';
-            ctx.beginPath();
-            ctx.arc(z.radius * 0.4, -z.radius * 0.3, 2.5, 0, Math.PI * 2);
-            ctx.arc(z.radius * 0.4, z.radius * 0.3, 2.5, 0, Math.PI * 2);
-            ctx.fill();
-          }
-        }
-
-        ctx.restore();
-
-        // Draw a HP bar above boss or big zombies
-        if (z.isBoss || (z.hp < z.maxHp && z.maxHp > 30)) {
-          const barW = z.radius * (z.isBoss ? 2.4 : 2);
-          const barH = z.isBoss ? 7 : 5;
-          const bx = szX - barW / 2;
-          const by = szY - z.radius - (z.isBoss ? 16 : 12);
-
-          ctx.save();
-          // background
-          ctx.fillStyle = 'rgba(0,0,0,0.8)';
-          ctx.fillRect(bx, by, barW, barH);
-          // progress
-          ctx.fillStyle = z.isBoss ? (isAlien ? '#ec4899' : '#dc2626') : '#22c55e';
-          const hpRatio = Math.max(0, z.hp / z.maxHp);
-          ctx.fillRect(bx, by, barW * hpRatio, barH);
-          // border
-          ctx.strokeStyle = z.isBoss ? '#ffffff' : 'rgba(255,255,255,0.2)';
-          ctx.lineWidth = z.isBoss ? 1.5 : 1;
-          ctx.strokeRect(bx, by, barW, barH);
-          ctx.restore();
-        }
-      }
-
-      // 7. DRAW PLAYER OR DOWNED OPERATOR
-      const spX = p.x - camX;
-      const spY = p.y - camY;
-
-      if (dyingRef.current?.active) {
-        const d = dyingRef.current;
-        const deathProgress = Math.min(1, Math.max(0, 1 - d.timer / d.total));
-
-        // A. Real-time expanding dark arterial blood pool on ground
-        ctx.save();
-        const poolR = d.bloodPoolRadius;
-        const poolGrad = ctx.createRadialGradient(spX, spY, 2, spX, spY, poolR);
-        poolGrad.addColorStop(0, '#3f0606');
-        poolGrad.addColorStop(0.65, '#5c0a0a');
-        poolGrad.addColorStop(0.9, '#7f1d1d');
-        poolGrad.addColorStop(1, 'rgba(127, 29, 29, 0)');
-        ctx.fillStyle = poolGrad;
-        ctx.beginPath();
-        ctx.arc(spX, spY, poolR, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
-
-        // B. Dropped weapon skidding / resting on floor
-        const dw = d.droppedWeapon;
-        ctx.save();
-        ctx.translate(dw.x - camX, dw.y - camY);
-        ctx.rotate(dw.angle);
-        // Weapon shadow
-        ctx.fillStyle = 'rgba(0,0,0,0.45)';
-        ctx.fillRect(-2, 2, 20, 6);
-        renderPlayerWeapon(ctx, dw.type, 0, time, 0);
-        ctx.restore();
-
-        // C. Collapsed Downed Operator Body
-        ctx.save();
-        ctx.translate(spX, spY);
-        // Tilt body flat on ground along fatal attack angle
-        const collapseAngle = p.angle + (d.fatalAngle - p.angle) * Math.min(1, deathProgress * 1.6);
-        ctx.rotate(collapseAngle);
-
-        // Flattening floor shadow
-        ctx.fillStyle = 'rgba(0,0,0,0.5)';
-        ctx.beginPath();
-        ctx.ellipse(3, 4, p.radius * (1 - deathProgress * 0.15), p.radius * 0.7, 0, 0, Math.PI * 2);
-        ctx.fill();
-
-        renderOperatorBody(ctx, p.equippedSkin || 'skin_default', p.radius, time, false, deathProgress);
-        ctx.restore();
-      } else {
-        const isMoving = Math.hypot(p.vx || 0, p.vy || 0) > 10;
-
-        // Active Mythic Solar Phoenix Aura beneath player/ship
-        if (p.mythicSolarAura && p.mythicSolarAura > 0) {
-          renderMythicSolarAura(ctx, spX, spY, p.mythicSolarAura, time);
-        }
-
-        if (
-          p.currentWeapon === WeaponType.TROPER ||
-          p.currentWeapon === WeaponType.DESTRUCTOR ||
-          p.currentWeapon === WeaponType.INTERCEPTOR ||
-          p.currentWeapon === WeaponType.NAVE_REI
-        ) {
-          const ds = destructorStateRef.current;
-          const isReiDraw = p.currentWeapon === WeaponType.NAVE_REI;
-          const isTroperDraw = p.currentWeapon === WeaponType.TROPER;
-
-          // A0: Continuous Thruster Exhaust Ribbon Trails behind both rear nozzles (not used on Troper mini-ship)
-          if (!isTroperDraw) {
-            renderDestructorThrusterTrails(
-              ctx,
-              ds.leftTrail,
-              ds.rightTrail,
-              camX,
-              camY,
-              ds.warpActive,
-              time,
-              isReiDraw && (ds.warpActive || ds.warpChargeTimer > 0.6)
-            );
-          }
-
-          const smDraw = shipMasteryRef.current;
-          const hasCapDraw = hasMasteryNode(smDraw, 'DESTRUCTOR', 'dest_capacitor');
-          const hasReiCoreDraw = hasMasteryNode(smDraw, 'NAVE_REI', 'rei_crimson_core');
-          const destChargeMax = hasCapDraw ? 2.1 : 3.0;
-          const destWarpMax = hasCapDraw ? 10.0 : 8.0;
-          const reiChargeMax = hasReiCoreDraw ? 4.5 : 6.0;
-
-          if (p.currentWeapon === WeaponType.TROPER) {
-            renderTroperShip(
-              ctx,
-              spX,
-              spY,
-              p.angle,
-              isMoving,
-              ds.isFiring,
-              time,
-              p.shield,
-              ds.angularVel
-            );
-          } else if (p.currentWeapon === WeaponType.DESTRUCTOR) {
-            // A: Continuous Twin Laser Beams when firing (+ 3rd center singularity beam if unlocked)
-            if (ds.isFiring) {
-              const BEAM_RANGE = 950;
-              const leftEndX = ds.leftMuzzleX + Math.cos(ds.leftBlasterAngle) * BEAM_RANGE;
-              const leftEndY = ds.leftMuzzleY + Math.sin(ds.leftBlasterAngle) * BEAM_RANGE;
-              const rightEndX = ds.rightMuzzleX + Math.cos(ds.rightBlasterAngle) * BEAM_RANGE;
-              const rightEndY = ds.rightMuzzleY + Math.sin(ds.rightBlasterAngle) * BEAM_RANGE;
-
-              renderDestructorTwinBeams(
-                ctx,
-                ds.leftMuzzleX,
-                ds.leftMuzzleY,
-                leftEndX,
-                leftEndY,
-                ds.rightMuzzleX,
-                ds.rightMuzzleY,
-                rightEndX,
-                rightEndY,
-                camX,
-                camY,
-                ds.warpActive,
-                time,
-                ds.laserChargeProgress
-              );
-
-              if (ds.warpActive && hasMasteryNode(smDraw, 'DESTRUCTOR', 'dest_singularity')) {
-                const midAngle = (ds.leftBlasterAngle + ds.rightBlasterAngle) * 0.5;
-                renderSingleExtraLaserBeam(
-                  ctx,
-                  p.x,
-                  p.y,
-                  p.x + Math.cos(midAngle) * BEAM_RANGE,
-                  p.y + Math.sin(midAngle) * BEAM_RANGE,
-                  camX,
-                  camY,
-                  '#d946ef',
-                  'rgba(192, 132, 252, 0.42)',
-                  1.35,
-                  time,
-                  ds.laserChargeProgress
-                );
-              }
-            }
-
-            // B: Transform Player into the Destructor Spaceship + Twin ±30° Blasters + Particle Accelerator Orbs
-            renderDestructorShip(
-              ctx,
-              spX,
-              spY,
-              p.angle,
-              ds.leftBlasterAngle,
-              ds.rightBlasterAngle,
-              isMoving,
-              ds.isFiring,
-              ds.warpChargeTimer / destChargeMax,
-              ds.warpActive,
-              ds.warpActive ? Math.max(0, ds.warpTimer / destWarpMax) : 0,
-              ds.orbitAngle,
-              time,
-              p.shield
-            );
-          } else if (p.currentWeapon === WeaponType.INTERCEPTOR) {
-            // B: Transform Player into the Long-Wing Interceptor Spaceship + Wingtip Rapid Orb Blasters
-            renderInterceptorShip(
-              ctx,
-              spX,
-              spY,
-              p.angle,
-              ds.leftBlasterAngle,
-              ds.rightBlasterAngle,
-              isMoving,
-              ds.isFiring,
-              ds.warpChargeTimer / 3.0,
-              ds.warpActive,
-              ds.warpActive ? Math.max(0, ds.warpTimer / 8.0) : 0,
-              ds.orbitAngle,
-              time,
-              p.shield,
-              ds.angularVel
-            );
-          } else {
-            // A: 4 Continuous Quad Laser Beams (+2 extra flank crimson lasers if rei_emperor unlocked)
-            if (ds.isFiring && ds.reiBlasters.length === 4) {
-              const rRange = ds.warpActive ? 1150 : 980;
-              renderReiQuadBeams(
-                ctx,
-                ds.reiBlasters,
-                rRange,
-                camX,
-                camY,
-                ds.warpActive,
-                time,
-                ds.laserChargeProgress
-              );
-              if (ds.warpActive && hasMasteryNode(smDraw, 'NAVE_REI', 'rei_emperor')) {
-                const avgA =
-                  (ds.reiBlasters[0].angle + ds.reiBlasters[3].angle) * 0.5;
-                [-0.18, 0.18].forEach((flankOff) => {
-                  const fa = avgA + flankOff;
-                  renderSingleExtraLaserBeam(
-                    ctx,
-                    p.x + Math.cos(fa) * 28,
-                    p.y + Math.sin(fa) * 28,
-                    p.x + Math.cos(fa) * rRange,
-                    p.y + Math.sin(fa) * rRange,
-                    camX,
-                    camY,
-                    '#ef4444',
-                    'rgba(220, 38, 38, 0.45)',
-                    1.25,
-                    time,
-                    ds.laserChargeProgress
-                  );
+              for (let ws = 0; ws < 2; ws++) {
+                particlesRef.current.push({
+                  id: `bws-${Math.random()}`,
+                  x: b.x,
+                  y: b.y,
+                  z: 4,
+                  vx: (Math.random() - 0.5) * 60,
+                  vy: (Math.random() - 0.5) * 60,
+                  vz: 55 + Math.random() * 45,
+                  drag: 3.5,
+                  radius: 1.8,
+                  color: '#e0f2fe',
+                  alpha: 0.85,
+                  decay: 2.3,
+                  type: 'WATER_SPLASH',
                 });
               }
             }
-
-            // B: Transform Player into the Giant Nave Rei Flagship + 4 Blasters + Red Electricity Fury
-            renderReiShip(
-              ctx,
-              spX,
-              spY,
-              p.angle,
-              ds.reiBlasters,
-              isMoving,
-              ds.isFiring,
-              ds.warpChargeTimer / reiChargeMax,
-              ds.warpActive,
-              ds.warpActive ? Math.max(0, ds.warpTimer / 10.0) : 0,
-              ds.orbitAngle,
-              time,
-              p.shield,
-              ds.angularVel
-            );
           }
-        } else if (p.currentWeapon === WeaponType.EAST_DRAGON) {
-          const ed = eastDragonStateRef.current;
-          if (ed.isFiring) {
-            renderEastDragonFireBeam(
-              ctx,
-              ed.muzzleX,
-              ed.muzzleY,
-              ed.beamEndX,
-              ed.beamEndY,
-              camX,
-              camY,
-              time
-            );
-          }
-          renderEastDragon(
-            ctx,
-            ed.segments,
-            p.x,
-            p.y,
-            p.angle,
-            camX,
-            camY,
-            isMoving,
-            ed.isFiring,
-            time,
-            p.shield
-          );
-        } else if (p.currentWeapon === WeaponType.IRON_MAN) {
-          const im = ironManStateRef.current;
-          renderIronManFlightTrail(ctx, im.trail, camX, camY, im.mode, time);
-          if (im.isFiring && im.mode === 'LASER') {
-            renderIronManLaserBeam(
-              ctx,
-              im.muzzleX,
-              im.muzzleY,
-              im.beamEndX,
-              im.beamEndY,
-              camX,
-              camY,
-              time,
-              im.laserChargeProgress
-            );
-          }
-          renderIronManSuit(
-            ctx,
-            spX,
-            spY,
-            p.angle,
-            im.mode,
-            isMoving,
-            im.isFiring,
-            time,
-            p.shield
-          );
-        } else if (p.currentWeapon === WeaponType.VENOM_FRUIT && venomFruitStateRef.current.demonActive) {
-          renderVenomDemonForm(
-            ctx,
-            spX,
-            spY,
-            p.angle,
-            p.radius,
-            isMoving,
-            time,
-            p.shield,
-            115
-          );
-        } else {
-          // Spawn special operator skin / motion trail particles when moving
-          const activeSkinDef = getOperatorSkinById(p.equippedSkin);
-          if (isMoving && Math.random() < (p.equippedSkin && p.equippedSkin !== 'skin_default' ? 0.65 : 0.45)) {
-            const pColor = activeSkinDef.accentColor || '#38bdf8';
-            const pType =
-              p.equippedSkin === 'skin_pyro_igniter'
-                ? 'FLAME'
-                : p.equippedSkin === 'skin_hazard_juggernaut'
-                  ? 'SMOKE'
-                  : 'SPARK';
-            particlesRef.current.push({
-              id: `ptrail-${Date.now()}-${Math.random()}`,
-              type: pType,
-              x: p.x + (Math.random() - 0.5) * 10,
-              y: p.y + (Math.random() - 0.5) * 10,
-              vx: -(p.vx || 0) * 0.16 + (Math.random() - 0.5) * 18,
-              vy: -(p.vy || 0) * 0.16 + (Math.random() - 0.5) * 18,
-              radius: pType === 'SMOKE' ? 4.2 : 2.2 + Math.random() * 2,
-              growthSpeed: pType === 'SMOKE' ? 12 : undefined,
-              color: pType === 'SMOKE' ? 'rgba(132, 204, 22, 0.45)' : pColor,
-              alpha: pType === 'SMOKE' ? 0.42 : 0.72,
-              decay: pType === 'SMOKE' ? 0.032 : 0.055,
-            });
-          }
+          bulletsRef.current.splice(bi, 1);
+          continue;
+        }
 
-          ctx.save();
-          ctx.translate(spX, spY);
-          ctx.rotate(p.angle);
-
-          // A: Draw distinct bespoke weapon model & tactical gloved hands in player's grip
-          renderPlayerWeapon(ctx, p.currentWeapon, gunRecoilRef.current, time, p.radius);
-
-          // B: Draw player shadow body
-          ctx.fillStyle = 'rgba(0,0,0,0.35)';
-          ctx.beginPath();
-          ctx.arc(3, 3, p.radius, 0, Math.PI * 2);
-          ctx.fill();
-
-          // C: Draw rich bespoke tactical operator suit, armor plates, visor & skin FX
-          renderOperatorBody(ctx, p.equippedSkin || 'skin_default', p.radius, time, isMoving, 0);
-
-          ctx.restore();
-
-          // D: Draw pulsing glowing cyan shield if shield is active (fast dual-stroke halo)
-          if (p.shield > 0) {
-            const pulseW = 2.5 + Math.sin(time / 150) * 1.0;
-            ctx.strokeStyle = 'rgba(34, 211, 238, 0.20)';
-            ctx.lineWidth = pulseW + 5;
-            ctx.beginPath();
-            ctx.arc(spX, spY, p.radius + 8, 0, Math.PI * 2);
-            ctx.stroke();
-
-            ctx.strokeStyle = 'rgba(34, 211, 238, 0.55)';
-            ctx.lineWidth = pulseW;
-            ctx.beginPath();
-            ctx.arc(spX, spY, p.radius + 8, 0, Math.PI * 2);
-            ctx.stroke();
-          }
-
-          // E: Render Ice & Fire Dragon dual companions (or Mega Purple Dragon when fused!) + elemental beam
-          if (p.currentWeapon === WeaponType.ICE_AND_FIRE_DRAGON) {
-            const ifdDraw = iceFireDragonStateRef.current;
-            if (ifdDraw.isFiring) {
-              const beamVar: 'FIRE' | 'ICE' | 'MEGA_PURPLE' = ifdDraw.merged
-                ? 'MEGA_PURPLE'
-                : ifdDraw.activeDragon;
-              renderDragonElementalBeam(
-                ctx,
-                beamVar,
-                ifdDraw.muzzleX,
-                ifdDraw.muzzleY,
-                ifdDraw.beamEndX,
-                ifdDraw.beamEndY,
-                camX,
-                camY,
-                time
-              );
+        if (!b.isRay && !b.isVoidLance) {
+          const forestHit = checkForestBulletHit(b.x, b.y, b.radius);
+          if (forestHit) {
+            const sparkColor = forestHit === 'WOOD' ? '#92400e' : '#cbd5e1';
+            for (let sp = 0; sp < 4; sp++) {
+              const sa = b.ownerAngle + Math.PI + (Math.random() - 0.5) * 1.4;
+              const ss = 65 + Math.random() * 110;
+              particlesRef.current.push({
+                id: `fhit-${Math.random()}`,
+                x: b.x,
+                y: b.y,
+                vx: Math.cos(sa) * ss,
+                vy: Math.sin(sa) * ss,
+                drag: 6,
+                radius: 1.6 + Math.random() * 1.6,
+                color: sparkColor,
+                alpha: 0.9,
+                decay: 3.0,
+                type: 'SPARK',
+              });
             }
-
-            if (ifdDraw.merged) {
-              renderCompanionDragon(
-                ctx,
-                'MEGA_PURPLE',
-                ifdDraw.megaSegments,
-                ifdDraw.megaHead.x,
-                ifdDraw.megaHead.y,
-                ifdDraw.megaHead.angle,
-                camX,
-                camY,
-                isMoving,
-                ifdDraw.isFiring,
-                true,
-                time,
-                1.65
-              );
-            } else {
-              // Draw idle escort dragon first, then active attacker dragon on top
-              const firstVar: 'FIRE' | 'ICE' = ifdDraw.activeDragon === 'FIRE' ? 'ICE' : 'FIRE';
-              const secondVar: 'FIRE' | 'ICE' = ifdDraw.activeDragon;
-              const drawPair = [
-                {
-                  variant: firstVar,
-                  segs: firstVar === 'FIRE' ? ifdDraw.fireSegments : ifdDraw.iceSegments,
-                  head: firstVar === 'FIRE' ? ifdDraw.fireHead : ifdDraw.iceHead,
-                  isAttacker: false,
-                },
-                {
-                  variant: secondVar,
-                  segs: secondVar === 'FIRE' ? ifdDraw.fireSegments : ifdDraw.iceSegments,
-                  head: secondVar === 'FIRE' ? ifdDraw.fireHead : ifdDraw.iceHead,
-                  isAttacker: true,
-                },
-              ];
-              for (let di = 0; di < drawPair.length; di++) {
-                const d = drawPair[di];
-                renderCompanionDragon(
-                  ctx,
-                  d.variant,
-                  d.segs,
-                  d.head.x,
-                  d.head.y,
-                  d.head.angle,
-                  camX,
-                  camY,
-                  isMoving,
-                  d.isAttacker && ifdDraw.isFiring,
-                  d.isAttacker,
-                  time,
-                  0.85
-                );
-              }
-            }
-          }
-        }
-
-        // Active Mythic Singularity: 5 Orbiting Cosmic Scythe Blades
-        if (p.mythicSingularity && p.mythicSingularity > 0) {
-          renderMythicSingularityBlades(
-            ctx,
-            spX,
-            spY,
-            mythicCombatRef.current.orbitalAngle,
-            5,
-            time
-          );
-        }
-
-        // Active Mythic Void Monarch: 3 Autonomous Hunter Drones
-        if (p.mythicVoidDrones && p.mythicVoidDrones > 0) {
-          renderMythicVoidDrones(ctx, mythicCombatRef.current.voidDrones, camX, camY, time);
-        }
-      }
-
-      // 8. DRAW PARTICLES (Frustum culled + fast layered rendering without shadowBlur/gradients)
-      const particles = particlesRef.current;
-      for (let i = 0; i < particles.length; i++) {
-        const pt = particles[i];
-        if (!pt.points) {
-          const pPad = pt.radius + 40;
-          if (
-            pt.x + pPad < viewLeft ||
-            pt.x - pPad > viewRight ||
-            pt.y + pPad < viewTop ||
-            pt.y - pPad > viewBottom
-          ) {
+            bulletsRef.current.splice(bi, 1);
             continue;
           }
         }
+
+        if (b.isEnemy) {
+          const hitDist = p.radius + b.radius;
+          if ((b.x - p.x) ** 2 + (b.y - p.y) ** 2 <= hitDist * hitDist) {
+            applyDamageToPlayer(b.damage, b.ownerAngle);
+            bulletsRef.current.splice(bi, 1);
+          }
+          continue;
+        }
+
+        // Player bullet vs zombies
+        let bulletRemoved = false;
+        for (let zi = zombiesRef.current.length - 1; zi >= 0; zi--) {
+          const z = zombiesRef.current[zi];
+          if (z.isDead) continue;
+          const hitR = z.radius + b.radius;
+          if ((b.x - z.x) ** 2 + (b.y - z.y) ** 2 <= hitR * hitR) {
+            const isCrit = Math.random() < (p.critChance || 0);
+            const finalDmg = isCrit ? b.damage * (p.critMultiplier || 2.0) : b.damage;
+            damageZombie(z, finalDmg, isCrit, b.ownerAngle);
+
+            if (b.isIgnite) {
+              z.isOnFire = true;
+              z.burnTimer = 2.6;
+            }
+
+            // Voltaic chain lightning perk
+            if ((p.chainLightningLevel || 0) > 0 && !b.isShrapnel) {
+              sound.playChainLightning();
+              const maxJumps = 2 + (p.chainLightningLevel || 1);
+              let jumpCount = 0;
+              for (let j = 0; j < zombiesRef.current.length && jumpCount < maxJumps; j++) {
+                const oz = zombiesRef.current[j];
+                if (oz.isDead || oz.id === z.id) continue;
+                const dSq = (oz.x - z.x) ** 2 + (oz.y - z.y) ** 2;
+                if (dSq < 150 * 150) {
+                  jumpCount++;
+                  oz.isStunned = true;
+                  oz.stunTimer = 0.25;
+                  damageZombie(oz, finalDmg * 0.45, false, Math.atan2(oz.y - z.y, oz.x - z.x));
+                  particlesRef.current.push({
+                    id: `arc-${Math.random()}`,
+                    x: oz.x,
+                    y: oz.y,
+                    vx: 0,
+                    vy: 0,
+                    radius: 4,
+                    color: '#38bdf8',
+                    alpha: 0.9,
+                    decay: 6,
+                    type: 'ENERGY_ARC',
+                    points: [
+                      { x: z.x, y: z.y },
+                      {
+                        x: (z.x + oz.x) / 2 + (Math.random() - 0.5) * 24,
+                        y: (z.y + oz.y) / 2 + (Math.random() - 0.5) * 24,
+                      },
+                      { x: oz.x, y: oz.y },
+                    ],
+                  });
+                }
+              }
+            }
+
+            b.piercingRemaining -= 1;
+            if (b.piercingRemaining <= 0) {
+              bulletsRef.current.splice(bi, 1);
+              bulletRemoved = true;
+              break;
+            }
+          }
+        }
+        if (bulletRemoved) continue;
+      }
+
+      // ==========================================
+      // ZOMBIES AI & PHYSICS
+      // ==========================================
+      for (let zi = zombiesRef.current.length - 1; zi >= 0; zi--) {
+        const z = zombiesRef.current[zi];
+        if (z.isDead) {
+          zombiesRef.current.splice(zi, 1);
+          continue;
+        }
+
+        // Fire DoT
+        if (z.isOnFire && (z.burnTimer || 0) > 0) {
+          z.burnTimer = (z.burnTimer || 0) - dt;
+          z.burnDamageTimer = (z.burnDamageTimer || 0) + dt;
+          if (z.burnDamageTimer >= 0.4) {
+            z.burnDamageTimer = 0;
+            damageZombie(z, 10 + p.level * 2, false, 0);
+            if (z.isDead) {
+              zombiesRef.current.splice(zi, 1);
+              continue;
+            }
+          }
+          if ((z.burnTimer || 0) <= 0) z.isOnFire = false;
+        }
+
+        if (z.isStunned) {
+          z.stunTimer -= dt;
+          if (z.stunTimer <= 0) z.isStunned = false;
+        }
+
+        const dx = p.x - z.x;
+        const dy = p.y - z.y;
+        const dist = Math.hypot(dx, dy) || 1;
+        const steered = steerZombieAroundBuildings(z.x, z.y, p.x, p.y);
+        const sdx = steered.targetX - z.x;
+        const sdy = steered.targetY - z.y;
+        const sdist = Math.hypot(sdx, sdy) || 1;
+        z.angle = Math.atan2(dy, dx);
+
+        // Cryo Warden aura slow near player
+        const skinSlowMult = p.equippedSkin === 'skin_cryo_warden' && dist < 130 ? 0.55 : 1.0;
+
+        const zWaterMult = getWaterSpeedMultiplier(z.x, z.y);
+
+        if (!z.isStunned) {
+          let desiredSpeed = z.speed * skinSlowMult * zWaterMult;
+          if (z.shootsProjectiles && dist < 310) {
+            desiredSpeed = dist < 210 ? -z.speed * 0.35 * zWaterMult : 0;
+            z.lastShootTime = (z.lastShootTime || 0) + dt;
+            if (z.lastShootTime >= 2.3) {
+              z.lastShootTime = 0;
+              sound.playZombieHit();
+              bulletsRef.current.push({
+                id: `spit-${Math.random()}`,
+                x: z.x + Math.cos(z.angle) * z.radius,
+                y: z.y + Math.sin(z.angle) * z.radius,
+                vx: Math.cos(z.angle) * 320,
+                vy: Math.sin(z.angle) * 320,
+                radius: 6,
+                damage: z.damage,
+                piercingRemaining: 1,
+                color: '#84cc16',
+                distanceTraveled: 0,
+                maxDistance: 460,
+                ownerAngle: z.angle,
+                isEnemy: true,
+              });
+            }
+          }
+
+          // Boss Special Attacks
+          if (z.isBoss) {
+            z.specialAttackTimer = (z.specialAttackTimer || 0) - dt;
+            if ((z.specialAttackTimer || 0) <= 0) {
+              z.specialAttackTimer = z.type === ZombieType.BOSS_NECROTITAN ? 2.4 : 3.1;
+              if (z.type === ZombieType.BOSS_BUTCHER) {
+                sound.playZombieRoar();
+                const fan = [-0.24, 0, 0.24];
+                for (const off of fan) {
+                  const a = z.angle + off;
+                  bulletsRef.current.push({
+                    id: `cleaver-${Math.random()}`,
+                    x: z.x,
+                    y: z.y,
+                    vx: Math.cos(a) * 350,
+                    vy: Math.sin(a) * 350,
+                    radius: 8,
+                    damage: Math.round(z.damage * 0.7),
+                    piercingRemaining: 1,
+                    color: '#dc2626',
+                    distanceTraveled: 0,
+                    maxDistance: 520,
+                    ownerAngle: a,
+                    isEnemy: true,
+                  });
+                }
+              } else if (z.type === ZombieType.BOSS_NECROTITAN) {
+                sound.playZombieRoar();
+                const ring = 8;
+                for (let ri = 0; ri < ring; ri++) {
+                  const a = z.angle + (ri * Math.PI * 2) / ring;
+                  bulletsRef.current.push({
+                    id: `titan-${Math.random()}`,
+                    x: z.x,
+                    y: z.y,
+                    vx: Math.cos(a) * 310,
+                    vy: Math.sin(a) * 310,
+                    radius: 7.5,
+                    damage: Math.round(z.damage * 0.65),
+                    piercingRemaining: 1,
+                    color: '#a855f7',
+                    distanceTraveled: 0,
+                    maxDistance: 580,
+                    ownerAngle: a,
+                    isEnemy: true,
+                  });
+                }
+              } else {
+                // Alfa Boss lunge burst
+                z.knockbackX += Math.cos(z.angle) * 280;
+                z.knockbackY += Math.sin(z.angle) * 280;
+                sound.playZombieRoar();
+              }
+            }
+          }
+
+          z.x += (sdx / sdist) * desiredSpeed * dt;
+          z.y += (sdy / sdist) * desiredSpeed * dt;
+
+          const zDepth = getWaterDepth(z.x, z.y);
+          if (zDepth > 3.5) {
+            const zDrift = getOceanCurrentDrift(z.x, z.y, nowSec);
+            z.x += zDrift.vx * 0.7 * dt;
+            z.y += zDrift.vz * 0.7 * dt;
+            if (desiredSpeed > 12 && particlesRef.current.length < 180 && Math.random() < dt * 2.2) {
+              threeRendererRef.current?.triggerWaterRipple(z.x, z.y, 0.42);
+              particlesRef.current.push({
+                id: `zwake-${Math.random()}`,
+                x: z.x,
+                y: z.y,
+                vx: 0,
+                vy: 0,
+                radius: Math.max(9, z.radius * 0.65),
+                growthSpeed: 42,
+                color: '#bae6fd',
+                alpha: 0.45,
+                decay: 1.0,
+                type: 'WATER_RING',
+              });
+            }
+          }
+        }
+
+        // Apply and damp knockback
+        z.x += z.knockbackX * dt;
+        z.y += z.knockbackY * dt;
+        z.knockbackX *= Math.exp(-8.5 * dt);
+        z.knockbackY *= Math.exp(-8.5 * dt);
+
+        // Soft zombie-to-zombie separation so hordes fan out naturally
+        for (let oj = zi - 1; oj >= 0 && oj >= zi - 10; oj--) {
+          const oz = zombiesRef.current[oj];
+          if (!oz || oz.isDead) continue;
+          const sdx = z.x - oz.x;
+          const sdy = z.y - oz.y;
+          const minDist = z.radius + oz.radius;
+          const dSq = sdx * sdx + sdy * sdy;
+          if (dSq > 0.01 && dSq < minDist * minDist) {
+            const d = Math.sqrt(dSq);
+            const push = (minDist - d) * 0.45;
+            const nx = sdx / d;
+            const ny = sdy / d;
+            z.x += nx * push;
+            z.y += ny * push;
+            oz.x -= nx * push;
+            oz.y -= ny * push;
+          }
+        }
+
+        const resolvedZ = resolveForestEntityCollision(z.x, z.y, z.radius);
+        z.x = resolvedZ.x;
+        z.y = resolvedZ.y;
+
+        // Melee contact damage
+        const contactDist = p.radius + z.radius;
+        if ((z.x - p.x) ** 2 + (z.y - p.y) ** 2 <= contactDist * contactDist) {
+          applyDamageToPlayer(z.damage, z.angle);
+        }
+      }
+
+      // ==========================================
+      // ITEM DROPS PICKUP
+      // ==========================================
+      for (let di = dropsRef.current.length - 1; di >= 0; di--) {
+        const d = dropsRef.current[di];
+        d.pulseTimer += dt * 4;
+        if (getWaterDepth(d.x, d.y) > 2.8) {
+          const dropDrift = getOceanCurrentDrift(d.x, d.y, nowSec);
+          d.x += dropDrift.vx * 0.85 * dt;
+          d.y += dropDrift.vz * 0.85 * dt;
+        }
+        const dist = Math.hypot(p.x - d.x, p.y - d.y);
+        if (dist < 110) {
+          d.x += ((p.x - d.x) / Math.max(1, dist)) * 280 * dt;
+          d.y += ((p.y - d.y) / Math.max(1, dist)) * 280 * dt;
+        }
+        if (dist <= p.radius + d.radius + 8) {
+          sound.playPowerup();
+          if (d.type === DropType.HEALTH) {
+            p.hp = Math.min(p.maxHp, p.hp + d.amount);
+            addFloatingText(p.x, p.y - 20, `+${d.amount} HP`, '#34d399', 1.05);
+          } else if (d.type === DropType.SHIELD && p.maxShield > 0) {
+            p.shield = Math.min(p.maxShield, p.shield + d.amount);
+            addFloatingText(p.x, p.y - 20, `+${d.amount} ESCUDO`, '#22d3ee', 1.05);
+          } else {
+            p.hp = Math.min(p.maxHp, p.hp + 15);
+          }
+          dropsRef.current.splice(di, 1);
+          syncHud();
+        }
+      }
+
+      // ==========================================
+      // PARTICLES, FLASH LIGHTS, FOOTPRINTS & CASINGS
+      // ==========================================
+      for (let pi = particlesRef.current.length - 1; pi >= 0; pi--) {
+        const pt = particlesRef.current[pi];
+        pt.prevX = pt.x;
+        pt.prevY = pt.y;
+        pt.x += pt.vx * dt;
+        pt.y += pt.vy * dt;
+        if (pt.drag) {
+          const damp = Math.exp(-pt.drag * dt);
+          pt.vx *= damp;
+          pt.vy *= damp;
+        }
+        if (pt.growthSpeed) {
+          pt.radius += pt.growthSpeed * dt;
+        }
+        if (pt.rotSpeed) {
+          pt.rotation = (pt.rotation || 0) + pt.rotSpeed * dt;
+        }
+        if (pt.z !== undefined && pt.vz !== undefined) {
+          pt.z += pt.vz * dt;
+          pt.vz -= (pt.type === 'WATER_SPLASH' ? 360 : 430) * dt;
+          if (pt.type === 'WATER_SPLASH' && pt.z <= 0.2) {
+            particlesRef.current.splice(pi, 1);
+            continue;
+          }
+          if ((pt.type === 'BLOOD' || pt.type === 'TOXIC_ACID') && pt.z <= 0.4) {
+            if (splatsRef.current.length < 260 && Math.random() < 0.75) {
+              const landR = Math.max(3.5, pt.radius * 2.1);
+              splatsRef.current.push({
+                x: pt.x,
+                y: pt.y,
+                radius: landR * 0.45,
+                targetRadius: landR,
+                alpha: 0.82,
+                color: pt.type === 'TOXIC_ACID' ? '#65a30d' : '#7f1d1d',
+                angle: Math.atan2(pt.vy, pt.vx),
+                stretch: 1.25,
+                isLiquid: true,
+                variant: Math.floor(Math.random() * 3),
+              });
+            }
+            particlesRef.current.splice(pi, 1);
+            continue;
+          }
+        }
+        pt.alpha -= pt.decay * dt;
+
+        // When airborne casing settles, convert into persistent spent brass/shell on ground
+        if (pt.type === 'CASING' && pt.alpha <= 0.45) {
+          sound.playCasingClink();
+          if (spentCasingsRef.current.length > 160) {
+            spentCasingsRef.current.shift();
+          }
+          spentCasingsRef.current.push({
+            x: pt.x,
+            y: pt.y,
+            angle: pt.rotation || 0,
+            color: pt.color,
+            isShell: pt.radius >= 2.0,
+            alpha: 0.9,
+          });
+          particlesRef.current.splice(pi, 1);
+          continue;
+        }
+
+        if (pt.alpha <= 0) {
+          particlesRef.current.splice(pi, 1);
+        }
+      }
+
+      // Dynamic liquid blood pool expansion & slow drying evaporation
+      for (let si = splatsRef.current.length - 1; si >= 0; si--) {
+        const sp = splatsRef.current[si];
+        if (sp.targetRadius && sp.radius < sp.targetRadius) {
+          sp.radius += (sp.targetRadius - sp.radius) * Math.min(1, dt * 6.5);
+        }
+        sp.alpha -= dt * (sp.isLiquid ? 0.008 : 0.006);
+        if (sp.alpha <= 0.02) {
+          splatsRef.current.splice(si, 1);
+        }
+      }
+
+      for (let li = flashLightsRef.current.length - 1; li >= 0; li--) {
+        const fl = flashLightsRef.current[li];
+        fl.alpha -= fl.decay * dt;
+        if (fl.alpha <= 0) flashLightsRef.current.splice(li, 1);
+      }
+
+      for (let fi = footprintsRef.current.length - 1; fi >= 0; fi--) {
+        footprintsRef.current[fi].alpha -= dt * 0.045;
+        if (footprintsRef.current[fi].alpha <= 0) footprintsRef.current.splice(fi, 1);
+      }
+
+      for (let ci = spentCasingsRef.current.length - 1; ci >= 0; ci--) {
+        spentCasingsRef.current[ci].alpha -= dt * 0.015;
+        if (spentCasingsRef.current[ci].alpha <= 0) spentCasingsRef.current.splice(ci, 1);
+      }
+
+      for (let ti = floatingTextsRef.current.length - 1; ti >= 0; ti--) {
+        const ft = floatingTextsRef.current[ti];
+        ft.y += ft.vy * dt;
+        ft.alpha -= dt * 1.45;
+        if (ft.alpha <= 0) floatingTextsRef.current.splice(ti, 1);
+      }
+
+      hudSyncTimerRef.current += dt;
+      if (hudSyncTimerRef.current >= 0.08) {
+        hudSyncTimerRef.current = 0;
+        syncHud();
+      }
+    };
+
+    const renderScene = (dt: number, nowMs: number) => {
+      const width = canvas.width;
+      const height = canvas.height;
+      const p = playerRef.current;
+      const cam = cameraRef.current;
+      const ds = dyingStateRef.current;
+      const diorama = threeRendererRef.current;
+
+      ctx.clearRect(0, 0, width, height);
+
+      if (diorama) {
+        diorama.render({
+          player: p,
+          zombies: zombiesRef.current,
+          bullets: bulletsRef.current,
+          drops: dropsRef.current,
+          particles: particlesRef.current,
+          splats: splatsRef.current,
+          footprints: footprintsRef.current,
+          casings: spentCasingsRef.current,
+          flashLights: flashLightsRef.current,
+          voidDrones: voidDronesRef.current,
+          dyingState: ds,
+          camera: cam,
+          viewportWidth: width,
+          viewportHeight: height,
+          weaponRecoil: weaponRecoilRef.current,
+          muzzleFlashIntensity: muzzleFlashRef.current,
+          mythicOrbitAngle: mythicOrbitAngleRef.current,
+          dayCycleTime: dayCycleTimeRef.current,
+          nowMs,
+          dt,
+          zombieHitFlashMap: zombieHitFlashRef.current,
+          visionConeEnabled: visionConeEnabledRef.current,
+        });
+        diorama.syncDrones(voidDronesRef.current, ds.active);
+      }
+
+      const playerScreen = diorama
+        ? diorama.worldToScreen(p.x, p.y, 16)
+        : { x: p.x - cam.x, y: p.y - cam.y };
+
+      // Crisp screen-space floating damage numbers projected from 3D world
+      if (floatingTextsRef.current.length > 0) {
         ctx.save();
-        ctx.globalAlpha = pt.alpha;
-        ctx.fillStyle = pt.color;
-
-        if (pt.type === 'CASING' && pt.rotation !== undefined) {
-          ctx.translate(pt.x - camX, pt.y - camY);
-          ctx.rotate(pt.rotation);
-          ctx.fillRect(-2, -1, 4, 2); // rectangular shell
-        } else if (pt.type === 'MYTHIC_NOVA') {
-          ctx.globalCompositeOperation = 'lighter';
-          ctx.strokeStyle = pt.color;
-          ctx.lineWidth = 4;
-          ctx.beginPath();
-          ctx.arc(pt.x - camX, pt.y - camY, pt.radius, 0, Math.PI * 2);
-          ctx.stroke();
-          ctx.strokeStyle = '#38bdf8';
-          ctx.lineWidth = 2;
-          ctx.beginPath();
-          ctx.arc(pt.x - camX, pt.y - camY, pt.radius * 0.78, 0, Math.PI * 2);
-          ctx.stroke();
-        } else if (pt.type === 'PLASMA_RING' || pt.type === 'RAY_RING') {
-          ctx.strokeStyle = pt.color;
-          ctx.lineWidth = 2.5;
-          ctx.beginPath();
-          ctx.arc(pt.x - camX, pt.y - camY, pt.radius, 0, Math.PI * 2);
-          ctx.stroke();
-
-          ctx.strokeStyle = '#ffffff';
-          ctx.lineWidth = 1;
-          ctx.beginPath();
-          ctx.arc(pt.x - camX, pt.y - camY, pt.radius * 0.98, 0, Math.PI * 2);
-          ctx.stroke();
-        } else if (pt.type === 'FIRE_RING') {
-          ctx.strokeStyle = pt.color;
-          ctx.lineWidth = 4;
-          ctx.beginPath();
-          ctx.arc(pt.x - camX, pt.y - camY, pt.radius, 0, Math.PI * 2);
-          ctx.stroke();
-
-          ctx.strokeStyle = '#fef08a';
-          ctx.lineWidth = 1.5;
-          ctx.beginPath();
-          ctx.arc(pt.x - camX, pt.y - camY, pt.radius * 0.96, 0, Math.PI * 2);
-          ctx.stroke();
-        } else if (pt.type === 'EXPLOSION') {
-          const rx = pt.x - camX;
-          const ry = pt.y - camY;
-          const rad = Math.max(1, pt.radius);
-          ctx.globalCompositeOperation = 'lighter';
-          ctx.fillStyle = 'rgba(249, 115, 22, 0.35)';
-          ctx.beginPath();
-          ctx.arc(rx, ry, rad, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.fillStyle = 'rgba(254, 240, 138, 0.55)';
-          ctx.beginPath();
-          ctx.arc(rx, ry, rad * 0.55, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.fillStyle = '#ffffff';
-          ctx.beginPath();
-          ctx.arc(rx, ry, rad * 0.22, 0, Math.PI * 2);
-          ctx.fill();
-        } else if (pt.type === 'FLAME') {
-          const rx = pt.x - camX;
-          const ry = pt.y - camY;
-          const speedSq = pt.vx * pt.vx + pt.vy * pt.vy;
-          const velAngle = speedSq > 16 ? Math.atan2(pt.vy, pt.vx) : -Math.PI / 2;
-          const tongueLen = Math.max(8, pt.radius * 3.4);
-          const tongueHalfW = Math.max(2, pt.radius * 1.05);
-
-          ctx.translate(rx, ry);
-          ctx.rotate(velAngle);
-          ctx.globalCompositeOperation = 'lighter';
-
-          ctx.fillStyle = pt.color;
-          ctx.beginPath();
-          ctx.moveTo(-tongueLen * 0.2, 0);
-          ctx.quadraticCurveTo(tongueLen * 0.15, -tongueHalfW, tongueLen, 0);
-          ctx.quadraticCurveTo(tongueLen * 0.15, tongueHalfW, -tongueLen * 0.2, 0);
-          ctx.closePath();
-          ctx.fill();
-
-          ctx.fillStyle = 'rgba(254, 249, 195, 0.85)';
-          ctx.beginPath();
-          ctx.moveTo(-tongueLen * 0.1, 0);
-          ctx.quadraticCurveTo(tongueLen * 0.1, -tongueHalfW * 0.45, tongueLen * 0.55, 0);
-          ctx.quadraticCurveTo(tongueLen * 0.1, tongueHalfW * 0.45, -tongueLen * 0.1, 0);
-          ctx.closePath();
-          ctx.fill();
-        } else if (pt.type === 'ENERGY_ARC' && pt.points) {
-          ctx.strokeStyle = pt.color;
-          ctx.lineWidth = 2;
-          ctx.lineCap = 'round';
-          ctx.lineJoin = 'round';
-          
-          ctx.beginPath();
-          ctx.moveTo(pt.x - camX, pt.y - camY);
-          for (const pPoint of pt.points) {
-            ctx.lineTo(pPoint.x - camX, pPoint.y - camY);
-          }
-          ctx.stroke();
-
-          ctx.strokeStyle = '#ffffff';
-          ctx.lineWidth = 0.8;
-          ctx.beginPath();
-          ctx.moveTo(pt.x - camX, pt.y - camY);
-          for (const pPoint of pt.points) {
-            ctx.lineTo(pPoint.x - camX, pPoint.y - camY);
-          }
-          ctx.stroke();
-        } else if (pt.type === 'SMOKE') {
-          renderRealisticSmokeParticle(
-            ctx,
-            pt.x - camX,
-            pt.y - camY,
-            Math.max(1.5, pt.radius),
-            pt.alpha,
-            pt.rotation || 0,
-            pt.color
-          );
-        } else if (pt.type === 'BLOOD' || pt.type === 'ALIEN_BLOOD' || pt.type === 'ALIEN_PLASMA' || pt.type === 'TOXIC_ACID') {
-          const bx = pt.x - camX;
-          const by = pt.y - camY;
-          const speed = Math.hypot(pt.vx, pt.vy);
-          const streakAngle = speed > 10 ? Math.atan2(pt.vy, pt.vx) : 0;
-          const tailLen = pt.radius * Math.min(2.05, 1.05 + speed / 155);
-          const headR = Math.max(1.2, pt.radius * 0.82);
-
-          ctx.translate(bx, by);
-          ctx.rotate(streakAngle);
-
-          if (pt.type === 'ALIEN_BLOOD' || pt.type === 'ALIEN_PLASMA') {
-            ctx.globalAlpha = pt.alpha * 0.22;
-            ctx.fillStyle = pt.color;
-            ctx.beginPath();
-            ctx.ellipse(-tailLen * 0.2, 0, tailLen * 0.78, headR * 1.45, 0, 0, Math.PI * 2);
-            ctx.fill();
-          }
-
-          // Natural viscous blood/ichor droplet shape
-          ctx.globalAlpha = pt.alpha * 0.92;
-          ctx.fillStyle = pt.color;
-          ctx.beginPath();
-          ctx.moveTo(-tailLen, 0);
-          ctx.quadraticCurveTo(-tailLen * 0.22, -headR * 0.85, headR * 0.2, -headR);
-          ctx.arc(headR * 0.2, 0, headR, -Math.PI * 0.5, Math.PI * 0.5);
-          ctx.quadraticCurveTo(-tailLen * 0.22, headR * 0.85, -tailLen, 0);
-          ctx.closePath();
-          ctx.fill();
-
-          // Deep coagulated core (or glowing core for alien ichor)
-          ctx.globalAlpha = pt.alpha * 0.45;
-          ctx.fillStyle = pt.type === 'ALIEN_BLOOD' || pt.type === 'ALIEN_PLASMA' ? '#ffffff' : '#450a0a';
-          ctx.beginPath();
-          ctx.arc(headR * 0.05, 0, headR * 0.48, 0, Math.PI * 2);
-          ctx.fill();
-
-          // Wet specular highlight
-          ctx.globalAlpha = pt.alpha * 0.42;
-          ctx.fillStyle = '#ffffff';
-          ctx.beginPath();
-          ctx.arc(headR * 0.35, -headR * 0.3, Math.max(0.65, headR * 0.24), 0, Math.PI * 2);
-          ctx.fill();
-        } else if (pt.type === 'MUZZLE_FLARE') {
-          const rx = pt.x - camX;
-          const ry = pt.y - camY;
-          ctx.globalCompositeOperation = 'lighter';
-
-          ctx.fillStyle = pt.color;
-          ctx.beginPath();
-          ctx.arc(rx, ry, pt.radius * 0.65, 0, Math.PI * 2);
-          ctx.fill();
-
-          ctx.strokeStyle = pt.color;
-          ctx.lineWidth = pt.radius * 0.25;
-          ctx.lineCap = 'round';
-          ctx.beginPath();
-          ctx.moveTo(rx - pt.radius * 1.4, ry);
-          ctx.lineTo(rx + pt.radius * 1.4, ry);
-          ctx.moveTo(rx, ry - pt.radius * 0.7);
-          ctx.lineTo(rx, ry + pt.radius * 0.7);
-          ctx.stroke();
-
-          ctx.strokeStyle = '#ffffff';
-          ctx.lineWidth = pt.radius * 0.1;
-          ctx.beginPath();
-          ctx.moveTo(rx - pt.radius * 1.1, ry);
-          ctx.lineTo(rx + pt.radius * 1.1, ry);
-          ctx.stroke();
-        } else {
-          ctx.beginPath();
-          ctx.arc(pt.x - camX, pt.y - camY, pt.radius, 0, Math.PI * 2);
-          ctx.fill();
+        ctx.textAlign = 'center';
+        for (let i = 0; i < floatingTextsRef.current.length; i++) {
+          const ft = floatingTextsRef.current[i];
+          const pos2d = diorama
+            ? diorama.worldToScreen(ft.x, ft.y, 34)
+            : { x: ft.x - cam.x, y: ft.y - cam.y };
+          ctx.globalAlpha = Math.max(0, ft.alpha);
+          ctx.font = `900 ${Math.round(13 * ft.scale)}px ui-monospace, monospace`;
+          ctx.fillStyle = '#020617';
+          ctx.fillText(ft.text, pos2d.x + 1, pos2d.y + 1);
+          ctx.fillStyle = ft.color;
+          ctx.fillText(ft.text, pos2d.x, pos2d.y);
         }
         ctx.restore();
       }
 
-      // 8b. DYNAMIC MULTI-SOURCE ENVIRONMENTAL & COMBAT LIGHTING (NO FLASHLIGHT!)
-      renderSceneLighting(
-        ctx,
-        p,
-        zombiesRef.current,
-        bulletsRef.current,
-        itemDropsRef.current,
-        flashLightsRef.current,
-        camX,
-        camY,
-        canvas.width,
-        canvas.height,
-        ARENA_SIZE,
-        isAlienStage,
-        muzzleFlashIntensityRef.current,
-        time
-      );
+      // Optional Vision Cone tactical darkness mask
+      if (visionConeEnabledRef.current && !ds.active) {
+        renderVisionConeOverlay(ctx, playerScreen.x, playerScreen.y, p.angle, width, height);
+      }
 
-      // 8c. ATMOSPHERIC DRIFTING ASH / BIO-SPORES
-      renderAtmosphericDust(ctx, canvas.width, canvas.height, lastDrawDtRef.current, isAlienStage, time);
-
-      // 8d. GAMEPAD 360° RIGHT-STICK AIM RETICLE
-      if (
-        gameState === GameState.PLAYING &&
-        !dyingRef.current?.active &&
-        gamepadSnapshotRef.current.connected
-      ) {
+      // Gamepad aim reticle
+      if (gamepadStateRef.current.connected && !ds.active && gameStateRef.current === GameState.PLAYING) {
         renderGamepadAimReticle(
           ctx,
-          spX,
-          spY,
+          playerScreen.x,
+          playerScreen.y,
           p.angle,
-          gamepadSnapshotRef.current.aimActive,
-          time
+          gamepadStateRef.current.aimActive,
+          nowMs
         );
       }
 
-      // 9. DRAW "WAVE TRANSITION / INCOMING HORDE" ALERTS OVERLAYS
-      if (!waveActiveRef.current && wave > 0) {
+      // Red damage vignette flash (no per-frame full-screen 2D vignette blit!)
+      if (playerDamageFlashRef.current > 0.02) {
         ctx.save();
-        ctx.fillStyle = 'rgba(239, 68, 68, 0.15)'; // glowing red tint screen
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-
-        // Draw Countdown alert
-        ctx.font = 'bold 13px monospace';
-        ctx.fillStyle = '#ef4444';
-        ctx.fillText('ALERTA DE INFECTADOS APRESSADOS', canvas.width / 2, canvas.height / 2 - 35);
-
-        ctx.font = '900 36px sans-serif';
-        ctx.fillStyle = '#ffffff';
-        ctx.fillText(`PREPARAR PARA ONDA ${wave + 1}!`, canvas.width / 2, canvas.height / 2);
-
-        ctx.font = 'bold 11px monospace';
-        ctx.fillStyle = '#a1a1aa';
-        ctx.fillText('A PRÓXIMA HORDA CHEGA EM BREVE...', canvas.width / 2, canvas.height / 2 + 35);
+        ctx.fillStyle = `rgba(220, 38, 38, ${(playerDamageFlashRef.current * 0.28).toFixed(3)})`;
+        ctx.fillRect(0, 0, width, height);
         ctx.restore();
       }
 
-      // 10. VISCERAL CANVAS-LEVEL LOW HEALTH ARTERIAL PULSE
-      if (gameState === GameState.PLAYING && p.hp > 0 && p.hp <= p.maxHp * 0.30) {
-        const hpRatio = p.hp / (p.maxHp * 0.30); // 1.0 down to 0.0
-        const beatDuration = 380 + hpRatio * 440;
-        const timeSinceBeat = time - lastHeartbeatRef.current;
-        const pulsePhase = Math.max(0, Math.min(1, 1 - timeSinceBeat / beatDuration));
-        const arterialThrob = Math.sin(pulsePhase * Math.PI);
+      // Compact Island & Ocean Tactical Radar Minimap
+      if (gameStateRef.current === GameState.PLAYING && !ds.active && width >= 480) {
+        const radarR = 46;
+        const rx = width - radarR - 18;
+        const ry = 108 + radarR;
+        const radarRange = 1780;
+        const scale = radarR / radarRange;
 
         ctx.save();
-        // Dynamic radial vignette tuned to heartbeat
-        const minDim = Math.min(canvas.width, canvas.height);
-        const innerR = minDim * (0.24 + hpRatio * 0.22 - arterialThrob * 0.05);
-        const outerR = minDim * 0.75;
-        const vigGrad = ctx.createRadialGradient(
-          canvas.width / 2,
-          canvas.height / 2,
-          Math.max(10, innerR),
-          canvas.width / 2,
-          canvas.height / 2,
-          outerR
-        );
+        ctx.beginPath();
+        ctx.arc(rx, ry, radarR, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(6, 36, 68, 0.9)';
+        ctx.fill();
+        ctx.clip();
 
-        const edgeAlpha = (0.35 + (1 - hpRatio) * 0.45) * (0.65 + arterialThrob * 0.35);
-        vigGrad.addColorStop(0, 'rgba(153, 27, 27, 0)');
-        vigGrad.addColorStop(0.65, `rgba(185, 28, 28, ${edgeAlpha * 0.5})`);
-        vigGrad.addColorStop(1, `rgba(69, 10, 10, ${edgeAlpha})`);
+        const slabX = rx - p.x * scale;
+        const slabY = ry - p.y * scale;
+        const islandCx = slabX + ISLAND_CENTER * scale;
+        const islandCy = slabY + ISLAND_CENTER * scale;
 
-        ctx.fillStyle = vigGrad;
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-        // Flash red tint at the apex of the heartbeat thump when extreme (<15% HP)
-        if (hpRatio < 0.5 && arterialThrob > 0.6) {
-          ctx.fillStyle = `rgba(220, 38, 38, ${(arterialThrob - 0.6) * 0.22})`;
-          ctx.fillRect(0, 0, canvas.width, canvas.height);
-        }
+        // Maritime Outer Buoy Ring
+        ctx.save();
+        ctx.strokeStyle = 'rgba(56, 189, 248, 0.25)';
+        ctx.setLineDash([3, 3]);
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(islandCx, islandCy, 1860 * scale, 0, Math.PI * 2);
+        ctx.stroke();
         ctx.restore();
-      }
 
-      // 11. DRAMATIC SLOW-MOTION DEATH COLLAPSE OVERLAY
-      if (dyingRef.current?.active) {
-        const progress = Math.min(1, Math.max(0, 1 - dyingRef.current.timer / dyingRef.current.total));
-        ctx.save();
-
-        // Atmospheric red-black fade
-        ctx.fillStyle = `rgba(69, 10, 10, ${progress * 0.45})`;
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-        ctx.fillStyle = `rgba(2, 6, 23, ${progress * 0.8})`;
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-        // Cinematic Widescreen Letterbox Bars
-        const barHeight = Math.min(65, canvas.height * 0.11 * Math.min(1, progress * 1.8));
-        ctx.fillStyle = '#000000';
-        ctx.fillRect(0, 0, canvas.width, barHeight);
-        ctx.fillRect(0, canvas.height - barHeight, canvas.width, barHeight);
-
-        // CRT Telemetry Scanlines
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.22)';
-        for (let y = barHeight; y < canvas.height - barHeight; y += 4) {
-          ctx.fillRect(0, y, canvas.width, 1.5);
-        }
-
-        // Biometric Heart Monitor Flatline Line Across Center
-        if (progress > 0.25) {
-          const flatlineAlpha = Math.min(1, (progress - 0.25) * 2);
-          ctx.strokeStyle = `rgba(239, 68, 68, ${flatlineAlpha * 0.85})`;
-          ctx.lineWidth = 2.5;
-
+        const traceCoastline = (offsetRadius: number) => {
+          const steps = 48;
           ctx.beginPath();
-          ctx.moveTo(0, canvas.height / 2 + 55);
-          ctx.lineTo(canvas.width, canvas.height / 2 + 55);
-          ctx.stroke();
+          for (let s = 0; s <= steps; s++) {
+            const a = (s / steps) * Math.PI * 2;
+            const r = (getCoastlineRadius(a) + offsetRadius) * scale;
+            const px = islandCx + Math.cos(a) * r;
+            const py = islandCy + Math.sin(a) * r;
+            if (s === 0) ctx.moveTo(px, py);
+            else ctx.lineTo(px, py);
+          }
+          ctx.closePath();
+        };
 
-          // Cardiac flatline pulse label
-          ctx.font = 'bold 10px monospace';
-          ctx.fillStyle = `rgba(248, 113, 113, ${flatlineAlpha})`;
-          ctx.textAlign = 'right';
-          ctx.fillText('EKG MONITOR: 0 BPM [PARADA CARDÍACA]', canvas.width - 25, canvas.height / 2 + 48);
+        // Shallow Turquoise Lagoon Shelf
+        traceCoastline(110);
+        ctx.fillStyle = 'rgba(14, 116, 144, 0.48)';
+        ctx.fill();
+
+        // Golden Sandy Beach Coastline
+        traceCoastline(0);
+        ctx.fillStyle = 'rgba(217, 184, 118, 0.85)';
+        ctx.fill();
+
+        // Lush Green Island Interior Meadow
+        traceCoastline(-72);
+        ctx.fillStyle = 'rgba(34, 84, 48, 0.86)';
+        ctx.fill();
+
+        // Wooden Coastal Pier Silhouette
+        const pier = getIslandPier();
+        ctx.fillStyle = 'rgba(146, 98, 57, 0.9)';
+        ctx.fillRect(
+          slabX + pier.minX * scale,
+          slabY + pier.startZ * scale,
+          pier.width * scale,
+          (pier.endZ - pier.startZ) * scale
+        );
+
+        // Center Spawn Pad Marker
+        ctx.strokeStyle = 'rgba(56, 189, 248, 0.5)';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(islandCx - 3.5, islandCy - 3.5, 7, 7);
+
+        // 3D Enterable Houses Architectural Footprints on Radar
+        const mapHouses = getEnterableHouses();
+        ctx.fillStyle = 'rgba(203, 213, 225, 0.48)';
+        ctx.strokeStyle = 'rgba(248, 250, 252, 0.78)';
+        ctx.lineWidth = 1;
+        for (let hi = 0; hi < mapHouses.length; hi++) {
+          const h = mapHouses[hi];
+          const hx = slabX + h.minX * scale;
+          const hy = slabY + h.minZ * scale;
+          const hw = h.width * scale;
+          const hd = h.depth * scale;
+          ctx.fillRect(hx, hy, hw, hd);
+          ctx.strokeRect(hx, hy, hw, hd);
         }
 
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
+        // Crisp Shoreline Contour
+        traceCoastline(0);
+        ctx.strokeStyle = 'rgba(186, 230, 253, 0.55)';
+        ctx.lineWidth = 1.1;
+        ctx.stroke();
 
-        // Glitch offset on text
-        const glitchX = (Math.random() - 0.5) * (progress < 0.6 ? 4 : 0);
-        const glitchY = (Math.random() - 0.5) * (progress < 0.6 ? 2 : 0);
+        for (let i = 0; i < zombiesRef.current.length; i++) {
+          const z = zombiesRef.current[i];
+          if (z.isDead) continue;
+          const dx = (z.x - p.x) * scale;
+          const dy = (z.y - p.y) * scale;
+          if (dx * dx + dy * dy > (radarR - 3) * (radarR - 3)) continue;
+          ctx.fillStyle = z.isBoss ? '#fbbf24' : '#ef4444';
+          ctx.beginPath();
+          ctx.arc(rx + dx, ry + dy, z.isBoss ? 3.2 : 1.7, 0, Math.PI * 2);
+          ctx.fill();
+        }
 
-        // Large bold failure announcement
-        ctx.font = '900 32px Chakra Petch, sans-serif';
-        ctx.fillStyle = `rgba(239, 68, 68, ${Math.min(1, progress * 1.6)})`;
-        ctx.fillText('SINAL DO OPERADOR PERDIDO', canvas.width / 2 + glitchX, canvas.height / 2 - 20 + glitchY);
+        ctx.fillStyle = 'rgba(56, 189, 248, 0.22)';
+        ctx.beginPath();
+        ctx.moveTo(rx, ry);
+        ctx.arc(rx, ry, 20, p.angle - 0.55, p.angle + 0.55);
+        ctx.closePath();
+        ctx.fill();
 
-        ctx.font = 'bold 12px monospace';
-        ctx.fillStyle = `rgba(254, 202, 202, ${Math.min(1, progress * 1.5)})`;
-        ctx.fillText('COLAPSO DE SINAIS VITAIS // EXTRAÇÃO TÁTICA ABORTADA', canvas.width / 2, canvas.height / 2 + 18);
+        ctx.fillStyle = '#38bdf8';
+        ctx.beginPath();
+        ctx.arc(rx, ry, 3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
 
+        ctx.save();
+        ctx.strokeStyle = 'rgba(148, 163, 184, 0.42)';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(rx, ry, radarR, 0, Math.PI * 2);
+        ctx.stroke();
         ctx.restore();
       }
     };
 
-    // Cached helper to darken hex colors without per-frame hex parsing overhead
-    const darkColorCache = new Map<string, string>();
-    const darkenColor = (hex: string, percent: number) => {
-      const key = `${hex}_${percent}`;
-      const cached = darkColorCache.get(key);
-      if (cached) return cached;
-      const num = parseInt(hex.replace('#', ''), 16),
-        amt = Math.round(2.55 * percent),
-        R = (num >> 16) - amt,
-        G = ((num >> 8) & 0x00ff) - amt,
-        B = (num & 0x0000ff) - amt;
-      const res =
-        '#' +
-        (
-          0x1000000 +
-          (R < 0 ? 0 : R > 255 ? 255 : R) * 0x10000 +
-          (G < 0 ? 0 : G > 255 ? 255 : G) * 0x100 +
-          (B < 0 ? 0 : B > 255 ? 255 : B)
-        )
-          .toString(16)
-          .slice(1);
-      darkColorCache.set(key, res);
-      return res;
+    let timerId = 0;
+    let active = true;
+
+    const scheduleNext = () => {
+      if (!active) return;
+      const diorama = threeRendererRef.current;
+      if (diorama?.isSoftwareGl) {
+        diorama.afterDraw(gameLoop, (id) => {
+          timerId = id;
+        });
+      } else {
+        animId = requestAnimationFrame(gameLoop);
+      }
     };
 
-    // Resize canvas to match the exact dimensions of its screen parent container
-    const resizeCanvas = () => {
-      const canvas = canvasRef.current;
-      const container = containerRef.current;
-      if (!canvas || !container) return;
+    const gameLoop = () => {
+      if (!active) return;
+      const now = performance.now();
+      const dt = Math.min(0.05, Math.max(0.001, (now - lastTime) / 1000));
+      lastTime = now;
 
-      canvas.width = container.clientWidth;
-      canvas.height = container.clientHeight;
+      updateGame(dt, now);
+      const st = gameStateRef.current;
+      if (st === GameState.PLAYING || st === GameState.GAME_OVER) {
+        staticFrameRenderedRef.current = false;
+        renderScene(dt, now);
+      } else if (st === GameState.PAUSED || st === GameState.LEVEL_UP) {
+        if (!staticFrameRenderedRef.current) {
+          staticFrameRenderedRef.current = true;
+          renderScene(dt, now);
+        }
+      } else {
+        staticFrameRenderedRef.current = false;
+      }
+
+      scheduleNext();
     };
 
-    resizeCanvas();
-    window.addEventListener('resize', resizeCanvas);
-
-    // Run requestAnimation frame
-    animationFrameId = requestAnimationFrame(gameLoop);
-
+    animId = requestAnimationFrame(gameLoop);
     return () => {
-      cancelAnimationFrame(animationFrameId);
-      window.removeEventListener('resize', resizeCanvas);
+      active = false;
+      cancelAnimationFrame(animId);
+      clearTimeout(timerId);
     };
-  }, [gameState, wave]);
-
-  // Sync HUD statistics inside standard React cycle occasionally to ensure 60fps
-  useEffect(() => {
-    if (gameState !== GameState.PLAYING) return;
-
-    const interval = setInterval(() => {
-      syncHudPlayer();
-    }, 150);
-
-    return () => clearInterval(interval);
-  }, [gameState, syncHudPlayer]);
+  }, [handlePauseToggle, setAppState, switchWeapon, syncHud, updateCoins]);
 
   return (
-    <div className="relative w-full h-[100dvh] overflow-hidden bg-slate-950 font-sans text-white flex flex-col select-none">
-      {/* 1. Main Canvas Stage container */}
-      <div id="game-stage" ref={containerRef} className="relative flex-1 w-full h-full">
-        <canvas
-          ref={canvasRef}
-          className="absolute inset-0 block w-full h-full cursor-crosshair touch-none"
+    <div className="relative w-screen h-screen overflow-hidden bg-slate-950 select-none">
+      <div
+        ref={threeMountRef}
+        className="absolute inset-0 w-full h-full cursor-crosshair touch-none"
+      />
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background:
+            'radial-gradient(ellipse at center, rgba(0,0,0,0) 58%, rgba(2,6,23,0.42) 100%)',
+        }}
+      />
+      <canvas
+        ref={canvasRef}
+        className="absolute inset-0 block w-full h-full pointer-events-none touch-none"
+      />
+
+      {gameState === GameState.PLAYING && (
+        <MobileControls
+          onLeftJoystick={(input) => {
+            leftJoystickRef.current = input;
+          }}
+          onRightJoystick={(input) => {
+            rightJoystickRef.current = input;
+          }}
         />
+      )}
 
-        {/* Fast radial vignette (replaces heavy GPU blur-2xl layer) */}
-        <div className="absolute inset-0 pointer-events-none z-30 bg-[radial-gradient(ellipse_at_center,transparent_58%,rgba(2,6,23,0.68)_100%)]" />
+      <GameHUD
+        gameState={gameState}
+        player={hudPlayer}
+        wave={wave}
+        zombiesRemaining={zombiesRemaining}
+        highScoreZombie={highScoreZombie}
+        activeBoss={activeBoss}
+        dayNight={dayNightHud}
+        onStart={startGame}
+        onPauseToggle={handlePauseToggle}
+        onRestart={startGame}
+        onGoToMenu={handleGoToMenu}
+        onSelectWeapon={switchWeapon}
+        soundEnabled={soundEnabled}
+        onToggleSound={handleToggleSound}
+        coins={coins}
+        onOpenStore={handleOpenStore}
+        onResetAll={handleResetAll}
+        prestigeLevel={prestigeLevel}
+        tokens={tokens}
+        onOpenPrestige={handleOpenPrestige}
+        gamepadConnected={gamepadConnected}
+        visionConeEnabled={visionConeEnabled}
+        onToggleVisionCone={handleToggleVisionCone}
+        graphicsQuality={graphicsQuality}
+        onChangeGraphicsQuality={handleChangeGraphicsQuality}
+      />
 
-        {/* 2. Visual overlays (Start Menu, HUD bar, Paused screen, Game Over) */}
-        <GameHUD
-          gameState={gameState}
-          player={hudPlayer}
-          wave={wave}
-          zombiesRemaining={zombiesRemaining}
-          highScore={highScore}
-          highScoreZombie={highScoreZombie}
-          highScoreAlien={highScoreAlien}
-          gameMode={currentMode}
-          activeBoss={activeBoss}
-          onStart={handleStartGame}
-          onOpenModeSelect={() => setShowModeModal(true)}
-          onChangeMode={handleSelectMode}
-          onPauseToggle={handlePauseToggle}
-          onRestart={handleRestart}
-          onGoToMenu={handleGoToMenu}
-          onSelectWeapon={handleSelectWeapon}
-          soundEnabled={soundActive}
-          onToggleSound={handleToggleSound}
+      {gameState === GameState.LEVEL_UP && (
+        <UpgradeScreen
+          options={upgradeOptions}
+          onSelect={handleSelectUpgrade}
+          level={hudPlayer.level}
+          onReroll={handleRerollUpgrades}
+          rerollsLeft={hudPlayer.rerollsAvailable || 0}
+        />
+      )}
+
+      {gameState === GameState.STORE && (
+        <StoreScreen
           coins={coins}
-          onOpenStore={handleOpenStore}
-          onResetAll={handleResetAll}
+          unlockedWeapons={unlockedWeapons}
+          equippedWeapon={equippedWeapon}
+          onBuyWeapon={handleBuyWeapon}
+          onEquipWeapon={handleEquipWeapon}
+          unlockedSkins={unlockedSkins}
+          equippedSkin={equippedSkin}
+          onBuySkin={handleBuySkin}
+          onEquipSkin={handleEquipSkin}
+          onBuyShieldUpgrade={handleBuyShieldUpgrade}
+          onBuyHealthUpgrade={handleBuyHealthUpgrade}
+          onBuySpeedUpgrade={handleBuySpeedUpgrade}
+          onBuyDamageUpgrade={handleBuyDamageUpgrade}
+          onBuyLuckUpgrade={handleBuyLuckUpgrade}
+          maxShieldLevel={maxShieldLevel}
+          maxHealthLevel={maxHealthLevel}
+          speedLevel={speedLevel}
+          damageLevel={damageLevel}
+          luckLevel={luckLevel}
+          onAddTestCoins={() => updateCoins(10000)}
+          onClose={handleCloseStore}
+        />
+      )}
+
+      {gameState === GameState.PRESTIGE && (
+        <PrestigeScreen
+          coins={coins}
           prestigeLevel={prestigeLevel}
           tokens={tokens}
-          onOpenPrestige={handleOpenPrestige}
-          onOpenMastery={handleOpenMastery}
-          masterySkillHud={masterySkillHud}
-          onTriggerMasterySkill={triggerShipMasterySkill}
-          destructorWarp={destructorWarpHud}
-          ironManMode={ironManModeHud}
-          onToggleIronManMode={toggleIronManMode}
-          iceFireDragonHud={iceFireDragonHud}
-          onSwitchIceFireDragon={switchIceFireDragon}
-          onTriggerIceFireMerge={triggerIceFireMerge}
-          venomFruitHud={venomFruitHud}
-          onTriggerVenomHydra={triggerVenomHydra}
-          onTriggerVenomChloro={triggerVenomChloro}
-          onTriggerVenomRoad={triggerVenomRoad}
-          onTriggerVenomDemon={triggerVenomDemon}
-          gamepadConnected={gamepadState.connected}
+          tokenUpgrades={tokenUpgrades}
+          onAscendPrestige={handleAscendPrestige}
+          onBuyTokenUpgrade={handleBuyTokenUpgrade}
+          onRespecTokens={handleRespecTokens}
+          onClose={handleClosePrestige}
         />
+      )}
 
-        {/* Mode Selector Modal */}
-        {showModeModal && (
-          <ModeSelectModal
-            currentMode={currentMode}
-            highScoreZombie={highScoreZombie}
-            highScoreAlien={highScoreAlien}
-            onSelectModeAndPlay={handleSelectModeAndPlay}
-            onClose={() => setShowModeModal(false)}
-          />
-        )}
-
-        {/* Store Overlay */}
-        {gameState === GameState.STORE && (
-          <StoreScreen
-            coins={coins}
-            unlockedWeapons={unlockedWeapons}
-            equippedWeapon={equippedWeapon}
-            onBuyWeapon={handleBuyWeapon}
-            onEquipWeapon={handleEquipWeapon}
-            unlockedSkins={unlockedSkins}
-            equippedSkin={equippedSkin}
-            onBuySkin={handleBuySkin}
-            onEquipSkin={handleEquipSkin}
-            onBuyShieldUpgrade={handleBuyShieldUpgrade}
-            onBuyHealthUpgrade={handleBuyHealthUpgrade}
-            onBuySpeedUpgrade={handleBuySpeedUpgrade}
-            onBuyDamageUpgrade={handleBuyDamageUpgrade}
-            onBuyLuckUpgrade={handleBuyLuckUpgrade}
-            maxShieldLevel={maxShieldLevel}
-            maxHealthLevel={maxHealthLevel}
-            speedLevel={speedLevel}
-            damageLevel={damageLevel}
-            luckLevel={luckLevel}
-            onAddTestCoins={handleAddTestCoins}
-            onClose={handleCloseStore}
-          />
-        )}
-
-        {/* Prestige & Token Shop Overlay */}
-        {gameState === GameState.PRESTIGE && (
-          <PrestigeScreen
-            coins={coins}
-            prestigeLevel={prestigeLevel}
-            tokens={tokens}
-            tokenUpgrades={tokenUpgrades}
-            onAscendPrestige={handleAscendPrestige}
-            onBuyTokenUpgrade={handleBuyTokenUpgrade}
-            onRespecTokens={handleRespecTokens}
-            onClose={handleCloseStore}
-          />
-        )}
-
-        {/* Ship Mastery Skill Tree Overlay */}
-        {gameState === GameState.MASTERY && (
-          <MasteryScreen
-            coins={coins}
-            unlockedWeapons={unlockedWeapons}
-            shipMastery={shipMastery}
-            onUnlockNode={handleUnlockMasteryNode}
-            onResetTree={handleResetMasteryTree}
-            onTrainShip={handleTrainShipMastery}
-            onClose={handleCloseStore}
-          />
-        )}
-
-        {/* 3. Survivor level up upgrades panel overlay */}
-        {gameState === GameState.LEVEL_UP && (
-          <UpgradeScreen
-            options={levelUpOptions}
-            onSelect={handleSelectUpgrade}
-            level={hudPlayer.level}
-            onReroll={handleRerollUpgrades}
-            rerollsLeft={rerollsLeft}
-          />
-        )}
-
-        {/* 4. DUAL DYNAMIC VIRTUAL JOYSTICKS & TACTICAL WARP BUTTON (Mobile / Touch) */}
-        {gameState === GameState.PLAYING && (
-          <MobileControls
-            onLeftJoystick={handleLeftJoystick}
-            onRightJoystick={handleRightJoystick}
-            isShip={
-              hudPlayer.currentWeapon === WeaponType.TROPER ||
-              hudPlayer.currentWeapon === WeaponType.DESTRUCTOR ||
-              hudPlayer.currentWeapon === WeaponType.INTERCEPTOR ||
-              hudPlayer.currentWeapon === WeaponType.NAVE_REI
-            }
-            shipType={
-              hudPlayer.currentWeapon === WeaponType.TROPER
-                ? 'TROPER'
-                : hudPlayer.currentWeapon === WeaponType.NAVE_REI
-                  ? 'NAVE_REI'
-                  : hudPlayer.currentWeapon === WeaponType.INTERCEPTOR
-                    ? 'INTERCEPTOR'
-                    : hudPlayer.currentWeapon === WeaponType.DESTRUCTOR
-                      ? 'DESTRUCTOR'
-                      : null
-            }
-            showWarp={hudPlayer.currentWeapon !== WeaponType.TROPER}
-            warpChargeProgress={destructorWarpHud.chargeProgress}
-            warpActive={destructorWarpHud.active}
-            warpRemainingRatio={destructorWarpHud.remainingRatio}
-            warpRemainingSeconds={destructorWarpHud.remainingSeconds}
-            warpChargeDuration={destructorWarpHud.chargeDuration}
-            onWarpStart={handleWarpStart}
-            onWarpEnd={handleWarpEnd}
-            hasMasterySkill={masterySkillHud.available}
-            masteryCooldown={masterySkillHud.cooldown}
-            masteryMaxCooldown={masterySkillHud.maxCooldown}
-            masterySkillName={masterySkillHud.name}
-            onTriggerMasterySkill={triggerShipMasterySkill}
-            isIronMan={hudPlayer.currentWeapon === WeaponType.IRON_MAN}
-            ironManMode={ironManModeHud}
-            onToggleIronManMode={toggleIronManMode}
-            isIceFireDragon={hudPlayer.currentWeapon === WeaponType.ICE_AND_FIRE_DRAGON}
-            iceFireActiveDragon={iceFireDragonHud.activeDragon}
-            iceFireMerged={iceFireDragonHud.merged}
-            iceFireCooldown={iceFireDragonHud.cooldown}
-            iceFireMergeRemaining={iceFireDragonHud.mergeTimer}
-            onSwitchIceFireDragon={switchIceFireDragon}
-            onTriggerIceFireMerge={triggerIceFireMerge}
-            isVenomFruit={hudPlayer.currentWeapon === WeaponType.VENOM_FRUIT}
-            venomFruitHud={venomFruitHud}
-            onTriggerVenomHydra={triggerVenomHydra}
-            onTriggerVenomChloro={triggerVenomChloro}
-            onTriggerVenomRoad={triggerVenomRoad}
-            onTriggerVenomDemon={triggerVenomDemon}
-          />
-        )}
-      </div>
+      <OfflineIndicator />
     </div>
   );
-
 }
+
+export default App;

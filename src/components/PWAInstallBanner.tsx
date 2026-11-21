@@ -115,7 +115,7 @@ export const PWAInstallButton: React.FC = () => {
         </button>
 
         {showIOSGuide && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4">
             <div className="relative w-full max-w-sm rounded-2xl border border-cyan-500/35 bg-slate-950 p-6 shadow-2xl">
               <button
                 onClick={() => setShowIOSGuide(false)}
@@ -165,7 +165,7 @@ export const OfflineIndicator: React.FC = () => {
   if (isOnline) return null;
 
   return (
-    <div className="fixed bottom-4 left-4 z-50 flex items-center gap-2 rounded-xl border border-amber-400/40 bg-amber-600/95 px-3.5 py-2 text-xs font-bold text-white shadow-xl backdrop-blur-md">
+    <div className="fixed bottom-4 left-4 z-50 flex items-center gap-2 rounded-xl border border-amber-400/40 bg-amber-600/95 px-3.5 py-2 text-xs font-bold text-white shadow-xl">
       <WifiOff className="h-3.5 w-3.5 animate-pulse" />
       <span>Modo Offline — Dados em cache ativos</span>
     </div>

@@ -3,7 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { BloodSplat, Bullet, GameMode, ItemDrop, Player, WeaponType, Zombie, ZombieType } from '../types';
+import { BloodSplat, Bullet, ItemDrop, Player, WeaponType, Zombie, ZombieType } from '../types';
+import { getForestData } from './ForestWorld';
 
 export type LightColorKey = 'amber' | 'orange' | 'cyan' | 'red' | 'green' | 'purple' | 'white';
 
@@ -37,10 +38,236 @@ const LIGHT_RGB: Record<LightColorKey, string> = {
 };
 
 let lightSpritesCache: Record<LightColorKey, HTMLCanvasElement> | null = null;
-let smokeSpritesCache: Record<'light' | 'mid' | 'dark' | 'ember' | 'toxic' | 'cyan', HTMLCanvasElement> | null = null;
+let smokeSpritesCache: Record<'light' | 'mid' | 'dark' | 'ember' | 'toxic' | 'cyan' | 'purple' | 'deepPurple', HTMLCanvasElement> | null = null;
+let fireballSpritesCache: Record<'fire' | 'crimson' | 'soot', HTMLCanvasElement> | null = null;
 let zombieGroundTile: HTMLCanvasElement | null = null;
-let alienGroundTile: HTMLCanvasElement | null = null;
 let dustMotes: DustMote[] | null = null;
+let giLightCanvas: HTMLCanvasElement | null = null;
+
+export const DAY_NIGHT_CYCLE_SECONDS = 180; // 3 full minutes per complete cycle
+
+export type DayPhaseId = 'DAWN' | 'DAY' | 'DUSK' | 'NIGHT';
+
+export interface DayNightState {
+  cycleProgress: number; // 0..1
+  phase: DayPhaseId;
+  phaseLabel: string;
+  clockText: string; // 24h in-world clock e.g. "14:22"
+  darknessAlpha: number;
+  ambientRgb: [number, number, number];
+  sunRgb: [number, number, number];
+  shadowDirX: number;
+  shadowDirY: number;
+  shadowStretch: number;
+  shadowAlpha: number;
+  sunbeamAlpha: number;
+  campfireStrength: number;
+  flashlightStrength: number;
+  fireflyStrength: number;
+  sunWarmth: number;
+}
+
+interface DayKeyframe {
+  t: number;
+  darkness: number;
+  ambientRgb: [number, number, number];
+  sunRgb: [number, number, number];
+  shadowDirX: number;
+  shadowDirY: number;
+  stretch: number;
+  shadowAlpha: number;
+  sunbeam: number;
+  campfire: number;
+  flashlight: number;
+  firefly: number;
+  sunWarmth: number;
+}
+
+const DAY_KEYFRAMES: DayKeyframe[] = [
+  {
+    t: 0.0,
+    darkness: 0.34,
+    ambientRgb: [36, 24, 42],
+    sunRgb: [253, 186, 116],
+    shadowDirX: 0.88,
+    shadowDirY: 0.34,
+    stretch: 1.72,
+    shadowAlpha: 0.36,
+    sunbeam: 0.28,
+    campfire: 0.72,
+    flashlight: 0.42,
+    firefly: 0.3,
+    sunWarmth: 0.72,
+  },
+  {
+    t: 0.14,
+    darkness: 0.04,
+    ambientRgb: [14, 24, 18],
+    sunRgb: [254, 243, 199],
+    shadowDirX: 0.68,
+    shadowDirY: 0.56,
+    stretch: 1.15,
+    shadowAlpha: 0.38,
+    sunbeam: 0.22,
+    campfire: 0.32,
+    flashlight: 0.05,
+    firefly: 0.0,
+    sunWarmth: 0.36,
+  },
+  {
+    t: 0.34,
+    darkness: 0.01,
+    ambientRgb: [12, 22, 16],
+    sunRgb: [255, 251, 235],
+    shadowDirX: 0.24,
+    shadowDirY: 0.78,
+    stretch: 0.86,
+    shadowAlpha: 0.34,
+    sunbeam: 0.16,
+    campfire: 0.24,
+    flashlight: 0.0,
+    firefly: 0.0,
+    sunWarmth: 0.2,
+  },
+  {
+    t: 0.5,
+    darkness: 0.22,
+    ambientRgb: [52, 24, 18],
+    sunRgb: [251, 146, 60],
+    shadowDirX: -0.82,
+    shadowDirY: 0.46,
+    stretch: 1.82,
+    shadowAlpha: 0.42,
+    sunbeam: 0.36,
+    campfire: 0.68,
+    flashlight: 0.34,
+    firefly: 0.28,
+    sunWarmth: 0.9,
+  },
+  {
+    t: 0.62,
+    darkness: 0.58,
+    ambientRgb: [14, 16, 38],
+    sunRgb: [165, 180, 252],
+    shadowDirX: -0.72,
+    shadowDirY: 0.62,
+    stretch: 1.42,
+    shadowAlpha: 0.32,
+    sunbeam: 0.14,
+    campfire: 0.95,
+    flashlight: 0.84,
+    firefly: 0.8,
+    sunWarmth: 0.08,
+  },
+  {
+    t: 0.76,
+    darkness: 0.78,
+    ambientRgb: [5, 10, 24],
+    sunRgb: [147, 197, 253],
+    shadowDirX: -0.45,
+    shadowDirY: 0.75,
+    stretch: 1.15,
+    shadowAlpha: 0.28,
+    sunbeam: 0.12,
+    campfire: 1.0,
+    flashlight: 1.0,
+    firefly: 1.0,
+    sunWarmth: 0.0,
+  },
+  {
+    t: 0.91,
+    darkness: 0.56,
+    ambientRgb: [16, 18, 36],
+    sunRgb: [196, 181, 253],
+    shadowDirX: 0.55,
+    shadowDirY: 0.62,
+    stretch: 1.35,
+    shadowAlpha: 0.3,
+    sunbeam: 0.16,
+    campfire: 0.9,
+    flashlight: 0.76,
+    firefly: 0.68,
+    sunWarmth: 0.18,
+  },
+];
+
+function lerp(a: number, b: number, t: number): number {
+  return a + (b - a) * t;
+}
+
+export function getDayNightState(cycleElapsedSec: number): DayNightState {
+  const norm = (((cycleElapsedSec % DAY_NIGHT_CYCLE_SECONDS) + DAY_NIGHT_CYCLE_SECONDS) % DAY_NIGHT_CYCLE_SECONDS) / DAY_NIGHT_CYCLE_SECONDS;
+
+  let k0 = DAY_KEYFRAMES[DAY_KEYFRAMES.length - 1];
+  let k1 = DAY_KEYFRAMES[0];
+  let span = 1 - k0.t + k1.t;
+  let local = norm >= k0.t ? norm - k0.t : norm + (1 - k0.t);
+
+  for (let i = 0; i < DAY_KEYFRAMES.length - 1; i++) {
+    if (norm >= DAY_KEYFRAMES[i].t && norm < DAY_KEYFRAMES[i + 1].t) {
+      k0 = DAY_KEYFRAMES[i];
+      k1 = DAY_KEYFRAMES[i + 1];
+      span = Math.max(0.001, k1.t - k0.t);
+      local = norm - k0.t;
+      break;
+    }
+  }
+
+  const rawU = Math.max(0, Math.min(1, local / span));
+  const u = rawU * rawU * (3 - 2 * rawU);
+
+  const sdx = lerp(k0.shadowDirX, k1.shadowDirX, u);
+  const sdy = lerp(k0.shadowDirY, k1.shadowDirY, u);
+  const sMag = Math.hypot(sdx, sdy) || 1;
+
+  let phase: DayPhaseId = 'DAY';
+  let phaseLabel = 'DIA';
+  if (norm < 0.12 || norm >= 0.92) {
+    phase = 'DAWN';
+    phaseLabel = 'AMANHECER';
+  } else if (norm < 0.46) {
+    phase = 'DAY';
+    phaseLabel = 'DIA';
+  } else if (norm < 0.62) {
+    phase = 'DUSK';
+    phaseLabel = 'ENTARDECER';
+  } else {
+    phase = 'NIGHT';
+    phaseLabel = 'NOITE';
+  }
+
+  // Virtual 24h clock starting at 06:00 AM
+  const totalMinutes = Math.floor(((norm * 24 + 6) % 24) * 60);
+  const hh = Math.floor(totalMinutes / 60).toString().padStart(2, '0');
+  const mm = (totalMinutes % 60).toString().padStart(2, '0');
+
+  return {
+    cycleProgress: norm,
+    phase,
+    phaseLabel,
+    clockText: `${hh}:${mm}`,
+    darknessAlpha: lerp(k0.darkness, k1.darkness, u),
+    ambientRgb: [
+      Math.round(lerp(k0.ambientRgb[0], k1.ambientRgb[0], u)),
+      Math.round(lerp(k0.ambientRgb[1], k1.ambientRgb[1], u)),
+      Math.round(lerp(k0.ambientRgb[2], k1.ambientRgb[2], u)),
+    ],
+    sunRgb: [
+      Math.round(lerp(k0.sunRgb[0], k1.sunRgb[0], u)),
+      Math.round(lerp(k0.sunRgb[1], k1.sunRgb[1], u)),
+      Math.round(lerp(k0.sunRgb[2], k1.sunRgb[2], u)),
+    ],
+    shadowDirX: sdx / sMag,
+    shadowDirY: sdy / sMag,
+    shadowStretch: lerp(k0.stretch, k1.stretch, u),
+    shadowAlpha: lerp(k0.shadowAlpha, k1.shadowAlpha, u),
+    sunbeamAlpha: lerp(k0.sunbeam, k1.sunbeam, u),
+    campfireStrength: lerp(k0.campfire, k1.campfire, u),
+    flashlightStrength: lerp(k0.flashlight, k1.flashlight, u),
+    fireflyStrength: lerp(k0.firefly, k1.firefly, u),
+    sunWarmth: lerp(k0.sunWarmth, k1.sunWarmth, u),
+  };
+}
 
 function createSoftLightSprite(rgb: string): HTMLCanvasElement {
   const size = 128;
@@ -109,7 +336,7 @@ function createVolumetricSmokeSprite(
   return c;
 }
 
-function getSmokeSprites(): Record<'light' | 'mid' | 'dark' | 'ember' | 'toxic' | 'cyan', HTMLCanvasElement> {
+export function getSmokeSprites(): Record<'light' | 'mid' | 'dark' | 'ember' | 'toxic' | 'cyan' | 'purple' | 'deepPurple', HTMLCanvasElement> {
   if (smokeSpritesCache) return smokeSpritesCache;
   smokeSpritesCache = {
     light: createVolumetricSmokeSprite('226, 232, 240', '148, 163, 184', '248, 250, 252'),
@@ -118,6 +345,8 @@ function getSmokeSprites(): Record<'light' | 'mid' | 'dark' | 'ember' | 'toxic' 
     ember: createVolumetricSmokeSprite('234, 88, 12', '120, 53, 15', '253, 186, 116'),
     toxic: createVolumetricSmokeSprite('132, 204, 22', '63, 98, 18', '190, 242, 100'),
     cyan: createVolumetricSmokeSprite('186, 230, 253', '56, 189, 248', '240, 249, 255'),
+    purple: createVolumetricSmokeSprite('168, 85, 247', '88, 28, 135', '233, 213, 255'),
+    deepPurple: createVolumetricSmokeSprite('126, 34, 206', '46, 16, 101', '192, 132, 252'),
   };
   return smokeSpritesCache;
 }
@@ -132,8 +361,30 @@ export function renderRealisticSmokeParticle(
   color: string
 ): void {
   const sprites = getSmokeSprites();
-  let key: 'light' | 'mid' | 'dark' | 'ember' | 'toxic' | 'cyan' = 'mid';
-  if (color.includes('234, 88') || color.includes('fb923c') || color.includes('fdba74')) {
+  let key: 'light' | 'mid' | 'dark' | 'ember' | 'toxic' | 'cyan' | 'purple' | 'deepPurple' = 'mid';
+  if (
+    color.includes('59, 7, 100') ||
+    color.includes('46, 16, 101') ||
+    color.includes('88, 28, 135') ||
+    color.includes('107, 33, 168') ||
+    color.includes('30, 8, 52') ||
+    color.includes('#581c87') ||
+    color.includes('#4c1d95')
+  ) {
+    key = 'deepPurple';
+  } else if (
+    color.includes('147, 51, 234') ||
+    color.includes('168, 85, 247') ||
+    color.includes('192, 132, 252') ||
+    color.includes('126, 34, 206') ||
+    color.includes('216, 180, 254') ||
+    color.includes('#a855f7') ||
+    color.includes('#9333ea') ||
+    color.includes('#c084fc') ||
+    color.includes('#d946ef')
+  ) {
+    key = 'purple';
+  } else if (color.includes('234, 88') || color.includes('fb923c') || color.includes('fdba74')) {
     key = 'ember';
   } else if (color.includes('132, 204') || color.includes('84cc16')) {
     key = 'toxic';
@@ -156,7 +407,158 @@ export function renderRealisticSmokeParticle(
   ctx.restore();
 }
 
-function getLightSprites(): Record<LightColorKey, HTMLCanvasElement> {
+function createVolumetricFireballSprite(
+  innerRgb: string,
+  midRgb: string,
+  outerRgb: string
+): HTMLCanvasElement {
+  const size = 192;
+  const half = size / 2;
+  const c = document.createElement('canvas');
+  c.width = size;
+  c.height = size;
+  const g = c.getContext('2d');
+  if (!g) return c;
+
+  // Chaotic turbulent outer fireball lobes (baked once into offscreen canvas)
+  const lobes = [
+    { x: 0, y: 0, r: 72, op: 0.55 },
+    { x: -24, y: -16, r: 46, op: 0.62 },
+    { x: 26, y: -12, r: 44, op: 0.6 },
+    { x: -16, y: 26, r: 42, op: 0.58 },
+    { x: 22, y: 22, r: 40, op: 0.56 },
+    { x: -34, y: 8, r: 30, op: 0.5 },
+    { x: 8, y: -32, r: 32, op: 0.52 },
+    { x: 34, y: 10, r: 28, op: 0.48 },
+    { x: -6, y: 34, r: 28, op: 0.45 },
+  ];
+
+  for (let i = 0; i < lobes.length; i++) {
+    const lb = lobes[i];
+    const lx = half + lb.x;
+    const ly = half + lb.y;
+    const grad = g.createRadialGradient(lx, ly, 2, lx, ly, lb.r);
+    grad.addColorStop(0, `rgba(${innerRgb}, ${lb.op})`);
+    grad.addColorStop(0.32, `rgba(${midRgb}, ${lb.op * 0.85})`);
+    grad.addColorStop(0.68, `rgba(${outerRgb}, ${lb.op * 0.45})`);
+    grad.addColorStop(1, `rgba(${outerRgb}, 0)`);
+    g.fillStyle = grad;
+    g.beginPath();
+    g.arc(lx, ly, lb.r, 0, Math.PI * 2);
+    g.fill();
+  }
+
+  // Incandescent superheated central plasma flash core
+  const coreGrad = g.createRadialGradient(half, half, 1, half, half, 42);
+  coreGrad.addColorStop(0, 'rgba(255, 255, 255, 0.96)');
+  coreGrad.addColorStop(0.35, `rgba(${innerRgb}, 0.88)`);
+  coreGrad.addColorStop(0.75, `rgba(${midRgb}, 0.32)`);
+  coreGrad.addColorStop(1, `rgba(${outerRgb}, 0)`);
+  g.fillStyle = coreGrad;
+  g.beginPath();
+  g.arc(half, half, 42, 0, Math.PI * 2);
+  g.fill();
+
+  return c;
+}
+
+export function getFireballSprites(): Record<'fire' | 'crimson' | 'soot', HTMLCanvasElement> {
+  if (fireballSpritesCache) return fireballSpritesCache;
+  fireballSpritesCache = {
+    fire: createVolumetricFireballSprite('254, 240, 138', '249, 115, 22', '185, 28, 28'),
+    crimson: createVolumetricFireballSprite('254, 215, 170', '244, 63, 94', '136, 19, 55'),
+    soot: createVolumetricSmokeSprite('30, 41, 59', '9, 9, 11', '124, 45, 18'),
+  };
+  return fireballSpritesCache;
+}
+
+export function renderRealisticExplosionParticle(
+  ctx: CanvasRenderingContext2D,
+  screenX: number,
+  screenY: number,
+  radius: number,
+  alpha: number,
+  rotation: number,
+  color: string
+): void {
+  const sprites = getFireballSprites();
+  const isCrimson =
+    color.includes('2255') ||
+    color.includes('f43f5e') ||
+    color.includes('e11d48') ||
+    color.includes('be123c');
+  const fireSprite = isCrimson ? sprites.crimson : sprites.fire;
+  const clampedA = Math.min(1, Math.max(0, alpha));
+  const size = Math.max(16, radius * 2.7);
+
+  ctx.save();
+  ctx.translate(screenX, screenY);
+  if (rotation !== 0) {
+    ctx.rotate(rotation);
+  }
+
+  // 1. Carbon smoke cloud backing builds as the fireball cools
+  const sootAlpha = Math.min(0.88, (1 - clampedA * 0.55) * clampedA * 1.35);
+  if (sootAlpha > 0.02) {
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.globalAlpha = sootAlpha;
+    const sootSize = size * 1.12;
+    ctx.drawImage(sprites.soot, -sootSize * 0.5, -sootSize * 0.5, sootSize, sootSize);
+  }
+
+  // 2. Blazing additive volumetric fireball (cools naturally with alpha)
+  const fireAlpha = Math.min(1, clampedA * 1.15);
+  if (fireAlpha > 0.02) {
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.globalAlpha = fireAlpha;
+    ctx.drawImage(fireSprite, -size * 0.5, -size * 0.5, size, size);
+  }
+
+  ctx.restore();
+}
+
+export function renderRealisticShockwave(
+  ctx: CanvasRenderingContext2D,
+  screenX: number,
+  screenY: number,
+  radius: number,
+  alpha: number,
+  color: string
+): void {
+  const clampedA = Math.min(1, Math.max(0, alpha));
+  if (clampedA <= 0.01 || radius <= 2) return;
+
+  ctx.save();
+  ctx.translate(screenX, screenY);
+
+  // Compressed air condensation halo (translucent distortion band)
+  ctx.strokeStyle = `rgba(255, 255, 255, ${(clampedA * 0.24).toFixed(2)})`;
+  ctx.lineWidth = Math.max(4, radius * 0.14);
+  ctx.beginPath();
+  ctx.arc(0, 0, radius * 0.94, 0, Math.PI * 2);
+  ctx.stroke();
+
+  // Sharp supersonic pressure wave rim
+  ctx.globalCompositeOperation = 'lighter';
+  ctx.strokeStyle = color;
+  ctx.globalAlpha = clampedA * 0.72;
+  ctx.lineWidth = Math.max(2, 4.5 * clampedA);
+  ctx.beginPath();
+  ctx.arc(0, 0, radius, 0, Math.PI * 2);
+  ctx.stroke();
+
+  // Crisp incandescent refraction highlight edge
+  ctx.strokeStyle = '#ffffff';
+  ctx.globalAlpha = clampedA * 0.65;
+  ctx.lineWidth = Math.max(1, 1.8 * clampedA);
+  ctx.beginPath();
+  ctx.arc(0, 0, radius * 1.01, 0, Math.PI * 2);
+  ctx.stroke();
+
+  ctx.restore();
+}
+
+export function getLightSprites(): Record<LightColorKey, HTMLCanvasElement> {
   if (lightSpritesCache) return lightSpritesCache;
   lightSpritesCache = {
     amber: createSoftLightSprite(LIGHT_RGB.amber),
@@ -281,92 +683,19 @@ function createZombieGroundTile(): HTMLCanvasElement {
   return c;
 }
 
-function createAlienGroundTile(): HTMLCanvasElement {
-  const size = 480;
-  const slab = 160;
-  const c = document.createElement('canvas');
-  c.width = size;
-  c.height = size;
-  const g = c.getContext('2d');
-  if (!g) return c;
-
-  // Obsidian-titanium orbital deck base
-  g.fillStyle = '#030816';
-  g.fillRect(0, 0, size, size);
-
-  for (let gx = 0; gx < 3; gx++) {
-    for (let gy = 0; gy < 3; gy++) {
-      const h = seededHash(gx * 11 + gy * 17 + 9);
-      g.fillStyle = h > 0.5 ? 'rgba(15, 23, 42, 0.45)' : 'rgba(8, 47, 73, 0.16)';
-      g.fillRect(gx * slab + 3, gy * slab + 3, slab - 6, slab - 6);
-    }
-  }
-
-  // Brushed titanium micro-grain
-  for (let i = 0; i < 650; i++) {
-    const px = seededHash(i * 4.3) * size;
-    const py = seededHash(i * 6.9) * size;
-    g.fillStyle = i % 2 === 0 ? 'rgba(56, 189, 248, 0.035)' : 'rgba(2, 6, 23, 0.35)';
-    g.fillRect(px, py, 6, 1);
-  }
-
-  // Recessed dark hull plate seams
-  g.strokeStyle = 'rgba(2, 6, 23, 0.85)';
-  g.lineWidth = 2.5;
-  for (let p = 0; p <= size; p += slab) {
-    g.beginPath();
-    g.moveTo(p, 0);
-    g.lineTo(p, size);
-    g.moveTo(0, p);
-    g.lineTo(size, p);
-    g.stroke();
-  }
-
-  // Subtle glowing cyan energy conduit traces along major deck joints
-  g.strokeStyle = 'rgba(6, 182, 212, 0.18)';
-  g.lineWidth = 1.2;
-  for (let p = 0; p < size; p += slab) {
-    g.beginPath();
-    g.moveTo(p + 2, 0);
-    g.lineTo(p + 2, size);
-    g.moveTo(0, p + 2);
-    g.lineTo(size, p + 2);
-    g.stroke();
-  }
-
-  // Corner hex bolts & subtle bio-tech node dots
-  for (let gx = 0; gx < 3; gx++) {
-    for (let gy = 0; gy < 3; gy++) {
-      const bx = gx * slab;
-      const by = gy * slab;
-      g.fillStyle = 'rgba(34, 211, 238, 0.22)';
-      g.fillRect(bx + 8, by + 8, 3, 3);
-      g.fillRect(bx + slab - 11, by + 8, 3, 3);
-      g.fillRect(bx + 8, by + slab - 11, 3, 3);
-      g.fillRect(bx + slab - 11, by + slab - 11, 3, 3);
-    }
-  }
-
-  return c;
-}
-
 export function renderArenaGround(
   ctx: CanvasRenderingContext2D,
   camX: number,
   camY: number,
   width: number,
   height: number,
-  arenaSize: number,
-  isAlienStage: boolean
+  arenaSize: number
 ): void {
-  if (isAlienStage && !alienGroundTile) {
-    alienGroundTile = createAlienGroundTile();
-  } else if (!isAlienStage && !zombieGroundTile) {
+  if (!zombieGroundTile) {
     zombieGroundTile = createZombieGroundTile();
   }
 
-  const tile = isAlienStage ? alienGroundTile! : zombieGroundTile!;
-  const pattern = ctx.createPattern(tile, 'repeat');
+  const pattern = ctx.createPattern(zombieGroundTile, 'repeat');
 
   // Clip ground texture strictly inside [0, arenaSize]
   const arenaScreenX = -camX;
@@ -391,11 +720,11 @@ export function renderArenaGround(
 
   // Outer Perimeter Hazard Border & Depth Shadow
   ctx.save();
-  ctx.strokeStyle = isAlienStage ? 'rgba(6, 182, 212, 0.4)' : 'rgba(239, 68, 68, 0.35)';
+  ctx.strokeStyle = 'rgba(239, 68, 68, 0.35)';
   ctx.lineWidth = 14;
   ctx.strokeRect(arenaScreenX - 4, arenaScreenY - 4, arenaSize + 8, arenaSize + 8);
 
-  ctx.strokeStyle = isAlienStage ? '#22d3ee' : '#991b1b';
+  ctx.strokeStyle = '#991b1b';
   ctx.lineWidth = 4;
   ctx.strokeRect(arenaScreenX, arenaScreenY, arenaSize, arenaSize);
   ctx.restore();
@@ -429,16 +758,65 @@ export function renderRealisticSplats(
 
     ctx.globalAlpha = s.alpha;
     if (isScorch) {
-      // Explosion scorch crater: outer soot ring + charred core
-      ctx.fillStyle = 'rgba(9, 9, 11, 0.45)';
+      // Ultra-realistic multi-zone blast crater: radial soot rays, rimmed charcoal bowl & cooling ember fissures
+      const hBase = seededHash(s.x * 0.17 + s.y * 0.31);
+      ctx.save();
+      ctx.translate(sx, sy);
+
+      // 1. Soft wide blast soot apron
+      ctx.globalAlpha = s.alpha * 0.42;
+      ctx.fillStyle = '#09090b';
       ctx.beginPath();
-      ctx.arc(sx, sy, s.radius * 1.22, 0, Math.PI * 2);
+      ctx.arc(0, 0, s.radius * 1.48, 0, Math.PI * 2);
       ctx.fill();
 
+      // 2. Radial blast-burn ejecta rays
+      ctx.globalAlpha = s.alpha * 0.52;
+      ctx.strokeStyle = '#09090b';
+      ctx.lineCap = 'round';
+      for (let ray = 0; ray < 7; ray++) {
+        const ra = hBase * Math.PI * 2 + (ray * Math.PI * 2) / 7 + seededHash(ray + s.x) * 0.35;
+        const rLen = s.radius * (1.18 + seededHash(ray * 3.1 + s.y) * 0.55);
+        ctx.lineWidth = Math.max(2, s.radius * 0.14);
+        ctx.beginPath();
+        ctx.moveTo(Math.cos(ra) * s.radius * 0.4, Math.sin(ra) * s.radius * 0.4);
+        ctx.lineTo(Math.cos(ra) * rLen, Math.sin(ra) * rLen);
+        ctx.stroke();
+      }
+
+      // 3. Elevated shattered concrete crater rim
+      ctx.globalAlpha = s.alpha * 0.45;
+      ctx.strokeStyle = '#334155';
+      ctx.lineWidth = Math.max(1.5, s.radius * 0.09);
+      ctx.beginPath();
+      ctx.arc(0, 0, s.radius * 0.94, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // 4. Deep sunken carbon blast pit
+      ctx.globalAlpha = s.alpha * 0.88;
       ctx.fillStyle = s.color;
       ctx.beginPath();
-      ctx.arc(sx, sy, s.radius * 0.78, 0, Math.PI * 2);
+      ctx.arc(0, 0, s.radius * 0.86, 0, Math.PI * 2);
       ctx.fill();
+
+      ctx.globalAlpha = s.alpha * 0.92;
+      ctx.fillStyle = '#020617';
+      ctx.beginPath();
+      ctx.arc(0, 0, s.radius * 0.48, 0, Math.PI * 2);
+      ctx.fill();
+
+      // 5. Subtle hot asphalt fracture fissures in crater center
+      ctx.globalAlpha = s.alpha * 0.36;
+      ctx.strokeStyle = '#c2410c';
+      ctx.lineWidth = 1.2;
+      for (let cr = 0; cr < 4; cr++) {
+        const ca = hBase * 6.28 + cr * 1.57;
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(Math.cos(ca) * s.radius * 0.42, Math.sin(ca) * s.radius * 0.42);
+        ctx.stroke();
+      }
+      ctx.restore();
     } else if (s.angle !== undefined && s.stretch && s.stretch > 1.12) {
       // Compact organic glancing droplet smear (no exaggerated hose streak)
       const len = s.radius * Math.min(1.65, s.stretch);
@@ -543,6 +921,13 @@ export function renderRealisticSplats(
   ctx.globalAlpha = 1;
 }
 
+export interface RealTimeShadowContext {
+  flashLights?: SceneFlashLight[];
+  muzzleFlashIntensity?: number;
+  arenaSize?: number;
+  dayNight?: DayNightState;
+}
+
 export function renderGroundCastShadows(
   ctx: CanvasRenderingContext2D,
   player: Player,
@@ -554,59 +939,150 @@ export function renderGroundCastShadows(
   viewTop: number,
   viewRight: number,
   viewBottom: number,
-  isDowned: boolean
+  isDowned: boolean,
+  shadowCtx?: RealTimeShadowContext
 ): void {
-  ctx.save();
-  ctx.fillStyle = 'rgba(2, 6, 23, 0.42)';
+  const flashLights = shadowCtx?.flashLights;
+  const muzzleIntensity = shadowCtx?.muzzleFlashIntensity ?? 0;
+  const dn = shadowCtx?.dayNight;
+  const baseDirX = dn ? dn.shadowDirX : 0.72;
+  const baseDirY = dn ? dn.shadowDirY : 0.65;
+  const baseStretch = dn ? dn.shadowStretch : 1.22;
+  const baseShadowAlpha = dn ? dn.shadowAlpha : 0.36;
 
-  // Drops subtle ground shadows
+  const muzzleX = player.x + Math.cos(player.angle) * (player.radius + 16);
+  const muzzleY = player.y + Math.sin(player.angle) * (player.radius + 16);
+
+  // Computes live real-time shadow vector from solar/lunar cycle + campfires + muzzle/explosion flashes
+  const computeShadowVector = (wx: number, wy: number, radius: number) => {
+    let dirX = baseDirX;
+    let dirY = baseDirY;
+    let stretch = baseStretch;
+
+    if (flashLights && flashLights.length > 0) {
+      let bestW = 0;
+      let fdx = 0;
+      let fdy = 0;
+      for (let li = 0; li < flashLights.length; li++) {
+        const fl = flashLights[li];
+        if (fl.alpha < 0.08) continue;
+        const ldx = wx - fl.x;
+        const ldy = wy - fl.y;
+        const maxRange = fl.radius * 1.45;
+        const dSq = ldx * ldx + ldy * ldy;
+        if (dSq > 16 && dSq < maxRange * maxRange) {
+          const d = Math.sqrt(dSq);
+          const w = Math.min(0.92, (1 - d / maxRange) * fl.alpha * 1.4);
+          if (w > bestW) {
+            bestW = w;
+            fdx = ldx / d;
+            fdy = ldy / d;
+          }
+        }
+      }
+      if (bestW > 0.05) {
+        dirX = dirX * (1 - bestW) + fdx * bestW;
+        dirY = dirY * (1 - bestW) + fdy * bestW;
+        const mag = Math.hypot(dirX, dirY) || 1;
+        dirX /= mag;
+        dirY /= mag;
+        stretch += bestW * 0.68;
+      }
+    }
+
+    if (muzzleIntensity > 0.14) {
+      const mdx = wx - muzzleX;
+      const mdy = wy - muzzleY;
+      const mSq = mdx * mdx + mdy * mdy;
+      if (mSq > 100 && mSq < 115600) {
+        const md = Math.sqrt(mSq);
+        const mw = Math.min(0.75, (1 - md / 340) * muzzleIntensity * 0.85);
+        dirX = dirX * (1 - mw) + (mdx / md) * mw;
+        dirY = dirY * (1 - mw) + (mdy / md) * mw;
+        const mag = Math.hypot(dirX, dirY) || 1;
+        dirX /= mag;
+        dirY /= mag;
+        stretch += mw * 0.45;
+      }
+    }
+
+    const offsetDist = radius * 0.44 * stretch;
+    return {
+      ox: dirX * offsetDist,
+      oy: dirY * offsetDist,
+      rx: radius * (0.98 + stretch * 0.34),
+      ry: radius * 0.74,
+      rot: Math.atan2(dirY, dirX),
+    };
+  };
+
+  ctx.save();
+
+  // Pass 1: Soft atmospheric Penumbra shadows
+  ctx.fillStyle = `rgba(2, 6, 23, ${(baseShadowAlpha * 0.56).toFixed(2)})`;
   ctx.beginPath();
   for (let i = 0; i < drops.length; i++) {
     const d = drops[i];
-    if (d.x + 24 < viewLeft || d.x - 24 > viewRight || d.y + 24 < viewTop || d.y - 24 > viewBottom) {
-      continue;
-    }
-    const sx = d.x - camX + 3;
-    const sy = d.y - camY + 5;
-    ctx.moveTo(sx + d.radius * 0.9, sy);
-    ctx.ellipse(sx, sy, d.radius * 0.9, d.radius * 0.55, 0, 0, Math.PI * 2);
+    if (d.x + 32 < viewLeft || d.x - 32 > viewRight || d.y + 32 < viewTop || d.y - 32 > viewBottom) continue;
+    const sv = computeShadowVector(d.x, d.y, d.radius * 0.88);
+    const sx = d.x - camX + sv.ox * 0.75;
+    const sy = d.y - camY + sv.oy * 0.75;
+    ctx.moveTo(sx + sv.rx * 1.15, sy);
+    ctx.ellipse(sx, sy, sv.rx * 1.15, sv.ry * 0.92, sv.rot, 0, Math.PI * 2);
   }
-  ctx.fill();
-
-  // Zombies & Bosses grounded directional cast shadows (batched single path for 60fps!)
-  ctx.beginPath();
   for (let i = 0; i < zombies.length; i++) {
     const z = zombies[i];
-    const pad = z.radius + 32;
-    if (z.x + pad < viewLeft || z.x - pad > viewRight || z.y + pad < viewTop || z.y - pad > viewBottom) {
-      continue;
-    }
-    const sx = z.x - camX + z.radius * 0.28;
-    const sy = z.y - camY + z.radius * 0.38;
-    const rx = z.radius * 1.08;
-    const ry = z.radius * 0.78;
-    ctx.moveTo(sx + rx, sy);
-    ctx.ellipse(sx, sy, rx, ry, 0.35, 0, Math.PI * 2);
+    const pad = z.radius + 64;
+    if (z.x + pad < viewLeft || z.x - pad > viewRight || z.y + pad < viewTop || z.y - pad > viewBottom) continue;
+    const sv = computeShadowVector(z.x, z.y, z.radius);
+    const sx = z.x - camX + sv.ox * 1.15;
+    const sy = z.y - camY + sv.oy * 1.15;
+    ctx.moveTo(sx + sv.rx * 1.18, sy);
+    ctx.ellipse(sx, sy, sv.rx * 1.18, sv.ry * 1.14, sv.rot, 0, Math.PI * 2);
+  }
+  if (!isDowned) {
+    const psv = computeShadowVector(player.x, player.y, player.radius);
+    const psx = player.x - camX + psv.ox * 1.15;
+    const psy = player.y - camY + psv.oy * 1.15;
+    ctx.moveTo(psx + psv.rx * 1.18, psy);
+    ctx.ellipse(psx, psy, psv.rx * 1.18, psv.ry * 1.14, psv.rot, 0, Math.PI * 2);
   }
   ctx.fill();
 
-  // Player grounded cast shadow (skip if downed, handled by collapse)
-  if (!isDowned) {
-    const psx = player.x - camX + 5;
-    const psy = player.y - camY + 7;
-    ctx.beginPath();
-    ctx.ellipse(psx, psy, player.radius * 1.12, player.radius * 0.82, 0.35, 0, Math.PI * 2);
-    ctx.fill();
+  // Pass 2: Dense Umbra & Contact shadows
+  ctx.fillStyle = `rgba(2, 6, 23, ${baseShadowAlpha.toFixed(2)})`;
+  ctx.beginPath();
+  for (let i = 0; i < drops.length; i++) {
+    const d = drops[i];
+    if (d.x + 28 < viewLeft || d.x - 28 > viewRight || d.y + 28 < viewTop || d.y - 28 > viewBottom) continue;
+    const sv = computeShadowVector(d.x, d.y, d.radius * 0.72);
+    const sx = d.x - camX + sv.ox * 0.45;
+    const sy = d.y - camY + sv.oy * 0.45;
+    ctx.moveTo(sx + sv.rx * 0.85, sy);
+    ctx.ellipse(sx, sy, sv.rx * 0.85, sv.ry * 0.72, sv.rot, 0, Math.PI * 2);
   }
+  for (let i = 0; i < zombies.length; i++) {
+    const z = zombies[i];
+    const pad = z.radius + 54;
+    if (z.x + pad < viewLeft || z.x - pad > viewRight || z.y + pad < viewTop || z.y - pad > viewBottom) continue;
+    const sv = computeShadowVector(z.x, z.y, z.radius);
+    const sx = z.x - camX + sv.ox * 0.65;
+    const sy = z.y - camY + sv.oy * 0.65;
+    ctx.moveTo(sx + sv.rx * 0.88, sy);
+    ctx.ellipse(sx, sy, sv.rx * 0.88, sv.ry * 0.86, sv.rot, 0, Math.PI * 2);
+  }
+  if (!isDowned) {
+    const psv = computeShadowVector(player.x, player.y, player.radius);
+    const psx = player.x - camX + psv.ox * 0.65;
+    const psy = player.y - camY + psv.oy * 0.65;
+    ctx.moveTo(psx + psv.rx * 0.88, psy);
+    ctx.ellipse(psx, psy, psv.rx * 0.88, psv.ry * 0.86, psv.rot, 0, Math.PI * 2);
+  }
+  ctx.fill();
 
   ctx.restore();
 }
 
-/**
- * Renders atmospheric dynamic lighting across the arena using pre-cached radial light sprites
- * (NO flashlight cone — strictly environmental floodlights, muzzle flashes, firelight,
- * projectiles, bioluminescence, and explosion flashes).
- */
 export function renderSceneLighting(
   ctx: CanvasRenderingContext2D,
   player: Player,
@@ -619,16 +1095,113 @@ export function renderSceneLighting(
   width: number,
   height: number,
   arenaSize: number,
-  isAlienStage: boolean,
   muzzleFlashIntensity: number,
-  time: number
+  time: number,
+  dayNight?: DayNightState
 ): void {
   const sprites = getLightSprites();
-  const viewLeft = camX - 180;
-  const viewTop = camY - 180;
-  const viewRight = camX + width + 180;
-  const viewBottom = camY + height + 180;
+  const forest = getForestData();
+  const dn = dayNight || getDayNightState(22);
+  const viewLeft = camX - 220;
+  const viewTop = camY - 220;
+  const viewRight = camX + width + 220;
+  const viewBottom = camY + height + 220;
 
+  // =========================================================================
+  // PASS A: QUARTER-RES GLOBAL ILLUMINATION DARKNESS & RADIOSITY LIGHTMAP
+  // =========================================================================
+  if (dn.darknessAlpha > 0.025) {
+    const lmScale = 0.25;
+    const lmW = Math.max(64, Math.ceil(width * lmScale));
+    const lmH = Math.max(64, Math.ceil(height * lmScale));
+    if (!giLightCanvas) {
+      giLightCanvas = document.createElement('canvas');
+    }
+    if (giLightCanvas.width !== lmW || giLightCanvas.height !== lmH) {
+      giLightCanvas.width = lmW;
+      giLightCanvas.height = lmH;
+    }
+    const lctx = giLightCanvas.getContext('2d');
+    if (lctx) {
+      lctx.save();
+      lctx.globalCompositeOperation = 'source-over';
+      lctx.clearRect(0, 0, lmW, lmH);
+      lctx.fillStyle = `rgba(${dn.ambientRgb[0]}, ${dn.ambientRgb[1]}, ${dn.ambientRgb[2]}, ${dn.darknessAlpha.toFixed(3)})`;
+      lctx.fillRect(0, 0, lmW, lmH);
+
+      // Punch out illuminated radiosity zones via destination-out
+      lctx.globalCompositeOperation = 'destination-out';
+
+      const punchRadial = (wx: number, wy: number, radius: number, strength: number) => {
+        if (strength <= 0.02) return;
+        if (wx + radius < viewLeft || wx - radius > viewRight || wy + radius < viewTop || wy - radius > viewBottom) {
+          return;
+        }
+        const lx = (wx - camX) * lmScale;
+        const ly = (wy - camY) * lmScale;
+        const lr = Math.max(4, radius * lmScale);
+        const g = lctx.createRadialGradient(lx, ly, lr * 0.1, lx, ly, lr);
+        g.addColorStop(0, `rgba(0,0,0,${Math.min(1, strength).toFixed(2)})`);
+        g.addColorStop(0.5, `rgba(0,0,0,${Math.min(1, strength * 0.58).toFixed(2)})`);
+        g.addColorStop(1, 'rgba(0,0,0,0)');
+        lctx.fillStyle = g;
+        lctx.beginPath();
+        lctx.arc(lx, ly, lr, 0, Math.PI * 2);
+        lctx.fill();
+      };
+
+      // 1. Operator tactical proximity aura + directional tactical flashlight beam
+      const pxL = (player.x - camX) * lmScale;
+      const pyL = (player.y - camY) * lmScale;
+      punchRadial(player.x, player.y, 175 + dn.flashlightStrength * 45, 0.92);
+
+      if (dn.flashlightStrength > 0.08) {
+        const beamRange = (460 + dn.flashlightStrength * 110) * lmScale;
+        const tipX = pxL + Math.cos(player.angle) * beamRange;
+        const tipY = pyL + Math.sin(player.angle) * beamRange;
+        const beamGrad = lctx.createLinearGradient(pxL, pyL, tipX, tipY);
+        beamGrad.addColorStop(0, `rgba(0,0,0,${(0.95 * dn.flashlightStrength).toFixed(2)})`);
+        beamGrad.addColorStop(0.55, `rgba(0,0,0,${(0.76 * dn.flashlightStrength).toFixed(2)})`);
+        beamGrad.addColorStop(1, 'rgba(0,0,0,0)');
+        lctx.fillStyle = beamGrad;
+        lctx.beginPath();
+        lctx.moveTo(pxL, pyL);
+        lctx.arc(pxL, pyL, beamRange, player.angle - 0.34, player.angle + 0.34);
+        lctx.closePath();
+        lctx.fill();
+      }
+
+      // 2. Campfire GI cutouts
+      for (let i = 0; i < forest.clearings.length; i++) {
+        const cl = forest.clearings[i];
+        if (!cl.hasCampfire) continue;
+        const pulse = 1 + Math.sin(time * 0.014 + i * 2) * 0.07;
+        punchRadial(cl.x, cl.y, 330 * pulse, 0.96);
+      }
+
+      // 3. Muzzle flashes & explosion lights
+      if (muzzleFlashIntensity > 0.05) {
+        const mx = player.x + Math.cos(player.angle) * (player.radius + 18);
+        const my = player.y + Math.sin(player.angle) * (player.radius + 18);
+        punchRadial(mx, my, 240, Math.min(1, muzzleFlashIntensity * 0.95));
+      }
+      for (let i = 0; i < flashLights.length; i++) {
+        const fl = flashLights[i];
+        punchRadial(fl.x, fl.y, fl.radius * 1.4, Math.min(1, fl.alpha * 1.2));
+      }
+
+      lctx.restore();
+
+      ctx.save();
+      ctx.imageSmoothingEnabled = true;
+      ctx.drawImage(giLightCanvas, 0, 0, width, height);
+      ctx.restore();
+    }
+  }
+
+  // =========================================================================
+  // PASS B: GLOBAL ILLUMINATION BOUNCE, SUNBEAMS & DYNAMIC SCENE LIGHTS
+  // =========================================================================
   ctx.save();
   ctx.globalCompositeOperation = 'lighter';
 
@@ -641,46 +1214,85 @@ export function renderSceneLighting(
     ctx.drawImage(sprites[color], wx - camX - radius, wy - camY - radius, radius * 2, radius * 2);
   };
 
-  // 1. Arena Overhead Floodlight Pools (spaced every 480px — creates atmospheric depth & pools of light)
-  const spacing = 480;
-  const startLX = Math.max(240, Math.floor(viewLeft / spacing) * spacing + 240);
-  const startLY = Math.max(240, Math.floor(viewTop / spacing) * spacing + 240);
-  for (let lx = startLX; lx <= Math.min(arenaSize - 120, viewRight); lx += spacing) {
-    for (let ly = startLY; ly <= Math.min(arenaSize - 120, viewBottom); ly += spacing) {
-      const h = seededHash(lx * 0.013 + ly * 0.029);
-      if (isAlienStage) {
-        const pulse = 0.09 + Math.sin(time * 0.0018 + h * 10) * 0.025;
-        drawLight(lx, ly, 230, h > 0.65 ? 'purple' : 'cyan', pulse);
-      } else {
-        // Warm sodium-vapor overhead floodlights; rare subtle industrial flicker
-        const flicker = h > 0.82 ? (Math.sin(time * 0.019 + h * 30) > -0.75 ? 0.11 : 0.04) : 0.11;
-        drawLight(lx, ly, 240, h > 0.45 ? 'amber' : 'white', flicker);
+  // 1. Directional Solar / Lunar God-Ray Shafts piercing through forest clearings
+  if (dn.sunbeamAlpha > 0.02) {
+    const rayColor = `rgba(${dn.sunRgb[0]}, ${dn.sunRgb[1]}, ${dn.sunRgb[2]}, ${(dn.sunbeamAlpha * 0.34).toFixed(3)})`;
+    const rayFade = `rgba(${dn.sunRgb[0]}, ${dn.sunRgb[1]}, ${dn.sunRgb[2]}, 0)`;
+    const rayLen = 440;
+    const dx = dn.shadowDirX;
+    const dy = dn.shadowDirY;
+    const px = -dy;
+    const py = dx;
+
+    for (let i = 0; i < forest.clearings.length; i++) {
+      const cl = forest.clearings[i];
+      if (cl.x + 480 < viewLeft || cl.x - 480 > viewRight || cl.y + 480 < viewTop || cl.y - 480 > viewBottom) {
+        continue;
       }
+      const sx = cl.x - camX - dx * 120;
+      const sy = cl.y - camY - dy * 120;
+      const ex = sx + dx * rayLen;
+      const ey = sy + dy * rayLen;
+      const grad = ctx.createLinearGradient(sx, sy, ex, ey);
+      grad.addColorStop(0, rayFade);
+      grad.addColorStop(0.28, rayColor);
+      grad.addColorStop(1, rayFade);
+
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.moveTo(sx + px * 42, sy + py * 42);
+      ctx.lineTo(sx - px * 42, sy - py * 42);
+      ctx.lineTo(ex - px * 115, ey - py * 115);
+      ctx.lineTo(ex + px * 115, ey + py * 115);
+      ctx.closePath();
+      ctx.fill();
     }
   }
 
-  // 2. Player Ambient Suit/Shield/Ship/Dragon Ground Reflection (strictly omnidirectional, NO flashlight)
-  let playerLightColor: LightColorKey = 'cyan';
-  let playerLightRadius = 85;
-  let playerLightAlpha = 0.11;
+  // 2. Campfire Global Illumination Radiosity Bounce & Emerald Canopy Dapples
+  for (let i = 0; i < forest.clearings.length; i++) {
+    const cl = forest.clearings[i];
+    if (!cl.hasCampfire) continue;
+    const flicker = (0.22 + Math.sin(time * 0.015 + i * 2.1) * 0.045) * (0.45 + dn.campfireStrength * 0.85);
+    drawLight(cl.x, cl.y, 310, 'orange', flicker);
+    drawLight(cl.x, cl.y, 120, 'amber', flicker * 1.15);
+  }
 
-  if (player.currentWeapon === WeaponType.NAVE_REI || player.currentWeapon === WeaponType.IRON_MAN) {
-    playerLightColor = 'red';
-    playerLightRadius = 110;
-    playerLightAlpha = 0.16;
-  } else if (player.currentWeapon === WeaponType.EAST_DRAGON) {
-    playerLightColor = 'orange';
-    playerLightRadius = 120;
-    playerLightAlpha = 0.17;
-  } else if (player.currentWeapon === WeaponType.ICE_AND_FIRE_DRAGON) {
-    playerLightColor = 'purple';
-    playerLightRadius = 115;
-    playerLightAlpha = 0.16;
-  } else if (player.currentWeapon === WeaponType.VENOM_FRUIT) {
-    playerLightColor = 'purple';
-    playerLightRadius = 122;
-    playerLightAlpha = 0.18;
-  } else if (player.equippedSkin === 'skin_pyro_igniter') {
+  const spacing = 620;
+  const startLX = Math.max(320, Math.floor(viewLeft / spacing) * spacing + 320);
+  const startLY = Math.max(320, Math.floor(viewTop / spacing) * spacing + 320);
+  for (let lx = startLX; lx <= Math.min(arenaSize - 160, viewRight); lx += spacing) {
+    for (let ly = startLY; ly <= Math.min(arenaSize - 160, viewBottom); ly += spacing) {
+      const h = seededHash(lx * 0.013 + ly * 0.029);
+      const dappleBase = dn.phase === 'NIGHT' ? 0.055 : 0.095;
+      const dapple = dappleBase + Math.sin(time * 0.0022 + h * 20) * 0.025;
+      const dColor: LightColorKey =
+        dn.sunWarmth > 0.45 ? 'amber' : dn.phase === 'NIGHT' ? 'cyan' : 'green';
+      drawLight(lx + (h - 0.5) * 140, ly + (h - 0.5) * 140, 240, dColor, dapple);
+    }
+  }
+
+  // 3. Tactical Operator Headlamp Warm/Cool Spill (visible during Dusk/Night/Dawn)
+  if (dn.flashlightStrength > 0.12) {
+    const beamDist = 230 + dn.flashlightStrength * 120;
+    const bx = player.x + Math.cos(player.angle) * beamDist;
+    const by = player.y + Math.sin(player.angle) * beamDist;
+    drawLight(bx, by, 170, 'white', 0.14 * dn.flashlightStrength);
+    drawLight(
+      player.x + Math.cos(player.angle) * 110,
+      player.y + Math.sin(player.angle) * 110,
+      95,
+      'amber',
+      0.11 * dn.flashlightStrength
+    );
+  }
+
+  // 4. Player Ambient Suit/Shield Ground Reflection
+  let playerLightColor: LightColorKey = 'cyan';
+  let playerLightRadius = 90;
+  let playerLightAlpha = 0.12;
+
+  if (player.equippedSkin === 'skin_pyro_igniter') {
     playerLightColor = 'orange';
     playerLightRadius = 118;
     playerLightAlpha = 0.22;
@@ -704,10 +1316,6 @@ export function renderSceneLighting(
     playerLightColor = 'red';
     playerLightRadius = 92;
     playerLightAlpha = 0.14;
-  } else if (player.currentWeapon === WeaponType.TROPER) {
-    playerLightColor = 'cyan';
-    playerLightRadius = 70;
-    playerLightAlpha = 0.12;
   } else if (player.shield > 0) {
     playerLightColor = 'cyan';
     playerLightRadius = 95;
@@ -715,35 +1323,37 @@ export function renderSceneLighting(
   }
   drawLight(player.x, player.y, playerLightRadius, playerLightColor, playerLightAlpha);
 
-  // 3. Muzzle Flash Gunfire Illumination Splash
+  // 5. Muzzle Flash Gunfire Illumination Splash calibrated to the 3 conventional firearms
   if (muzzleFlashIntensity > 0.02) {
     let flashColor: LightColorKey = 'amber';
-    if (player.currentWeapon === WeaponType.PLASMA_RIFLE || player.currentWeapon === WeaponType.RAYGUN || player.currentWeapon === WeaponType.DESTRUCTOR || player.currentWeapon === WeaponType.INTERCEPTOR || player.currentWeapon === WeaponType.TROPER) {
-      flashColor = 'cyan';
-    } else if (player.currentWeapon === WeaponType.RAY_RIFLE) {
-      flashColor = 'green';
-    } else if (player.currentWeapon === WeaponType.LASER_MINIGUN || player.currentWeapon === WeaponType.NAVE_REI || player.currentWeapon === WeaponType.IRON_MAN) {
-      flashColor = 'red';
-    } else if (player.currentWeapon === WeaponType.MACHINE_GUN || player.currentWeapon === WeaponType.ICE_AND_FIRE_DRAGON || player.currentWeapon === WeaponType.VENOM_FRUIT) {
-      flashColor = 'purple';
-    } else if (player.currentWeapon === WeaponType.FLAMETHROWER || player.currentWeapon === WeaponType.ROCKET_LAUNCHER || player.currentWeapon === WeaponType.EAST_DRAGON) {
+    if (player.currentWeapon === WeaponType.BENELLI_M4) {
       flashColor = 'orange';
+    } else if (player.currentWeapon === WeaponType.SCAR_L) {
+      flashColor = 'cyan';
     }
-    const mx = player.x + Math.cos(player.angle) * (player.radius + 16);
-    const my = player.y + Math.sin(player.angle) * (player.radius + 16);
-    drawLight(mx, my, 165 * muzzleFlashIntensity + 40, flashColor, 0.36 * muzzleFlashIntensity);
+    const mx = player.x + Math.cos(player.angle) * (player.radius + 18);
+    const my = player.y + Math.sin(player.angle) * (player.radius + 18);
+    drawLight(mx, my, 175 * muzzleFlashIntensity + 44, flashColor, 0.4 * muzzleFlashIntensity);
   }
 
-  // 4. Item Drop Floor Reflections
+  // 6. Item Drop Floor Reflections
   for (let i = 0; i < drops.length; i++) {
     const d = drops[i];
     const lk: LightColorKey =
-      d.color === '#10b981' ? 'green' : d.color === '#22d3ee' ? 'cyan' : d.color === '#fbbf24' ? 'amber' : 'red';
-    const pulse = 0.13 + Math.sin(d.pulseTimer) * 0.035;
-    drawLight(d.x, d.y, 44, lk, pulse);
+      d.color === '#10b981' || d.color === '#34d399'
+        ? 'green'
+        : d.color === '#22d3ee' || d.color === '#38bdf8'
+          ? 'cyan'
+          : d.color === '#fbbf24' || d.color === '#f59e0b'
+            ? 'amber'
+            : d.color === '#f97316'
+              ? 'orange'
+              : 'red';
+    const pulse = 0.14 + Math.sin(d.pulseTimer) * 0.035;
+    drawLight(d.x, d.y, 46, lk, pulse);
   }
 
-  // 5. Burning Enemies, Toxic Units, Alien Glow & Boss Auras (Capped for mobile FPS)
+  // 7. Burning Enemies, Toxic Units & Boss Auras
   let enemyLightsDrawn = 0;
   for (let i = 0; i < zombies.length && enemyLightsDrawn < 28; i++) {
     const z = zombies[i];
@@ -751,7 +1361,7 @@ export function renderSceneLighting(
       continue;
     }
     if (z.isOnFire) {
-      const flicker = 0.2 + Math.sin(time * 0.025 + i) * 0.06;
+      const flicker = 0.22 + Math.sin(time * 0.025 + i) * 0.06;
       drawLight(z.x, z.y, z.radius * 3.1, 'orange', flicker);
       enemyLightsDrawn++;
     } else if (z.isPoisoned) {
@@ -759,19 +1369,15 @@ export function renderSceneLighting(
       drawLight(z.x, z.y, z.radius * 2.8, z.isKinjitePoison ? 'red' : 'purple', pulseP);
       enemyLightsDrawn++;
     } else if (z.isBoss) {
-      const bossColor: LightColorKey = isAlienStage ? 'purple' : 'red';
-      drawLight(z.x, z.y, z.radius * 3.4, bossColor, 0.22 + Math.sin(time * 0.005) * 0.05);
+      drawLight(z.x, z.y, z.radius * 3.5, 'red', 0.24 + Math.sin(time * 0.005) * 0.05);
       enemyLightsDrawn++;
     } else if (z.type === ZombieType.TOXIC_SPITTER) {
-      drawLight(z.x, z.y, z.radius * 2.4, 'green', 0.14);
-      enemyLightsDrawn++;
-    } else if (z.type === ZombieType.ALIEN_DRONE || z.type === ZombieType.ALIEN_SHOOTER) {
-      drawLight(z.x, z.y, z.radius * 2.2, 'cyan', 0.11);
+      drawLight(z.x, z.y, z.radius * 2.5, 'green', 0.15);
       enemyLightsDrawn++;
     }
   }
 
-  // 6. Active Projectiles / Lasers / Fireballs Floor Lighting (Capped at 24 for max mobile FPS)
+  // 8. Active Projectiles Floor Lighting
   let bulletLightsDrawn = 0;
   for (let i = 0; i < bullets.length && bulletLightsDrawn < 24; i++) {
     const b = bullets[i];
@@ -780,41 +1386,29 @@ export function renderSceneLighting(
     }
     let lk: LightColorKey = 'amber';
     let rad = 36;
-    let alpha = 0.14;
+    let alpha = 0.15;
     if (b.isEnemy) {
-      lk = b.isCosmic ? 'purple' : 'green';
+      lk = b.color === '#a855f7' ? 'purple' : b.color === '#dc2626' ? 'red' : 'green';
+      rad = 44;
+      alpha = 0.19;
+    } else if (b.isRay || b.isVoidLance) {
+      lk = 'purple';
+      rad = 52;
+      alpha = 0.22;
+    } else if (b.weaponType === WeaponType.BENELLI_M4) {
+      lk = 'orange';
       rad = 44;
       alpha = 0.18;
-    } else if (b.isRocket || b.isBomb) {
-      lk = 'orange';
-      rad = 78;
-      alpha = 0.28;
-    } else if (b.isFlame) {
-      lk = 'orange';
-      rad = 56;
-      alpha = 0.18;
-    } else if (b.isLaser) {
-      lk = 'red';
-      rad = 48;
-      alpha = 0.2;
-    } else if (b.isVenomWave) {
-      lk = 'red';
-      rad = 68;
-      alpha = 0.24;
-    } else if (b.isHydra || b.isChloroBall || b.isVenom) {
-      lk = 'purple';
-      rad = b.isHydra ? 72 : 52;
-      alpha = b.isHydra ? 0.25 : 0.18;
-    } else if (b.isRay || b.isOrb || b.isVoidLance) {
+    } else if (b.weaponType === WeaponType.SCAR_L) {
       lk = 'cyan';
-      rad = 52;
+      rad = 48;
       alpha = 0.2;
     }
     drawLight(b.x, b.y, rad, lk, alpha);
     bulletLightsDrawn++;
   }
 
-  // 7. Dynamic Explosion / Impact Flash Lights
+  // 9. Dynamic Explosion / Impact Flash Lights
   for (let i = 0; i < flashLights.length; i++) {
     const fl = flashLights[i];
     drawLight(fl.x, fl.y, fl.radius, fl.color, fl.alpha);
@@ -828,26 +1422,28 @@ export function renderAtmosphericDust(
   width: number,
   height: number,
   dt: number,
-  isAlienStage: boolean,
-  time: number
+  time: number,
+  dayNight?: DayNightState
 ): void {
   if (!dustMotes) {
     dustMotes = [];
-    for (let i = 0; i < 28; i++) {
+    for (let i = 0; i < 34; i++) {
       dustMotes.push({
         x: Math.random() * 1600,
         y: Math.random() * 900,
-        vx: (Math.random() - 0.5) * 18 + (isAlienStage ? 6 : 10),
+        vx: (Math.random() - 0.5) * 18 + 10,
         vy: -6 - Math.random() * 14,
-        size: 1 + Math.random() * 1.8,
+        size: 1 + Math.random() * 1.9,
         alpha: 0.16 + Math.random() * 0.28,
         phase: Math.random() * Math.PI * 2,
       });
     }
   }
 
+  const isNight = dayNight?.phase === 'NIGHT';
+  const fireflyMode = (dayNight?.fireflyStrength ?? 0) > 0.35;
+
   ctx.save();
-  ctx.fillStyle = isAlienStage ? '#67e8f9' : '#fed7aa';
   for (let i = 0; i < dustMotes.length; i++) {
     const m = dustMotes[i];
     m.x += m.vx * dt;
@@ -858,10 +1454,12 @@ export function renderAtmosphericDust(
     if (m.y < 0) m.y += height;
     else if (m.y > height) m.y -= height;
 
-    const shimmer = 0.65 + 0.35 * Math.sin(time * 0.003 + m.phase);
-    ctx.globalAlpha = m.alpha * shimmer;
+    const shimmer = 0.55 + 0.45 * Math.sin(time * 0.004 + m.phase);
+    const isFirefly = fireflyMode && i % 2 === 0;
+    ctx.fillStyle = isFirefly ? '#bef264' : isNight ? '#bae6fd' : '#fde68a';
+    ctx.globalAlpha = m.alpha * shimmer * (isFirefly ? 1.45 : 0.9);
     ctx.beginPath();
-    ctx.arc(m.x % Math.max(1, width), m.y % Math.max(1, height), m.size, 0, Math.PI * 2);
+    ctx.arc(m.x % Math.max(1, width), m.y % Math.max(1, height), isFirefly ? m.size * 1.35 : m.size, 0, Math.PI * 2);
     ctx.fill();
   }
   ctx.restore();
@@ -910,6 +1508,146 @@ export function renderGamepadAimReticle(
     ctx.arc(0, 0, 2.2, 0, Math.PI * 2);
     ctx.fill();
   }
+  ctx.restore();
+}
+
+export interface GroundFootprint {
+  x: number;
+  y: number;
+  angle: number;
+  side: -1 | 1;
+  alpha: number;
+  wet: boolean;
+  scale: number;
+}
+
+export interface SpentCasing {
+  x: number;
+  y: number;
+  angle: number;
+  color: string;
+  isShell: boolean;
+  alpha: number;
+}
+
+export function renderFootprintsAndCasings(
+  ctx: CanvasRenderingContext2D,
+  footprints: GroundFootprint[],
+  casings: SpentCasing[],
+  camX: number,
+  camY: number,
+  viewLeft: number,
+  viewTop: number,
+  viewRight: number,
+  viewBottom: number
+): void {
+  // 1. Subtle tactical boot footprints & wet shore prints (culled)
+  if (footprints.length > 0) {
+    ctx.save();
+    for (let i = 0; i < footprints.length; i++) {
+      const f = footprints[i];
+      if (f.x + 18 < viewLeft || f.x - 18 > viewRight || f.y + 18 < viewTop || f.y - 18 > viewBottom) {
+        continue;
+      }
+      const sx = f.x - camX;
+      const sy = f.y - camY;
+      ctx.save();
+      ctx.translate(sx, sy);
+      ctx.rotate(f.angle);
+      ctx.globalAlpha = f.alpha;
+      ctx.fillStyle = f.wet ? 'rgba(6, 28, 42, 0.56)' : 'rgba(15, 23, 42, 0.34)';
+      const w = 4.6 * f.scale;
+      const h = 2.6 * f.scale;
+      // Heel + forefoot tread separation
+      ctx.fillRect(-w * 0.55, -h * 0.5, w * 0.38, h);
+      ctx.beginPath();
+      ctx.ellipse(w * 0.25, 0, w * 0.42, h * 0.52, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+    ctx.restore();
+  }
+
+  // 2. Persistent spent brass cartridges & red shotgun shells resting on the ground
+  if (casings.length > 0) {
+    ctx.save();
+    for (let i = 0; i < casings.length; i++) {
+      const c = casings[i];
+      if (c.x + 14 < viewLeft || c.x - 14 > viewRight || c.y + 14 < viewTop || c.y - 14 > viewBottom) {
+        continue;
+      }
+      ctx.save();
+      ctx.translate(c.x - camX, c.y - camY);
+      ctx.rotate(c.angle);
+      ctx.globalAlpha = c.alpha;
+      const cw = c.isShell ? 5.8 : 4.4;
+      const ch = c.isShell ? 2.5 : 1.75;
+      // Ground drop shadow under casing
+      ctx.fillStyle = 'rgba(2, 6, 23, 0.42)';
+      ctx.fillRect(-cw * 0.5 + 0.8, -ch * 0.5 + 0.9, cw, ch);
+      // Casing cylinder body
+      ctx.fillStyle = c.color;
+      ctx.fillRect(-cw * 0.5, -ch * 0.5, cw, ch);
+      // Brass primer head & specular highlight ridge
+      ctx.fillStyle = '#fde68a';
+      ctx.fillRect(-cw * 0.5, -ch * 0.5, cw * 0.3, ch);
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.38)';
+      ctx.fillRect(-cw * 0.2, -ch * 0.35, cw * 0.55, 0.55);
+      ctx.restore();
+    }
+    ctx.restore();
+  }
+}
+
+let vignetteSpriteCache: HTMLCanvasElement | null = null;
+function getCinematicVignetteSprite(): HTMLCanvasElement {
+  if (vignetteSpriteCache) return vignetteSpriteCache;
+  const size = 256;
+  const half = size * 0.5;
+  const c = document.createElement('canvas');
+  c.width = size;
+  c.height = size;
+  const g = c.getContext('2d');
+  if (g) {
+    const grad = g.createRadialGradient(half, half, size * 0.32, half, half, size * 0.72);
+    grad.addColorStop(0, 'rgba(2, 6, 23, 0)');
+    grad.addColorStop(0.62, 'rgba(2, 6, 23, 0.14)');
+    grad.addColorStop(1, 'rgba(2, 6, 23, 0.52)');
+    g.fillStyle = grad;
+    g.fillRect(0, 0, size, size);
+  }
+  vignetteSpriteCache = c;
+  return c;
+}
+
+export function renderCinematicPostFX(
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+  muzzleFlashIntensity: number,
+  speedRatio: number
+): void {
+  const vig = getCinematicVignetteSprite();
+  ctx.save();
+
+  // 1. Optical lens vignette (zero per-frame gradient allocation!)
+  ctx.globalAlpha = 0.76;
+  ctx.drawImage(vig, 0, 0, width, height);
+
+  // 2. Subtle peripheral velocity focus when sprinting fast
+  if (speedRatio > 1.15) {
+    const focusAlpha = Math.min(0.24, (speedRatio - 1.15) * 0.18);
+    ctx.globalAlpha = focusAlpha;
+    ctx.drawImage(vig, -width * 0.04, -height * 0.04, width * 1.08, height * 1.08);
+  }
+
+  // 3. Subtle warm atmospheric muzzle-flash lens bounce during gunfire/explosions
+  if (muzzleFlashIntensity > 0.12) {
+    ctx.globalCompositeOperation = 'screen';
+    ctx.fillStyle = `rgba(251, 146, 60, ${(muzzleFlashIntensity * 0.055).toFixed(3)})`;
+    ctx.fillRect(0, 0, width, height);
+  }
+
   ctx.restore();
 }
 
