@@ -319,6 +319,7 @@ export class ForestDiorama3DRenderer {
   private playerGroup: THREE.Group;
   private playerCard: THREE.Mesh;
   private playerShadowProxy: THREE.Mesh;
+  private shadowProxyMat!: THREE.MeshBasicMaterial;
   private playerContactShadow: THREE.Mesh;
   private contactShadowMat!: THREE.MeshBasicMaterial;
   private weaponShadowGroup!: THREE.Group;
@@ -347,7 +348,7 @@ export class ForestDiorama3DRenderer {
   private zombieActive = new Map<string, ZombieSpriteEntry>();
   private aliveZombieIds = new Set<string>();
   private zombieCardGeo = new THREE.PlaneGeometry(1, 1);
-  private zombieProxyGeo = new THREE.SphereGeometry(0.75, 8, 6);
+  private zombieProxyGeo = new THREE.CapsuleGeometry(0.62, 0.95, 4, 8);
   private zombieHpGeo = new THREE.PlaneGeometry(1, 0.14);
   private zombieRingGeo = new THREE.RingGeometry(0.95, 1.08, 20);
 
@@ -425,7 +426,7 @@ export class ForestDiorama3DRenderer {
     this.renderer.setPixelRatio(this.renderScale);
     this.renderer.setSize(this.width, this.height, false);
     this.renderer.shadowMap.enabled = shadowsOn;
-    this.renderer.shadowMap.type = THREE.PCFShadowMap;
+    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.renderer.domElement.style.display = 'block';
     this.renderer.domElement.style.width = '100%';
     this.renderer.domElement.style.height = '100%';
@@ -456,19 +457,21 @@ export class ForestDiorama3DRenderer {
     this.hemiLight = new THREE.HemisphereLight(0xe0f2fe, 0x2d5438, 1.02);
     this.scene.add(this.hemiLight);
 
-    // 2) Key Sun / Moon Directional Light (shadows)
+    // 2) Key Sun / Moon Directional Light (wide viewport-spanning shadow frustum with clean PCF bias)
     this.sunLight = new THREE.DirectionalLight(0xfffbeb, 1.42);
     this.sunLight.castShadow = shadowsOn;
     this.sunLight.shadow.mapSize.width = this.preset.shadowMapSize;
     this.sunLight.shadow.mapSize.height = this.preset.shadowMapSize;
-    this.sunLight.shadow.camera.near = 180;
-    this.sunLight.shadow.camera.far = 1800;
-    const d = 500;
+    this.sunLight.shadow.camera.near = 150;
+    this.sunLight.shadow.camera.far = 2600;
+    const d = 760;
     this.sunLight.shadow.camera.left = -d;
     this.sunLight.shadow.camera.right = d;
     this.sunLight.shadow.camera.top = d;
     this.sunLight.shadow.camera.bottom = -d;
-    this.sunLight.shadow.bias = -0.0008;
+    this.sunLight.shadow.camera.updateProjectionMatrix();
+    this.sunLight.shadow.bias = -0.00025;
+    this.sunLight.shadow.normalBias = 0.75;
     this.scene.add(this.sunLight);
     this.scene.add(this.sunLight.target);
 
@@ -526,12 +529,12 @@ export class ForestDiorama3DRenderer {
     this.buildStaticForestWorld();
     this.buildEnterableHouses();
 
-    // Shared Contact Shadow Disc Material
+    // Shared Contact Shadow Disc Material (subtle AO under feet when 3D shadows are active)
     const contactTex = this.createContactShadowTexture();
     this.contactShadowMat = new THREE.MeshBasicMaterial({
       map: contactTex,
       transparent: true,
-      opacity: 0.48,
+      opacity: shadowsOn ? 0.26 : 0.48,
       depthWrite: false,
     });
     this.texturesToDispose.push(contactTex);
@@ -552,26 +555,26 @@ export class ForestDiorama3DRenderer {
     this.playerGroup.add(this.playerCard);
     this.litMaterials.push(this.playerMat);
 
-    // Shadow caster proxy inside player (depth/shadow pass only)
-    const pProxyGeo = new THREE.SphereGeometry(15, 10, 8);
-    const pProxyMat = new THREE.MeshBasicMaterial({
+    // Shadow caster proxy inside player (MUST have transparent: false so WebGLShadowMap renders it!)
+    const pProxyGeo = new THREE.CapsuleGeometry(11, 18, 4, 8);
+    this.shadowProxyMat = new THREE.MeshBasicMaterial({
       colorWrite: false,
       depthWrite: false,
-      transparent: true,
-      opacity: 0,
+      depthTest: false,
+      transparent: false,
     });
-    this.playerShadowProxy = new THREE.Mesh(pProxyGeo, pProxyMat);
-    this.playerShadowProxy.position.y = 16;
+    this.playerShadowProxy = new THREE.Mesh(pProxyGeo, this.shadowProxyMat);
+    this.playerShadowProxy.position.y = 20;
     this.playerShadowProxy.castShadow = this.renderer.shadowMap.enabled;
     this.playerGroup.add(this.playerShadowProxy);
 
-    // 3D Weapon Shadow Proxy Rig (casts realistic gun barrel/receiver/optic shadows onto Baseplate)
+    // 3D Weapon Shadow Proxy Rig (casts realistic gun barrel/receiver/optic shadows onto ground/floors)
     const wBoxGeo = new THREE.BoxGeometry(1, 1, 1);
     this.weaponShadowGroup = new THREE.Group();
     this.weaponShadowGroup.position.y = 20;
-    this.weaponStockProxy = new THREE.Mesh(wBoxGeo, pProxyMat);
-    this.weaponBodyProxy = new THREE.Mesh(wBoxGeo, pProxyMat);
-    this.weaponBarrelProxy = new THREE.Mesh(wBoxGeo, pProxyMat);
+    this.weaponStockProxy = new THREE.Mesh(wBoxGeo, this.shadowProxyMat);
+    this.weaponBodyProxy = new THREE.Mesh(wBoxGeo, this.shadowProxyMat);
+    this.weaponBarrelProxy = new THREE.Mesh(wBoxGeo, this.shadowProxyMat);
     this.weaponStockProxy.castShadow = this.renderer.shadowMap.enabled;
     this.weaponBodyProxy.castShadow = this.renderer.shadowMap.enabled;
     this.weaponBarrelProxy.castShadow = this.renderer.shadowMap.enabled;
@@ -599,7 +602,7 @@ export class ForestDiorama3DRenderer {
 
     this.scene.add(this.playerGroup);
     this.geometriesToDispose.push(playerGeo, pProxyGeo, wBoxGeo, pContactGeo, wGroundGeo);
-    this.materialsToDispose.push(this.playerMat, pProxyMat, this.weaponGroundShadowMat);
+    this.materialsToDispose.push(this.playerMat, this.shadowProxyMat, this.weaponGroundShadowMat);
 
     // Dropped weapon & shadow + death blood pool
     this.droppedWeaponMat = new THREE.MeshLambertMaterial({
@@ -625,7 +628,7 @@ export class ForestDiorama3DRenderer {
     this.droppedWeaponShadow.visible = false;
     this.scene.add(this.droppedWeaponShadow);
 
-    this.droppedWeaponShadowProxy = new THREE.Mesh(wBoxGeo, pProxyMat);
+    this.droppedWeaponShadowProxy = new THREE.Mesh(wBoxGeo, this.shadowProxyMat);
     this.droppedWeaponShadowProxy.scale.set(34, 5, 6);
     this.droppedWeaponShadowProxy.position.y = 5.5;
     this.droppedWeaponShadowProxy.castShadow = this.renderer.shadowMap.enabled;
@@ -832,6 +835,7 @@ export class ForestDiorama3DRenderer {
       }
     }
 
+    this.contactShadowMat.opacity = shadowsOn ? 0.26 : 0.48;
     this.weaponGroundShadowMat.opacity = shadowsOn ? 0.28 : 0.58;
     this.droppedWeaponShadowMat.opacity = shadowsOn ? 0.34 : 0.6;
 
@@ -1435,6 +1439,7 @@ export class ForestDiorama3DRenderer {
           inst.instanceMatrix.needsUpdate = true;
           if (inst.instanceColor) inst.instanceColor.needsUpdate = true;
           inst.computeBoundingSphere();
+          inst.receiveShadow = true;
           inst.count = Math.min(placed, this.preset.grassTuftsPerChunk);
           inst.visible = inst.count > 0;
           this.scene.add(inst);
@@ -1583,8 +1588,12 @@ export class ForestDiorama3DRenderer {
       const bGroup = new THREE.Group();
       const floatMesh = new THREE.Mesh(floatGeo, redMat);
       floatMesh.position.y = 1.5;
+      floatMesh.castShadow = this.renderer.shadowMap.enabled;
+      floatMesh.receiveShadow = true;
       const towerMesh = new THREE.Mesh(towerGeo, whiteMat);
       towerMesh.position.y = 13;
+      towerMesh.castShadow = this.renderer.shadowMap.enabled;
+      towerMesh.receiveShadow = true;
       const beaconMesh = new THREE.Mesh(beaconGeo, beaconMat);
       beaconMesh.position.y = 22.5;
       bGroup.add(floatMesh, towerMesh, beaconMesh);
@@ -1823,6 +1832,11 @@ export class ForestDiorama3DRenderer {
           j1.position.set(door.x, (h.wallHeight - 16) * 0.5, door.z - jOffset);
           j2.position.set(door.x, (h.wallHeight - 16) * 0.5, door.z + jOffset);
         }
+        j1.castShadow = shadowsOn;
+        j1.receiveShadow = true;
+        j2.castShadow = shadowsOn;
+        j2.receiveShadow = true;
+        wallShadowMeshes.push(j1, j2);
         root.add(j1, j2);
         this.geometriesToDispose.push(jambGeo);
       }
@@ -1973,15 +1987,17 @@ export class ForestDiorama3DRenderer {
         color: h.roofColor,
         roughness: h.roofKind === 'CORRUGATED' ? 0.42 : 0.82,
         metalness: h.roofKind === 'CORRUGATED' ? 0.32 : 0.06,
-        transparent: true,
+        transparent: false,
         opacity: 1,
+        depthWrite: true,
       });
       const roofTrimMat = new THREE.MeshStandardMaterial({
         color: h.trimColor,
         roughness: 0.65,
         metalness: 0.14,
-        transparent: true,
+        transparent: false,
         opacity: 1,
+        depthWrite: true,
       });
       roofMaterials.push(roofMainMat, roofTrimMat);
       this.materialsToDispose.push(roofMainMat, roofTrimMat);
@@ -2012,6 +2028,7 @@ export class ForestDiorama3DRenderer {
         const ridgeGeo = new THREE.BoxGeometry(rw + 4, 8, 12);
         const ridge = new THREE.Mesh(ridgeGeo, roofTrimMat);
         ridge.position.set(h.cx, h.wallHeight + pitchH, h.cz);
+        ridge.castShadow = shadowsOn;
 
         const chimGeo = new THREE.BoxGeometry(24, 34, 24);
         const chimney = new THREE.Mesh(chimGeo, roofTrimMat);
@@ -2019,7 +2036,7 @@ export class ForestDiorama3DRenderer {
         chimney.castShadow = shadowsOn;
 
         roofGroup.add(northSlope, southSlope, ridge, chimney);
-        roofShadowMeshes.push(northSlope, southSlope, chimney);
+        roofShadowMeshes.push(northSlope, southSlope, ridge, chimney);
         this.geometriesToDispose.push(slopeGeo, ridgeGeo, chimGeo);
       } else {
         // FLAT_PARAPET or CORRUGATED industrial deck
@@ -2089,11 +2106,16 @@ export class ForestDiorama3DRenderer {
       const visibleRoof = entry.roofOpacity > 0.03;
       entry.roofGroup.visible = visibleRoof;
       if (visibleRoof) {
+        const shouldBeTransparent = entry.roofOpacity < 0.985;
         const allowCast = shadowsOn && entry.roofOpacity > 0.45;
         for (let m = 0; m < entry.roofMaterials.length; m++) {
           const mat = entry.roofMaterials[m];
-          mat.opacity = entry.roofOpacity;
-          mat.depthWrite = entry.roofOpacity > 0.94;
+          if (mat.transparent !== shouldBeTransparent) {
+            mat.transparent = shouldBeTransparent;
+            mat.needsUpdate = true;
+          }
+          mat.opacity = shouldBeTransparent ? entry.roofOpacity : 1;
+          mat.depthWrite = !shouldBeTransparent;
         }
         for (let r = 0; r < entry.roofShadowMeshes.length; r++) {
           entry.roofShadowMeshes[r].castShadow = allowCast;
@@ -2611,6 +2633,95 @@ export class ForestDiorama3DRenderer {
       g.fill();
     });
 
+    this.bulletTextures.MP5_A5 = mkBullet((g) => {
+      const gr = g.createLinearGradient(-52, 0, 12, 0);
+      gr.addColorStop(0, 'rgba(52, 211, 153, 0)');
+      gr.addColorStop(0.6, 'rgba(52, 211, 153, 0.78)');
+      gr.addColorStop(1, '#ecfdf5');
+      g.fillStyle = gr;
+      g.fillRect(-52, -2.6, 62, 5.2);
+      g.fillStyle = '#34d399';
+      g.beginPath();
+      g.ellipse(4, 0, 7.5, 3.2, 0, 0, Math.PI * 2);
+      g.fill();
+      g.fillStyle = '#ffffff';
+      g.beginPath();
+      g.arc(7, 0, 2.2, 0, Math.PI * 2);
+      g.fill();
+    });
+
+    const flameCanvas = document.createElement('canvas');
+    flameCanvas.width = 64;
+    flameCanvas.height = 64;
+    const fg = flameCanvas.getContext('2d')!;
+    const fGrad = fg.createRadialGradient(32, 32, 3, 32, 32, 30);
+    fGrad.addColorStop(0, '#fffbeb');
+    fGrad.addColorStop(0.28, '#fde047');
+    fGrad.addColorStop(0.62, 'rgba(249, 115, 22, 0.88)');
+    fGrad.addColorStop(0.86, 'rgba(220, 38, 38, 0.35)');
+    fGrad.addColorStop(1, 'rgba(185, 28, 28, 0)');
+    fg.fillStyle = fGrad;
+    fg.beginPath();
+    fg.arc(32, 32, 30, 0, Math.PI * 2);
+    fg.fill();
+    // Wispy tongue flares around the core
+    fg.fillStyle = 'rgba(251, 146, 60, 0.45)';
+    for (let k = 0; k < 5; k++) {
+      const a = (k * Math.PI * 2) / 5;
+      fg.beginPath();
+      fg.ellipse(32 + Math.cos(a) * 11, 32 + Math.sin(a) * 11, 10, 6, a, 0, Math.PI * 2);
+      fg.fill();
+    }
+    const flameTex = createCanvasTexture(flameCanvas, true, this.maxAniso);
+    this.texturesToDispose.push(flameTex);
+    this.bulletTextures.FLAMETHROWER = flameTex;
+
+    this.bulletTextures.AWM_SNIPER = mkBullet((g) => {
+      const gr = g.createLinearGradient(-74, 0, 15, 0);
+      gr.addColorStop(0, 'rgba(192, 132, 252, 0)');
+      gr.addColorStop(0.45, 'rgba(192, 132, 252, 0.78)');
+      gr.addColorStop(0.84, '#f5d0fe');
+      gr.addColorStop(1, '#ffffff');
+      g.fillStyle = gr;
+      g.beginPath();
+      g.moveTo(15, 0);
+      g.lineTo(-74, -4.6);
+      g.lineTo(-74, 4.6);
+      g.closePath();
+      g.fill();
+      g.fillStyle = '#ffffff';
+      g.beginPath();
+      g.ellipse(6, 0, 11, 3.6, 0, 0, Math.PI * 2);
+      g.fill();
+    });
+
+    this.bulletTextures.RPG_7 = mkBullet((g) => {
+      const exhaust = g.createLinearGradient(-72, 0, -14, 0);
+      exhaust.addColorStop(0, 'rgba(249, 115, 22, 0)');
+      exhaust.addColorStop(0.65, 'rgba(251, 146, 60, 0.88)');
+      exhaust.addColorStop(1, '#fef08a');
+      g.fillStyle = exhaust;
+      g.beginPath();
+      g.moveTo(-14, 0);
+      g.lineTo(-72, -8);
+      g.lineTo(-72, 8);
+      g.closePath();
+      g.fill();
+      // Warhead cone
+      g.fillStyle = '#4d7c0f';
+      g.strokeStyle = '#fde047';
+      g.lineWidth = 1.6;
+      g.beginPath();
+      g.moveTo(18, 0);
+      g.lineTo(1, -7);
+      g.lineTo(-16, -4.5);
+      g.lineTo(-16, 4.5);
+      g.lineTo(1, 7);
+      g.closePath();
+      g.fill();
+      g.stroke();
+    });
+
     this.bulletTextures.RAY = mkBullet((g) => {
       g.strokeStyle = '#e879f9';
       g.lineWidth = 8;
@@ -3122,25 +3233,28 @@ export class ForestDiorama3DRenderer {
     this.hemiLight.groundColor.setRGB(groundBounceR, groundBounceG, groundBounceB);
     this.hemiLight.intensity = 0.62 + dayBlend * 0.66;
 
-    // 2) Directional Sun / Moon Key Light (shadows)
-    const sunHeight = 380 + dayBlend * 360;
+    // 2) Directional Sun / Moon Key Light (physical orbital arc + texel-snapped shadow frustum)
+    const texelSize = (760 * 2) / Math.max(256, this.preset.shadowMapSize);
+    const snapX = Math.round(camX / texelSize) * texelSize;
+    const snapZ = Math.round(camZ / texelSize) * texelSize;
+    const sunDist = 1150;
     this.sunLight.position.set(
-      camX - dn.shadowDirX * 520 * dn.shadowStretch,
-      sunHeight,
-      camZ - dn.shadowDirY * 520 * dn.shadowStretch
+      snapX + dn.sunDir3D[0] * sunDist,
+      dn.sunDir3D[1] * sunDist,
+      snapZ + dn.sunDir3D[2] * sunDist
     );
-    this.sunLight.target.position.set(camX, 0, camZ);
+    this.sunLight.target.position.set(snapX, 0, snapZ);
     this.sunLight.target.updateMatrixWorld();
     this.sunLight.color.setRGB(sunR, sunG, sunB);
-    this.sunLight.intensity = 0.78 + dayBlend * 1.48;
+    this.sunLight.intensity = (dn.isMoonlight ? 0.92 : 1.05 + dayBlend * 1.4) * dn.celestialFade;
 
-    // 3) Counter-Bounce GI Fill Light (sky/ocean/meadow indirect bounce lighting up shadowed faces)
+    // 3) Counter-Bounce GI Fill Light (always opposite the active Sun/Moon illuminating shadowed faces)
     this.giBounceLight.position.set(
-      camX + dn.shadowDirX * 420,
+      snapX - dn.sunDir3D[0] * 550,
       190 + dayBlend * 90,
-      camZ + dn.shadowDirY * 420
+      snapZ - dn.sunDir3D[2] * 550
     );
-    this.giBounceLight.target.position.set(camX, 0, camZ);
+    this.giBounceLight.target.position.set(snapX, 0, snapZ);
     this.giBounceLight.target.updateMatrixWorld();
     this.giBounceLight.color.setRGB(
       0.34 + dn.sunWarmth * 0.36 + dayBlend * 0.18,
@@ -3441,8 +3555,7 @@ export class ForestDiorama3DRenderer {
     contactShadow.rotation.x = -Math.PI / 2;
     contactShadow.position.y = 0.34;
 
-    const pMat = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false });
-    const shadowProxy = new THREE.Mesh(this.zombieProxyGeo, pMat);
+    const shadowProxy = new THREE.Mesh(this.zombieProxyGeo, this.shadowProxyMat);
     shadowProxy.castShadow = false;
 
     const hpBgMat = new THREE.MeshBasicMaterial({ color: 0x020617, transparent: true, opacity: 0.85, depthTest: false });
@@ -3469,7 +3582,7 @@ export class ForestDiorama3DRenderer {
 
     group.add(card, contactShadow, shadowProxy, hpBg, hpFill, fireRing, stunRing);
     this.scene.add(group);
-    this.materialsToDispose.push(mat, pMat, hpBgMat, hpMat, fireMat, stunMat);
+    this.materialsToDispose.push(mat, hpBgMat, hpMat, fireMat, stunMat);
     this.litMaterials.push(mat);
     return { group, card, mat, contactShadow, shadowProxy, hpBg, hpFill, hpMat, fireRing, stunRing };
   }
@@ -3533,12 +3646,14 @@ export class ForestDiorama3DRenderer {
       entry.card.scale.set(spriteSize * pulse, spriteSize / pulse, 1);
       entry.card.rotation.set(TILT_X + zPose.tiltX * 0.35, zPose.tiltZ * 0.35, -z.angle);
 
-      const csSize = z.radius * 2.55;
+      const csSize = z.radius * 2.45;
       entry.contactShadow.scale.set(csSize, csSize, 1);
       entry.contactShadow.visible = zPose.waterDepth < 1.5;
-      entry.shadowProxy.castShadow = shadowsEnabled && !!z.isBoss && zPose.waterDepth < 2.0;
-      if (z.isBoss) {
-        entry.shadowProxy.position.y = cardLocalY;
+      const castZShadow = shadowsEnabled && zPose.waterDepth < 2.0;
+      entry.shadowProxy.castShadow = castZShadow;
+      entry.shadowProxy.visible = castZShadow;
+      if (castZShadow) {
+        entry.shadowProxy.position.y = cardLocalY * 0.92;
         entry.shadowProxy.scale.setScalar(z.radius);
       }
 
@@ -3641,9 +3756,21 @@ export class ForestDiorama3DRenderer {
     if (weapon === WeaponType.GLOCK_19) {
       drawBlurShape(4, -5.5, 14, 11, 3);
       drawBlurShape(12, -3.5, 22, 7, 2);
+    } else if (weapon === WeaponType.MP5_A5) {
+      drawBlurShape(-2, -4.5, 24, 9, 2.5);
+      drawBlurShape(22, -3.0, 16, 6, 2);
     } else if (weapon === WeaponType.BENELLI_M4) {
       drawBlurShape(-4, -4.5, 26, 9, 2.5);
       drawBlurShape(20, -3.2, 24, 6.4, 2);
+    } else if (weapon === WeaponType.FLAMETHROWER) {
+      drawBlurShape(-15, -11, 11, 22, 4);
+      drawBlurShape(4, -4.5, 36, 9, 2.5);
+    } else if (weapon === WeaponType.AWM_SNIPER) {
+      drawBlurShape(-6, -4.5, 36, 9, 2.5);
+      drawBlurShape(30, -2.5, 26, 5, 2);
+    } else if (weapon === WeaponType.RPG_7) {
+      drawBlurShape(-12, -4.5, 50, 9, 2.5);
+      drawBlurShape(38, -6.2, 16, 12.4, 3);
     } else {
       // FN SCAR-L CQC
       drawBlurShape(-5, -4.5, 34, 9, 2.5);
@@ -3714,13 +3841,16 @@ export class ForestDiorama3DRenderer {
       ds.active ? 0 : pose.tiltZ * 0.32,
       -activeAngle
     );
-    this.playerShadowProxy.visible = !ds.active && pose.waterDepth < 2.0;
+    const shadowsEnabled = this.renderer.shadowMap.enabled;
+    this.playerShadowProxy.visible = shadowsEnabled && !ds.active && pose.waterDepth < 2.0;
+    this.playerShadowProxy.castShadow = this.playerShadowProxy.visible;
     this.playerContactShadow.visible = pose.waterDepth < 1.5;
 
-    // Sync 3D Weapon Shadow Proxy Rig + Directional Weapon Ground Shadow
+    // Sync 3D Weapon Shadow Proxy Rig (real shadows when enabled; 2D ground shadow only in LOW/ULTRA_LOW fallback)
     if (!ds.active) {
       const kick = Math.min(8, weaponRecoil * 0.85);
-      this.weaponShadowGroup.visible = pose.waterDepth < 1.8;
+      const show3DWeaponShadow = shadowsEnabled && pose.waterDepth < 1.8;
+      this.weaponShadowGroup.visible = show3DWeaponShadow;
       this.weaponShadowGroup.position.y = cardLocalY + 1;
       this.weaponShadowGroup.rotation.y = -activeAngle;
 
@@ -3731,6 +3861,13 @@ export class ForestDiorama3DRenderer {
         this.weaponBodyProxy.position.set(20 - kick, 0.5, 0);
         this.weaponBarrelProxy.scale.set(8, 4.5, 4.5);
         this.weaponBarrelProxy.position.set(30 - kick * 0.8, 0, 0);
+      } else if (p.currentWeapon === WeaponType.MP5_A5) {
+        this.weaponStockProxy.scale.set(9, 5, 6);
+        this.weaponStockProxy.position.set(2 - kick * 0.6, 0, 0);
+        this.weaponBodyProxy.scale.set(22, 7, 6.5);
+        this.weaponBodyProxy.position.set(16 - kick * 0.8, 0.5, 0);
+        this.weaponBarrelProxy.scale.set(14, 5, 5);
+        this.weaponBarrelProxy.position.set(33 - kick * 0.8, 0.3, 0);
       } else if (p.currentWeapon === WeaponType.BENELLI_M4) {
         this.weaponStockProxy.scale.set(12, 6, 6);
         this.weaponStockProxy.position.set(-1 - kick * 0.8, 0, 0);
@@ -3738,6 +3875,27 @@ export class ForestDiorama3DRenderer {
         this.weaponBodyProxy.position.set(15 - kick, 0.5, 0);
         this.weaponBarrelProxy.scale.set(19, 4.5, 4.5);
         this.weaponBarrelProxy.position.set(34 - kick, 0.5, 0);
+      } else if (p.currentWeapon === WeaponType.FLAMETHROWER) {
+        this.weaponStockProxy.scale.set(10, 11, 18);
+        this.weaponStockProxy.position.set(-10, 0, 0);
+        this.weaponBodyProxy.scale.set(24, 8, 7.5);
+        this.weaponBodyProxy.position.set(18 - kick * 0.4, 0.5, 0);
+        this.weaponBarrelProxy.scale.set(14, 5.5, 5.5);
+        this.weaponBarrelProxy.position.set(36 - kick * 0.4, 0.5, 0);
+      } else if (p.currentWeapon === WeaponType.AWM_SNIPER) {
+        this.weaponStockProxy.scale.set(13, 6.5, 6);
+        this.weaponStockProxy.position.set(-2 - kick * 0.9, 0, 0);
+        this.weaponBodyProxy.scale.set(28, 8.5, 7);
+        this.weaponBodyProxy.position.set(18 - kick, 1.2, 0);
+        this.weaponBarrelProxy.scale.set(24, 4.5, 4.5);
+        this.weaponBarrelProxy.position.set(44 - kick, 0.5, 0);
+      } else if (p.currentWeapon === WeaponType.RPG_7) {
+        this.weaponStockProxy.scale.set(16, 7.5, 7.5);
+        this.weaponStockProxy.position.set(-8 - kick * 0.9, 0, 0);
+        this.weaponBodyProxy.scale.set(32, 7.5, 7.5);
+        this.weaponBodyProxy.position.set(16 - kick, 1.0, 0);
+        this.weaponBarrelProxy.scale.set(16, 10, 10);
+        this.weaponBarrelProxy.position.set(42 - kick, 1.0, 0);
       } else {
         // SCAR-L CQC
         this.weaponStockProxy.scale.set(12, 6, 6);
@@ -3748,17 +3906,21 @@ export class ForestDiorama3DRenderer {
         this.weaponBarrelProxy.position.set(38 - kick * 0.85, 0.5, 0);
       }
 
-      const wShadowTex = this.getWeaponGroundShadowTexture(p.currentWeapon);
-      if (this.weaponGroundShadowMat.map !== wShadowTex) {
-        const wasNull = !this.weaponGroundShadowMat.map;
-        this.weaponGroundShadowMat.map = wShadowTex;
-        if (wasNull) this.weaponGroundShadowMat.needsUpdate = true;
+      if (!shadowsEnabled) {
+        const wShadowTex = this.getWeaponGroundShadowTexture(p.currentWeapon);
+        if (this.weaponGroundShadowMat.map !== wShadowTex) {
+          const wasNull = !this.weaponGroundShadowMat.map;
+          this.weaponGroundShadowMat.map = wShadowTex;
+          if (wasNull) this.weaponGroundShadowMat.needsUpdate = true;
+        }
+        const shOffX = dn.shadowDirX * 14 * dn.shadowStretch;
+        const shOffZ = dn.shadowDirY * 14 * dn.shadowStretch;
+        this.weaponGroundShadow.position.set(p.x + shOffX, pose.baseY + 0.37, p.y + shOffZ);
+        this.weaponGroundShadow.rotation.set(-Math.PI / 2, 0, -activeAngle);
+        this.weaponGroundShadow.visible = pose.waterDepth < 1.3;
+      } else {
+        this.weaponGroundShadow.visible = false;
       }
-      const shOffX = dn.shadowDirX * 14 * dn.shadowStretch;
-      const shOffZ = dn.shadowDirY * 14 * dn.shadowStretch;
-      this.weaponGroundShadow.position.set(p.x + shOffX, pose.baseY + 0.37, p.y + shOffZ);
-      this.weaponGroundShadow.rotation.set(-Math.PI / 2, 0, -activeAngle);
-      this.weaponGroundShadow.visible = pose.waterDepth < 1.3;
     } else {
       this.weaponShadowGroup.visible = false;
       this.weaponGroundShadow.visible = false;
@@ -3781,23 +3943,27 @@ export class ForestDiorama3DRenderer {
       this.droppedWeaponMesh.rotation.set(-Math.PI / 2, 0, -ds.droppedWeapon.angle);
       this.droppedWeaponMesh.visible = true;
 
-      const dwShadowTex = this.getWeaponGroundShadowTexture(ds.droppedWeapon.type);
-      if (this.droppedWeaponShadowMat.map !== dwShadowTex) {
-        const wasNull = !this.droppedWeaponShadowMat.map;
-        this.droppedWeaponShadowMat.map = dwShadowTex;
-        if (wasNull) this.droppedWeaponShadowMat.needsUpdate = true;
+      if (!shadowsEnabled) {
+        const dwShadowTex = this.getWeaponGroundShadowTexture(ds.droppedWeapon.type);
+        if (this.droppedWeaponShadowMat.map !== dwShadowTex) {
+          const wasNull = !this.droppedWeaponShadowMat.map;
+          this.droppedWeaponShadowMat.map = dwShadowTex;
+          if (wasNull) this.droppedWeaponShadowMat.needsUpdate = true;
+        }
+        this.droppedWeaponShadow.position.set(
+          ds.droppedWeapon.x + dn.shadowDirX * 5.5 * dn.shadowStretch,
+          dwWalkY + 0.42,
+          ds.droppedWeapon.y + dn.shadowDirY * 5.5 * dn.shadowStretch
+        );
+        this.droppedWeaponShadow.rotation.set(-Math.PI / 2, 0, -ds.droppedWeapon.angle);
+        this.droppedWeaponShadow.visible = dwDepth < 1.2;
+      } else {
+        this.droppedWeaponShadow.visible = false;
       }
-      this.droppedWeaponShadow.position.set(
-        ds.droppedWeapon.x + dn.shadowDirX * 5.5 * dn.shadowStretch,
-        dwWalkY + 0.42,
-        ds.droppedWeapon.y + dn.shadowDirY * 5.5 * dn.shadowStretch
-      );
-      this.droppedWeaponShadow.rotation.set(-Math.PI / 2, 0, -ds.droppedWeapon.angle);
-      this.droppedWeaponShadow.visible = dwDepth < 1.2;
 
       this.droppedWeaponShadowProxy.position.set(ds.droppedWeapon.x, dwWalkY + 5.5, ds.droppedWeapon.y);
       this.droppedWeaponShadowProxy.rotation.set(0, -ds.droppedWeapon.angle, 0);
-      this.droppedWeaponShadowProxy.visible = this.renderer.shadowMap.enabled && dwDepth < 1.2;
+      this.droppedWeaponShadowProxy.visible = shadowsEnabled && dwDepth < 1.2;
 
       const dpDepth = pose.waterDepth;
       this.deathBloodPoolMesh.position.set(
@@ -3908,14 +4074,34 @@ export class ForestDiorama3DRenderer {
         tex = this.bulletTextures.SHRAPNEL;
         sx = 22;
         sy = 12;
+      } else if (b.weaponType === WeaponType.MP5_A5) {
+        tex = this.bulletTextures.MP5_A5;
+        sx = 40;
+        sy = 13;
       } else if (b.weaponType === WeaponType.BENELLI_M4) {
         tex = this.bulletTextures.BENELLI_M4;
         sx = 40;
         sy = 15;
+      } else if (b.weaponType === WeaponType.FLAMETHROWER || b.isFlame) {
+        tex = this.bulletTextures.FLAMETHROWER;
+        const progress = Math.min(1, b.distanceTraveled / Math.max(1, b.maxDistance));
+        const flameSize = 26 + progress * 46;
+        sx = flameSize;
+        sy = flameSize;
+        additive = true;
       } else if (b.weaponType === WeaponType.SCAR_L) {
         tex = this.bulletTextures.SCAR_L;
         sx = 64;
         sy = 14;
+      } else if (b.weaponType === WeaponType.AWM_SNIPER) {
+        tex = this.bulletTextures.AWM_SNIPER;
+        sx = 88;
+        sy = 16;
+        additive = true;
+      } else if (b.weaponType === WeaponType.RPG_7) {
+        tex = this.bulletTextures.RPG_7;
+        sx = 58;
+        sy = 22;
       }
 
       if (item.mat.map !== tex) {
@@ -3925,7 +4111,8 @@ export class ForestDiorama3DRenderer {
       }
       item.mat.blending = additive ? THREE.AdditiveBlending : THREE.NormalBlending;
       item.mesh.position.set(b.x, 16, b.y);
-      const rotZ = b.isShrapnel ? -(b.ownerAngle + nowMs * 0.015) : -b.ownerAngle;
+      const rotZ =
+        b.isShrapnel || b.isFlame ? -(b.ownerAngle + nowMs * 0.014) : -b.ownerAngle;
       item.mesh.rotation.set(TILT_X, 0, rotZ);
       item.mesh.scale.set(sx, sy, 1);
       item.mesh.visible = true;

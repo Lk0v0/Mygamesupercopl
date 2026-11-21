@@ -56,6 +56,10 @@ export interface DayNightState {
   darknessAlpha: number;
   ambientRgb: [number, number, number];
   sunRgb: [number, number, number];
+  sunDir3D: [number, number, number]; // Normalized 3D vector from scene center toward active Sun or Moon
+  sunElevation: number; // 0 (horizon) .. 1 (zenith)
+  isMoonlight: boolean;
+  celestialFade: number; // Smooth horizon crossfade across sunrise/sunset
   shadowDirX: number;
   shadowDirY: number;
   shadowStretch: number;
@@ -72,9 +76,6 @@ interface DayKeyframe {
   darkness: number;
   ambientRgb: [number, number, number];
   sunRgb: [number, number, number];
-  shadowDirX: number;
-  shadowDirY: number;
-  stretch: number;
   shadowAlpha: number;
   sunbeam: number;
   campfire: number;
@@ -85,28 +86,22 @@ interface DayKeyframe {
 
 const DAY_KEYFRAMES: DayKeyframe[] = [
   {
-    t: 0.0,
+    t: 0.0, // 06:00 Sunrise
     darkness: 0.34,
     ambientRgb: [36, 24, 42],
     sunRgb: [253, 186, 116],
-    shadowDirX: 0.88,
-    shadowDirY: 0.34,
-    stretch: 1.72,
     shadowAlpha: 0.36,
-    sunbeam: 0.28,
+    sunbeam: 0.3,
     campfire: 0.72,
     flashlight: 0.42,
     firefly: 0.3,
-    sunWarmth: 0.72,
+    sunWarmth: 0.78,
   },
   {
-    t: 0.14,
+    t: 0.14, // 09:20 Morning
     darkness: 0.04,
     ambientRgb: [14, 24, 18],
     sunRgb: [254, 243, 199],
-    shadowDirX: 0.68,
-    shadowDirY: 0.56,
-    stretch: 1.15,
     shadowAlpha: 0.38,
     sunbeam: 0.22,
     campfire: 0.32,
@@ -115,43 +110,46 @@ const DAY_KEYFRAMES: DayKeyframe[] = [
     sunWarmth: 0.36,
   },
   {
-    t: 0.34,
-    darkness: 0.01,
+    t: 0.25, // 12:00 Solar Noon
+    darkness: 0.0,
     ambientRgb: [12, 22, 16],
-    sunRgb: [255, 251, 235],
-    shadowDirX: 0.24,
-    shadowDirY: 0.78,
-    stretch: 0.86,
-    shadowAlpha: 0.34,
+    sunRgb: [255, 252, 240],
+    shadowAlpha: 0.35,
     sunbeam: 0.16,
-    campfire: 0.24,
+    campfire: 0.2,
     flashlight: 0.0,
     firefly: 0.0,
-    sunWarmth: 0.2,
+    sunWarmth: 0.16,
   },
   {
-    t: 0.5,
-    darkness: 0.22,
+    t: 0.36, // 14:40 Afternoon
+    darkness: 0.03,
+    ambientRgb: [16, 24, 18],
+    sunRgb: [255, 247, 224],
+    shadowAlpha: 0.36,
+    sunbeam: 0.2,
+    campfire: 0.26,
+    flashlight: 0.0,
+    firefly: 0.0,
+    sunWarmth: 0.28,
+  },
+  {
+    t: 0.5, // 18:00 Sunset
+    darkness: 0.24,
     ambientRgb: [52, 24, 18],
     sunRgb: [251, 146, 60],
-    shadowDirX: -0.82,
-    shadowDirY: 0.46,
-    stretch: 1.82,
     shadowAlpha: 0.42,
-    sunbeam: 0.36,
+    sunbeam: 0.38,
     campfire: 0.68,
     flashlight: 0.34,
     firefly: 0.28,
-    sunWarmth: 0.9,
+    sunWarmth: 0.92,
   },
   {
-    t: 0.62,
+    t: 0.62, // 20:52 Dusk / Early Night
     darkness: 0.58,
     ambientRgb: [14, 16, 38],
     sunRgb: [165, 180, 252],
-    shadowDirX: -0.72,
-    shadowDirY: 0.62,
-    stretch: 1.42,
     shadowAlpha: 0.32,
     sunbeam: 0.14,
     campfire: 0.95,
@@ -160,13 +158,10 @@ const DAY_KEYFRAMES: DayKeyframe[] = [
     sunWarmth: 0.08,
   },
   {
-    t: 0.76,
+    t: 0.76, // 00:14 Midnight
     darkness: 0.78,
     ambientRgb: [5, 10, 24],
     sunRgb: [147, 197, 253],
-    shadowDirX: -0.45,
-    shadowDirY: 0.75,
-    stretch: 1.15,
     shadowAlpha: 0.28,
     sunbeam: 0.12,
     campfire: 1.0,
@@ -175,13 +170,10 @@ const DAY_KEYFRAMES: DayKeyframe[] = [
     sunWarmth: 0.0,
   },
   {
-    t: 0.91,
+    t: 0.91, // 03:50 Pre-dawn
     darkness: 0.56,
     ambientRgb: [16, 18, 36],
     sunRgb: [196, 181, 253],
-    shadowDirX: 0.55,
-    shadowDirY: 0.62,
-    stretch: 1.35,
     shadowAlpha: 0.3,
     sunbeam: 0.16,
     campfire: 0.9,
@@ -193,6 +185,11 @@ const DAY_KEYFRAMES: DayKeyframe[] = [
 
 function lerp(a: number, b: number, t: number): number {
   return a + (b - a) * t;
+}
+
+function smoothstep01(t: number): number {
+  const c = Math.max(0, Math.min(1, t));
+  return c * c * (3 - 2 * c);
 }
 
 export function getDayNightState(cycleElapsedSec: number): DayNightState {
@@ -216,9 +213,30 @@ export function getDayNightState(cycleElapsedSec: number): DayNightState {
   const rawU = Math.max(0, Math.min(1, local / span));
   const u = rawU * rawU * (3 - 2 * rawU);
 
-  const sdx = lerp(k0.shadowDirX, k1.shadowDirX, u);
-  const sdy = lerp(k0.shadowDirY, k1.shadowDirY, u);
-  const sMag = Math.hypot(sdx, sdy) || 1;
+  // Physical 3D Celestial Sun (06:00 -> 18:00) & Moon (18:00 -> 06:00) Orbital Arc
+  // East (+X) at horizon -> high overhead zenith at 12:00 / 00:00 -> West (-X) at horizon
+  const isMoonlight = norm >= 0.5;
+  const arcProgress = isMoonlight ? (norm - 0.5) / 0.5 : norm / 0.5; // 0..1 across sky dome
+  const arcAngle = arcProgress * Math.PI; // 0 (East) -> PI/2 (Zenith) -> PI (West)
+  const elevSin = Math.sin(arcAngle);
+
+  const rawSunX = Math.cos(arcAngle) * (isMoonlight ? 0.88 : 0.94);
+  const rawSunY = (isMoonlight ? 0.25 : 0.20) + elevSin * (isMoonlight ? 0.68 : 0.78);
+  const rawSunZ = -(isMoonlight ? 0.24 : 0.22) - elevSin * (isMoonlight ? 0.14 : 0.18);
+  const sunLen = Math.hypot(rawSunX, rawSunY, rawSunZ) || 1;
+  const sunX = rawSunX / sunLen;
+  const sunY = rawSunY / sunLen;
+  const sunZ = rawSunZ / sunLen;
+
+  // Smooth horizon crossfade at sunrise (06:00 / norm=0) and sunset (18:00 / norm=0.5)
+  const distToHorizon = Math.min(norm, Math.abs(norm - 0.5), 1 - norm);
+  const celestialFade = 0.22 + 0.78 * smoothstep01(distToHorizon / 0.045);
+
+  const horizMag = Math.hypot(sunX, sunZ) || 0.001;
+  const shadowDirX = -sunX / horizMag;
+  const shadowDirY = -sunZ / horizMag;
+  const shadowStretch = Math.min(2.35, Math.max(0.42, horizMag / Math.max(0.28, sunY)));
+  const sunElevation = Math.max(0, Math.min(1, Math.asin(Math.max(0, Math.min(1, sunY))) / (Math.PI * 0.5)));
 
   let phase: DayPhaseId = 'DAY';
   let phaseLabel = 'DIA';
@@ -257,9 +275,13 @@ export function getDayNightState(cycleElapsedSec: number): DayNightState {
       Math.round(lerp(k0.sunRgb[1], k1.sunRgb[1], u)),
       Math.round(lerp(k0.sunRgb[2], k1.sunRgb[2], u)),
     ],
-    shadowDirX: sdx / sMag,
-    shadowDirY: sdy / sMag,
-    shadowStretch: lerp(k0.stretch, k1.stretch, u),
+    sunDir3D: [sunX, sunY, sunZ],
+    sunElevation,
+    isMoonlight,
+    celestialFade,
+    shadowDirX,
+    shadowDirY,
+    shadowStretch,
     shadowAlpha: lerp(k0.shadowAlpha, k1.shadowAlpha, u),
     sunbeamAlpha: lerp(k0.sunbeam, k1.sunbeam, u),
     campfireStrength: lerp(k0.campfire, k1.campfire, u),
@@ -1323,17 +1345,29 @@ export function renderSceneLighting(
   }
   drawLight(player.x, player.y, playerLightRadius, playerLightColor, playerLightAlpha);
 
-  // 5. Muzzle Flash Gunfire Illumination Splash calibrated to the 3 conventional firearms
+  // 5. Muzzle Flash Gunfire Illumination Splash calibrated to all conventional firearms
   if (muzzleFlashIntensity > 0.02) {
     let flashColor: LightColorKey = 'amber';
+    let flashRadius = 175 * muzzleFlashIntensity + 44;
     if (player.currentWeapon === WeaponType.BENELLI_M4) {
       flashColor = 'orange';
+    } else if (player.currentWeapon === WeaponType.FLAMETHROWER) {
+      flashColor = 'orange';
+      flashRadius = 220 * muzzleFlashIntensity + 75;
+    } else if (player.currentWeapon === WeaponType.RPG_7) {
+      flashColor = 'orange';
+      flashRadius = 240 * muzzleFlashIntensity + 80;
     } else if (player.currentWeapon === WeaponType.SCAR_L) {
       flashColor = 'cyan';
+    } else if (player.currentWeapon === WeaponType.MP5_A5) {
+      flashColor = 'green';
+    } else if (player.currentWeapon === WeaponType.AWM_SNIPER) {
+      flashColor = 'purple';
+      flashRadius = 225 * muzzleFlashIntensity + 60;
     }
     const mx = player.x + Math.cos(player.angle) * (player.radius + 18);
     const my = player.y + Math.sin(player.angle) * (player.radius + 18);
-    drawLight(mx, my, 175 * muzzleFlashIntensity + 44, flashColor, 0.4 * muzzleFlashIntensity);
+    drawLight(mx, my, flashRadius, flashColor, 0.42 * muzzleFlashIntensity);
   }
 
   // 6. Item Drop Floor Reflections
@@ -1395,14 +1429,30 @@ export function renderSceneLighting(
       lk = 'purple';
       rad = 52;
       alpha = 0.22;
+    } else if (b.weaponType === WeaponType.MP5_A5) {
+      lk = 'green';
+      rad = 38;
+      alpha = 0.16;
     } else if (b.weaponType === WeaponType.BENELLI_M4) {
       lk = 'orange';
       rad = 44;
       alpha = 0.18;
+    } else if (b.weaponType === WeaponType.FLAMETHROWER || b.isFlame) {
+      lk = 'orange';
+      rad = 78;
+      alpha = 0.28;
     } else if (b.weaponType === WeaponType.SCAR_L) {
       lk = 'cyan';
       rad = 48;
       alpha = 0.2;
+    } else if (b.weaponType === WeaponType.AWM_SNIPER) {
+      lk = 'purple';
+      rad = 64;
+      alpha = 0.24;
+    } else if (b.weaponType === WeaponType.RPG_7) {
+      lk = 'orange';
+      rad = 84;
+      alpha = 0.3;
     }
     drawLight(b.x, b.y, rad, lk, alpha);
     bulletLightsDrawn++;

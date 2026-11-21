@@ -832,31 +832,27 @@ export const sound = {
       const ctx = getAudioContext();
       if (!ctx) return;
       const now = ctx.currentTime;
+      const noiseBuffer = getNoiseBuffer(ctx);
 
-      // Roaring fire blast (low-pass crackling noise)
-      const bufferSize = ctx.sampleRate * 0.08;
-      const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
-      const data = buffer.getChannelData(0);
-      for (let i = 0; i < bufferSize; i++) {
-        data[i] = (Math.random() * 2 - 1);
-      }
-
+      // Pressurized napalm jet roar + crackling turbulence
       const noiseNode = ctx.createBufferSource();
-      noiseNode.buffer = buffer;
+      noiseNode.buffer = noiseBuffer;
 
       const filter = ctx.createBiquadFilter();
-      filter.type = 'lowpass';
-      filter.frequency.setValueAtTime(800 + Math.random() * 400, now);
+      filter.type = 'bandpass';
+      filter.frequency.setValueAtTime(580 + Math.random() * 480, now);
+      filter.Q.value = 0.75;
 
       const gain = ctx.createGain();
-      gain.gain.setValueAtTime(0.18, now);
-      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
+      gain.gain.setValueAtTime(0.14, now);
+      gain.gain.exponentialRampToValueAtTime(0.008, now + 0.085);
 
       noiseNode.connect(filter);
       filter.connect(gain);
       gain.connect(ctx.destination);
 
       noiseNode.start(now);
+      noiseNode.stop(now + 0.09);
     } catch (e) {
       console.warn('Audio play failed', e);
     }
@@ -4579,6 +4575,105 @@ export const sound = {
       punch.stop(now + 0.085);
       carrier.start(now + 0.008);
       carrier.stop(now + 0.038);
+    } catch (e) {
+      console.warn('Audio play failed', e);
+    }
+  },
+
+  playMp5: () => {
+    if (!soundEnabled) return;
+    try {
+      const ctx = getAudioContext();
+      if (!ctx) return;
+      const now = ctx.currentTime;
+      const buffer = getNoiseBuffer(ctx);
+
+      // Tight tactical SMG 9mm burst with muffled suppressor pop
+      const snap = ctx.createBufferSource();
+      snap.buffer = buffer;
+      const snapFilter = ctx.createBiquadFilter();
+      snapFilter.type = 'bandpass';
+      snapFilter.frequency.setValueAtTime(2200, now);
+      snapFilter.Q.value = 1.1;
+      const snapGain = ctx.createGain();
+      snapGain.gain.setValueAtTime(0.18, now);
+      snapGain.gain.exponentialRampToValueAtTime(0.001, now + 0.055);
+      snap.connect(snapFilter);
+      snapFilter.connect(snapGain);
+      snapGain.connect(ctx.destination);
+
+      const punch = ctx.createOscillator();
+      const punchGain = ctx.createGain();
+      punch.type = 'triangle';
+      punch.frequency.setValueAtTime(240, now);
+      punch.frequency.exponentialRampToValueAtTime(68, now + 0.048);
+      punchGain.gain.setValueAtTime(0.15, now);
+      punchGain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+      punch.connect(punchGain);
+      punchGain.connect(ctx.destination);
+
+      snap.start(now);
+      snap.stop(now + 0.058);
+      punch.start(now);
+      punch.stop(now + 0.055);
+    } catch (e) {
+      console.warn('Audio play failed', e);
+    }
+  },
+
+  playAwmSniper: () => {
+    if (!soundEnabled) return;
+    try {
+      const ctx = getAudioContext();
+      if (!ctx) return;
+      const now = ctx.currentTime;
+      const buffer = getNoiseBuffer(ctx);
+
+      // .338 Lapua Magnum supersonic cannon crack + tail
+      const crack = ctx.createBufferSource();
+      crack.buffer = buffer;
+      const crackFilter = ctx.createBiquadFilter();
+      crackFilter.type = 'lowpass';
+      crackFilter.frequency.setValueAtTime(5200, now);
+      crackFilter.frequency.exponentialRampToValueAtTime(340, now + 0.24);
+      const crackGain = ctx.createGain();
+      crackGain.gain.setValueAtTime(0.45, now);
+      crackGain.gain.exponentialRampToValueAtTime(0.002, now + 0.26);
+      crack.connect(crackFilter);
+      crackFilter.connect(crackGain);
+      crackGain.connect(ctx.destination);
+
+      const boom = ctx.createOscillator();
+      const boomGain = ctx.createGain();
+      boom.type = 'sawtooth';
+      boom.frequency.setValueAtTime(175, now);
+      boom.frequency.exponentialRampToValueAtTime(36, now + 0.2);
+      const boomFilter = ctx.createBiquadFilter();
+      boomFilter.type = 'lowpass';
+      boomFilter.frequency.value = 540;
+      boomGain.gain.setValueAtTime(0.35, now);
+      boomGain.gain.exponentialRampToValueAtTime(0.002, now + 0.22);
+      boom.connect(boomFilter);
+      boomFilter.connect(boomGain);
+      boomGain.connect(ctx.destination);
+
+      // Crisp mechanical bolt cycle clack after shot
+      const bolt = ctx.createOscillator();
+      const boltGain = ctx.createGain();
+      bolt.type = 'square';
+      bolt.frequency.setValueAtTime(1450, now + 0.22);
+      bolt.frequency.exponentialRampToValueAtTime(620, now + 0.27);
+      boltGain.gain.setValueAtTime(0.055, now + 0.22);
+      boltGain.gain.exponentialRampToValueAtTime(0.001, now + 0.28);
+      bolt.connect(boltGain);
+      boltGain.connect(ctx.destination);
+
+      crack.start(now);
+      crack.stop(now + 0.28);
+      boom.start(now);
+      boom.stop(now + 0.23);
+      bolt.start(now + 0.22);
+      bolt.stop(now + 0.29);
     } catch (e) {
       console.warn('Audio play failed', e);
     }

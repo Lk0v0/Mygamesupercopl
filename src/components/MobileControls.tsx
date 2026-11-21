@@ -11,7 +11,6 @@ export const MobileControls: React.FC<MobileControlsProps> = ({
   onLeftJoystick,
   onRightJoystick,
 }) => {
-  // === 1. LEFT DYNAMIC JOYSTICK (MOVEMENT) ===
   const [leftTouchActive, setLeftTouchActive] = useState(false);
   const [leftOrigin, setLeftOrigin] = useState({ x: 0, y: 0 });
   const [leftKnob, setLeftKnob] = useState({ x: 0, y: 0 });
@@ -20,7 +19,6 @@ export const MobileControls: React.FC<MobileControlsProps> = ({
   const onLeftRef = useRef(onLeftJoystick);
   onLeftRef.current = onLeftJoystick;
 
-  // === 2. RIGHT DYNAMIC JOYSTICK (AIM & FIRE) ===
   const [rightTouchActive, setRightTouchActive] = useState(false);
   const [rightOrigin, setRightOrigin] = useState({ x: 0, y: 0 });
   const [rightKnob, setRightKnob] = useState({ x: 0, y: 0 });
@@ -29,10 +27,8 @@ export const MobileControls: React.FC<MobileControlsProps> = ({
   const onRightRef = useRef(onRightJoystick);
   onRightRef.current = onRightJoystick;
 
-  // Maximum joystick throw radius (px)
   const MAX_RADIUS = 54;
 
-  // Track if device has touch capability or mobile screen
   const [isTouchDevice, setIsTouchDevice] = useState(() => {
     if (typeof window === 'undefined') return false;
     return 'ontouchstart' in window || navigator.maxTouchPoints > 0 || window.innerWidth <= 1024;
@@ -51,7 +47,6 @@ export const MobileControls: React.FC<MobileControlsProps> = ({
     };
   }, []);
 
-  // Reset Left Joystick
   const resetLeft = useCallback(() => {
     leftTouchIdRef.current = null;
     setLeftTouchActive(false);
@@ -59,7 +54,6 @@ export const MobileControls: React.FC<MobileControlsProps> = ({
     onLeftRef.current({ x: 0, y: 0, active: false });
   }, []);
 
-  // Reset Right Joystick
   const resetRight = useCallback(() => {
     rightTouchIdRef.current = null;
     setRightTouchActive(false);
@@ -67,17 +61,15 @@ export const MobileControls: React.FC<MobileControlsProps> = ({
     onRightRef.current({ x: 0, y: 0, active: false });
   }, []);
 
-  // Update Left position with smooth follow-finger origin
   const updateLeftCoords = useCallback((clientX: number, clientY: number) => {
     const origin = leftOriginRef.current;
-    let dx = clientX - origin.x;
-    let dy = clientY - origin.y;
+    const dx = clientX - origin.x;
+    const dy = clientY - origin.y;
     const dist = Math.hypot(dx, dy);
 
     let kx = dx;
     let ky = dy;
 
-    // Follow-finger dynamic joystick: base slides smoothly if dragged past MAX_RADIUS
     if (dist > MAX_RADIUS) {
       const excess = dist - MAX_RADIUS;
       const nx = dx / dist;
@@ -98,11 +90,10 @@ export const MobileControls: React.FC<MobileControlsProps> = ({
     });
   }, [MAX_RADIUS]);
 
-  // Update Right position with smooth follow-finger origin
   const updateRightCoords = useCallback((clientX: number, clientY: number) => {
     const origin = rightOriginRef.current;
-    let dx = clientX - origin.x;
-    let dy = clientY - origin.y;
+    const dx = clientX - origin.x;
+    const dy = clientY - origin.y;
     const dist = Math.hypot(dx, dy);
 
     let kx = dx;
@@ -128,7 +119,6 @@ export const MobileControls: React.FC<MobileControlsProps> = ({
     });
   }, [MAX_RADIUS]);
 
-  // Global window touch listeners so moving finger anywhere on screen maintains smooth tracking
   useEffect(() => {
     const handleTouchMove = (e: TouchEvent) => {
       for (let i = 0; i < e.changedTouches.length; i++) {
@@ -163,7 +153,6 @@ export const MobileControls: React.FC<MobileControlsProps> = ({
     };
   }, [updateLeftCoords, updateRightCoords, resetLeft, resetRight]);
 
-  // Handle Touch Start on Left Half (Movement)
   const handleLeftZoneTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
     if (leftTouchIdRef.current !== null) return;
     const touch = e.changedTouches[0];
@@ -178,7 +167,6 @@ export const MobileControls: React.FC<MobileControlsProps> = ({
     onLeftRef.current({ x: 0, y: 0, active: true });
   };
 
-  // Handle Touch Start on Right Half (Aim & Fire)
   const handleRightZoneTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
     if (rightTouchIdRef.current !== null) return;
     const touch = e.changedTouches[0];
@@ -193,57 +181,49 @@ export const MobileControls: React.FC<MobileControlsProps> = ({
     onRightRef.current({ x: 0, y: 0, active: true });
   };
 
-  // Aim Angle calculation for laser pointer on right joystick
   const rightAimAngle = Math.atan2(rightKnob.y, rightKnob.x);
   const rightAimDist = Math.hypot(rightKnob.x, rightKnob.y);
 
   return (
-    <div className="absolute inset-0 pointer-events-none select-none touch-none z-30 overflow-hidden font-sans">
-
-      {/* ======================================================== */}
-      {/* 1. DYNAMIC LEFT TOUCH ZONE (MOVEMENT)                     */}
-      {/* ======================================================== */}
+    <div className="absolute inset-0 pointer-events-none select-none touch-none z-30 overflow-hidden">
+      {/* LEFT DYNAMIC TOUCH ZONE (MOVEMENT) */}
       <div
-        className="absolute top-12 bottom-0 left-0 w-1/2 pointer-events-auto"
+        className="absolute top-14 landscape:top-12 bottom-0 left-0 w-1/2 pointer-events-auto"
         onTouchStart={handleLeftZoneTouchStart}
         style={{ touchAction: 'none' }}
       >
-        {/* Subtle resting guide anchor when idle (Mobile only) */}
+        {/* Resting guide sits clear of portrait bottom weapon dock (bottom-24) and tucks to corner in landscape */}
         {!leftTouchActive && isTouchDevice && (
-          <div className="absolute bottom-3 left-3 sm:bottom-8 sm:left-8 flex flex-col items-center pointer-events-none opacity-45 transition-opacity">
-            <div className="w-14 h-14 sm:w-20 sm:h-20 rounded-full border border-cyan-400/40 flex items-center justify-center bg-slate-950/50 relative">
-              <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-cyan-500/20 border border-cyan-400/50 flex items-center justify-center animate-pulse">
-                <div className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-cyan-300" />
+          <div className="absolute bottom-24 left-4 landscape:bottom-6 landscape:left-6 sm:bottom-8 sm:left-8 flex flex-col items-center pointer-events-none opacity-45 transition-opacity">
+            <div className="w-14 h-14 sm:w-18 sm:h-18 rounded-full border border-cyan-400/45 flex items-center justify-center bg-[#060d14]/55 relative">
+              <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-cyan-500/20 border border-cyan-400/55 flex items-center justify-center">
+                <div className="w-2 h-2 rounded-full bg-cyan-300" />
               </div>
-              <div className="absolute inset-1.5 sm:inset-2 rounded-full border border-dashed border-cyan-400/20" />
+              <div className="absolute inset-1.5 rounded-full border border-dashed border-cyan-400/20" />
             </div>
-            <span className="text-[7.5px] sm:text-[8px] font-mono font-bold tracking-widest text-cyan-300/75 uppercase mt-1">
+            <span className="text-[8px] font-mono font-bold tracking-widest text-cyan-300/80 uppercase mt-1">
               Mover
             </span>
           </div>
         )}
 
-        {/* Dynamic Spawned Left Joystick Base */}
         {leftTouchActive && (
           <div
-            className="fixed pointer-events-none -translate-x-1/2 -translate-y-1/2 z-40 transition-transform duration-75"
+            className="fixed pointer-events-none -translate-x-1/2 -translate-y-1/2 z-40"
             style={{
               left: `${leftOrigin.x}px`,
               top: `${leftOrigin.y}px`,
             }}
           >
-            {/* Outer Base Ring */}
-            <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-full bg-slate-950/85 border-2 border-cyan-400 shadow-[0_0_20px_rgba(6,182,212,0.5)] flex items-center justify-center relative">
-              {/* Radial crosshairs */}
+            <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-full bg-[#060d14]/85 border-2 border-cyan-400 shadow-[0_0_20px_rgba(34,211,238,0.45)] flex items-center justify-center relative">
               <div className="absolute inset-3.5 sm:inset-4 rounded-full border border-cyan-400/30" />
               <div className="absolute top-1 bottom-1 w-0.5 bg-cyan-400/20" />
               <div className="absolute left-1 right-1 h-0.5 bg-cyan-400/20" />
               <div className="w-2.5 h-2.5 rounded-full bg-cyan-400/60" />
 
-              {/* Vector trail from center to knob */}
               {Math.hypot(leftKnob.x, leftKnob.y) > 6 && (
                 <div
-                  className="absolute left-1/2 top-1/2 h-0.5 bg-gradient-to-r from-cyan-400 to-transparent origin-left opacity-75"
+                  className="absolute left-1/2 top-1/2 h-0.5 bg-gradient-to-r from-cyan-400 to-transparent origin-left opacity-80"
                   style={{
                     width: `${Math.hypot(leftKnob.x, leftKnob.y)}px`,
                     transform: `rotate(${Math.atan2(leftKnob.y, leftKnob.x)}rad)`,
@@ -251,7 +231,6 @@ export const MobileControls: React.FC<MobileControlsProps> = ({
                 />
               )}
 
-              {/* Movable Knob */}
               <div
                 className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-gradient-to-tr from-cyan-600 via-sky-500 to-blue-500 border-2 border-white flex items-center justify-center absolute"
                 style={{
@@ -266,59 +245,50 @@ export const MobileControls: React.FC<MobileControlsProps> = ({
         )}
       </div>
 
-      {/* ======================================================== */}
-      {/* 2. DYNAMIC RIGHT TOUCH ZONE (AIM & SHOOT)                 */}
-      {/* ======================================================== */}
+      {/* RIGHT DYNAMIC TOUCH ZONE (AIM & SHOOT) */}
       <div
-        className="absolute top-12 bottom-0 right-0 w-1/2 pointer-events-auto"
+        className="absolute top-14 landscape:top-12 bottom-0 right-0 w-1/2 pointer-events-auto"
         onTouchStart={handleRightZoneTouchStart}
         style={{ touchAction: 'none' }}
       >
-        {/* Subtle resting guide anchor when idle (Mobile only) */}
         {!rightTouchActive && isTouchDevice && (
-          <div className="absolute bottom-3 right-3 sm:bottom-8 sm:right-8 flex flex-col items-center pointer-events-none opacity-45 transition-opacity">
-            <div className="w-14 h-14 sm:w-20 sm:h-20 rounded-full border border-rose-400/40 flex items-center justify-center bg-slate-950/50 relative">
-              <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-rose-500/20 border border-rose-400/50 flex items-center justify-center animate-pulse">
-                <Crosshair className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-rose-300" />
+          <div className="absolute bottom-24 right-4 landscape:bottom-6 landscape:right-6 sm:bottom-8 sm:right-8 flex flex-col items-center pointer-events-none opacity-45 transition-opacity">
+            <div className="w-14 h-14 sm:w-18 sm:h-18 rounded-full border border-rose-400/45 flex items-center justify-center bg-[#060d14]/55 relative">
+              <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-rose-500/20 border border-rose-400/55 flex items-center justify-center">
+                <Crosshair className="w-3.5 h-3.5 text-rose-300" />
               </div>
-              <div className="absolute inset-1.5 sm:inset-2 rounded-full border border-dashed border-rose-400/20" />
+              <div className="absolute inset-1.5 rounded-full border border-dashed border-rose-400/20" />
             </div>
-            <span className="text-[7.5px] sm:text-[8px] font-mono font-bold tracking-widest text-rose-300/75 uppercase mt-1">
+            <span className="text-[8px] font-mono font-bold tracking-widest text-rose-300/80 uppercase mt-1">
               Mirar
             </span>
           </div>
         )}
 
-        {/* Dynamic Spawned Right Joystick Base */}
         {rightTouchActive && (
           <div
-            className="fixed pointer-events-none -translate-x-1/2 -translate-y-1/2 z-40 transition-transform duration-75"
+            className="fixed pointer-events-none -translate-x-1/2 -translate-y-1/2 z-40"
             style={{
               left: `${rightOrigin.x}px`,
               top: `${rightOrigin.y}px`,
             }}
           >
-            {/* Outer Base Ring */}
-            <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-full bg-slate-950/85 border-2 border-rose-400 shadow-[0_0_20px_rgba(244,63,94,0.5)] flex items-center justify-center relative">
-              {/* Aiming Reticle Circle */}
+            <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-full bg-[#060d14]/85 border-2 border-rose-400 shadow-[0_0_20px_rgba(244,63,94,0.45)] flex items-center justify-center relative">
               <div className="absolute inset-3.5 sm:inset-4 rounded-full border border-rose-400/30" />
               <div className="w-2.5 h-2.5 rounded-full bg-rose-400/60" />
 
-              {/* Aiming Laser Line Indicator extending toward target */}
               {rightAimDist > 8 && (
                 <div
-                  className="absolute left-1/2 top-1/2 h-0.5 bg-gradient-to-r from-rose-400 via-rose-300 to-transparent shadow-[0_0_10px_rgba(244,63,94,0.9)] origin-left"
+                  className="absolute left-1/2 top-1/2 h-0.5 bg-gradient-to-r from-rose-400 via-rose-300 to-transparent shadow-[0_0_10px_rgba(244,63,94,0.85)] origin-left"
                   style={{
                     width: '105px',
                     transform: `rotate(${rightAimAngle}rad)`,
                   }}
                 >
-                  {/* Glowing crosshair tip */}
                   <div className="absolute right-0 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-rose-200 shadow-[0_0_8px_#fda4af]" />
                 </div>
               )}
 
-              {/* Movable Knob */}
               <div
                 className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-gradient-to-tr from-rose-600 via-red-500 to-pink-500 border-2 border-white flex items-center justify-center absolute"
                 style={{
@@ -333,14 +303,18 @@ export const MobileControls: React.FC<MobileControlsProps> = ({
         )}
       </div>
 
-      {/* Helper legend for desktop mode when idle */}
+      {/* Discreet Desktop Controls Hint in Bottom-Left Corner (Never overlaps centered Weapon Bar) */}
       {!isTouchDevice && (
-        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 hidden lg:flex flex-col items-center gap-1 opacity-30 max-w-[340px] text-center pointer-events-none">
-          <span className="text-[10px] font-mono tracking-widest text-slate-400">MODO PC ATIVO</span>
-          <span className="text-[9px] text-slate-500">Mover: WASD | Mirar e Atirar: Mouse | Trocar Arma: 1-3 | Pausar: P/ESC</span>
+        <div className="hidden xl:flex absolute bottom-3 left-5 items-center gap-2 text-[10px] font-mono text-slate-400/55 pointer-events-none">
+          <span>WASD Mover</span>
+          <span aria-hidden="true">·</span>
+          <span>Mouse Mirar/Atirar</span>
+          <span aria-hidden="true">·</span>
+          <span>1–3 Armas</span>
+          <span aria-hidden="true">·</span>
+          <span>ESC Pausa</span>
         </div>
       )}
-
     </div>
   );
 };

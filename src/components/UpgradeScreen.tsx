@@ -101,9 +101,9 @@ const RARITY_STYLES: Record<
     stripBg: string;
     border: string;
     bg: string;
-    badge: string;
+    labelColor: string;
     iconBox: string;
-    statBg: string;
+    statColor: string;
     cta: string;
   }
 > = {
@@ -111,50 +111,50 @@ const RARITY_STYLES: Record<
     label: 'COMUM',
     stripBg: 'bg-emerald-500',
     border: 'border-emerald-500/40 hover:border-emerald-400',
-    bg: 'from-slate-900/95 to-slate-950/95',
-    badge: 'text-emerald-300 bg-emerald-500/15 border-emerald-500/35',
+    bg: 'from-[#071018]/95 to-slate-950/95',
+    labelColor: 'text-emerald-300',
     iconBox: 'bg-emerald-500/15 border-emerald-400/40 text-emerald-300',
-    statBg: 'border-emerald-500/30 text-emerald-300',
+    statColor: 'text-emerald-300',
     cta: 'bg-slate-800 hover:bg-emerald-500 text-white hover:text-slate-950 border-emerald-500/40',
   },
   RARE: {
     label: 'RARO',
     stripBg: 'bg-cyan-400',
     border: 'border-cyan-500/50 hover:border-cyan-300',
-    bg: 'from-slate-900/95 via-cyan-950/35 to-slate-950/95',
-    badge: 'text-cyan-300 bg-cyan-500/15 border-cyan-400/45',
+    bg: 'from-[#071018]/95 via-cyan-950/35 to-slate-950/95',
+    labelColor: 'text-cyan-300',
     iconBox: 'bg-cyan-500/15 border-cyan-400/50 text-cyan-200',
-    statBg: 'border-cyan-500/35 text-cyan-300',
-    cta: 'bg-cyan-600 hover:bg-cyan-400 text-slate-950 border-cyan-300',
+    statColor: 'text-cyan-300',
+    cta: 'bg-cyan-500 hover:bg-cyan-400 text-slate-950 border-cyan-300',
   },
   EPIC: {
     label: 'ÉPICO',
     stripBg: 'bg-purple-500',
     border: 'border-purple-500/60 hover:border-purple-300',
-    bg: 'from-slate-900/95 via-purple-950/40 to-slate-950/95',
-    badge: 'text-purple-200 bg-purple-500/20 border-purple-400/50',
+    bg: 'from-[#071018]/95 via-purple-950/40 to-slate-950/95',
+    labelColor: 'text-purple-300',
     iconBox: 'bg-purple-500/20 border-purple-400/60 text-purple-200',
-    statBg: 'border-purple-400/40 text-purple-200',
+    statColor: 'text-purple-200',
     cta: 'bg-purple-600 hover:bg-purple-500 text-white border-purple-300',
   },
   LEGENDARY: {
     label: 'LENDÁRIO',
     stripBg: 'bg-amber-400',
-    border: 'border-amber-400/80 hover:border-amber-200',
-    bg: 'from-slate-900/95 via-amber-950/40 to-slate-950/95',
-    badge: 'text-amber-200 bg-amber-500/20 border-amber-400/60',
-    iconBox: 'bg-amber-500/25 border-amber-300/70 text-amber-200',
-    statBg: 'border-amber-400/50 text-amber-300',
-    cta: 'bg-amber-500 hover:bg-amber-400 text-slate-950 border-amber-200',
+    border: 'border-amber-400/75 hover:border-amber-200',
+    bg: 'from-[#071018]/95 via-amber-950/35 to-slate-950/95',
+    labelColor: 'text-amber-300',
+    iconBox: 'bg-amber-500/20 border-amber-300/65 text-amber-200',
+    statColor: 'text-amber-300',
+    cta: 'bg-amber-400 hover:bg-amber-300 text-slate-950 border-amber-200',
   },
   MYTHIC: {
     label: 'MÍTICO',
     stripBg: 'bg-gradient-to-r from-cyan-400 via-fuchsia-400 to-amber-300',
     border: 'border-cyan-300 hover:border-white ring-1 ring-fuchsia-400/40',
-    bg: 'from-slate-950 via-fuchsia-950/50 to-cyan-950/50',
-    badge: 'text-cyan-100 bg-fuchsia-500/25 border-cyan-300/70',
+    bg: 'from-slate-950 via-fuchsia-950/45 to-cyan-950/45',
+    labelColor: 'text-cyan-200',
     iconBox: 'bg-gradient-to-br from-cyan-500/35 via-fuchsia-500/35 to-amber-400/35 border-cyan-200/80 text-white',
-    statBg: 'border-fuchsia-400/60 text-cyan-200',
+    statColor: 'text-cyan-200',
     cta: 'bg-gradient-to-r from-cyan-300 via-fuchsia-300 to-amber-200 hover:brightness-105 text-slate-950 border-white',
   },
 };
@@ -223,7 +223,6 @@ export const UpgradeScreen: React.FC<UpgradeScreenProps> = ({
     onReroll();
   }, [onReroll, rerollsLeft]);
 
-  // Keyboard shortcuts [1] [2] [3] & [R]
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (selectionLockRef.current) return;
@@ -241,60 +240,47 @@ export const UpgradeScreen: React.FC<UpgradeScreenProps> = ({
   return (
     <div
       data-gamepad-scope="modal"
-      className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-slate-950/92 p-2 sm:p-4 md:p-6 select-none overflow-y-auto animate-lvl-backdrop"
+      className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-[#050a0f]/92 backdrop-blur-md p-3 sm:p-6 pt-safe pb-safe select-none overflow-y-auto hud-scroll animate-lvl-backdrop"
     >
-      {/* Lightweight Ambient Tactical Grid (No heavy GPU blurs) */}
-      <div
-        className="fixed inset-0 z-0 opacity-15 pointer-events-none"
-        style={{
-          backgroundImage: hasMythic
-            ? 'linear-gradient(#d946ef 1px, transparent 1px), linear-gradient(90deg, #38bdf8 1px, transparent 1px)'
-            : 'linear-gradient(#06b6d4 1px, transparent 1px), linear-gradient(90deg, #06b6d4 1px, transparent 1px)',
-          backgroundSize: '42px 42px',
-        }}
-      />
-
-      <div className="relative z-10 w-full max-w-5xl flex flex-col items-center my-auto gap-2 sm:gap-4">
-        {/* Compact Tactical Header (fits mobile landscape cleanly) */}
-        <div className="w-full flex flex-wrap items-center justify-between gap-2 px-3 py-2 rounded-xl bg-slate-900/90 border border-cyan-500/30 shadow-lg animate-lvl-banner">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-8 h-8 rounded-lg bg-cyan-500/15 border border-cyan-400/40 flex items-center justify-center shrink-0">
-              <Sparkles className="w-4 h-4 text-cyan-300" />
+      <div className="relative z-10 w-full max-w-6xl flex flex-col items-center my-auto gap-3 sm:gap-5">
+        {/* Clean Header Row (No static pill clutter) */}
+        <div className="w-full flex flex-wrap items-center justify-between gap-3 px-4 py-3 rounded-2xl bg-[#071018]/90 border border-white/10 shadow-xl animate-lvl-banner">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-xl bg-cyan-500/15 border border-cyan-400/40 flex items-center justify-center shrink-0">
+              <Sparkles className="w-5 h-5 text-cyan-300" />
             </div>
             <div className="min-w-0">
-              <span className="text-[9px] sm:text-[10px] font-mono font-bold tracking-[0.2em] uppercase text-cyan-300 block leading-none mb-0.5">
-                {hasMythic ? 'RESSONÂNCIA MÍTICA DETECTADA' : `SUBIU DE NÍVEL · NV. ${level + 1}`}
+              <span className="text-[10px] sm:text-xs font-mono font-semibold tracking-[0.18em] uppercase text-cyan-300 block leading-none mb-1">
+                {hasMythic ? 'Ressonância Mítica Detectada' : `Subiu de Nível · Nv.${level + 1}`}
               </span>
               <h2
-                className={`text-base sm:text-2xl font-display font-black uppercase tracking-wide truncate leading-tight text-transparent bg-clip-text ${
+                className={`text-lg sm:text-2xl font-display font-bold uppercase tracking-wide truncate leading-tight text-transparent bg-clip-text ${
                   hasMythic
                     ? 'bg-gradient-to-r from-cyan-200 via-fuchsia-300 to-amber-200'
-                    : 'bg-gradient-to-r from-white via-cyan-200 to-sky-400'
+                    : 'bg-gradient-to-r from-white via-cyan-100 to-sky-300'
                 }`}
               >
-                ESCOLHA UM POWER-UP
+                Escolha um Power-Up
               </h2>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 shrink-0">
-            {onReroll && rerollsLeft > 0 && (
-              <button
-                type="button"
-                data-gamepad-nav="true"
-                onClick={handleReroll}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-cyan-500/20 border border-cyan-400/40 text-cyan-200 text-[11px] font-mono font-bold uppercase tracking-wider transition-colors cursor-pointer active:scale-95 whitespace-nowrap"
-              >
-                <RefreshCw className="w-3.5 h-3.5 text-cyan-300" />
-                <span>Rolar ({rerollsLeft})</span>
-                <span className="hidden sm:inline text-slate-400">[R]</span>
-              </button>
-            )}
-          </div>
+          {onReroll && rerollsLeft > 0 && (
+            <button
+              type="button"
+              data-gamepad-nav="true"
+              onClick={handleReroll}
+              className="min-h-[44px] flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-900 hover:bg-cyan-500/20 border border-cyan-400/45 text-cyan-200 text-xs font-mono font-bold uppercase tracking-wider transition-colors cursor-pointer active:scale-95 whitespace-nowrap"
+            >
+              <RefreshCw className="w-4 h-4 text-cyan-300 shrink-0" />
+              <span>Rolar ({rerollsLeft})</span>
+              <span className="hidden sm:inline text-slate-400">[R]</span>
+            </button>
+          )}
         </div>
 
-        {/* 3 Responsive Tactical Cards (Side-by-side in landscape/sm+, stacked on narrow portrait) */}
-        <div className="grid grid-cols-1 landscape:grid-cols-3 sm:grid-cols-3 gap-2 sm:gap-4 w-full">
+        {/* 3 Cards: Side-by-Side on Widescreen/Landscape, Compact Horizontal Rows on Portrait */}
+        <div className="grid grid-cols-1 landscape:grid-cols-3 sm:grid-cols-3 gap-2.5 sm:gap-4 w-full">
           {options.map((option, idx) => {
             const rarity: UpgradeRarity = option.rarity || 'COMMON';
             const style = RARITY_STYLES[rarity] || RARITY_STYLES.COMMON;
@@ -317,53 +303,49 @@ export const UpgradeScreen: React.FC<UpgradeScreenProps> = ({
                 data-gamepad-nav="true"
                 onClick={() => triggerSelect(option)}
                 style={{ animationDelay: `${idx * 45}ms` }}
-                className={`group relative text-left flex flex-col justify-between p-2.5 sm:p-4 rounded-xl border-2 bg-gradient-to-b ${style.bg} ${style.border} ${animClass} cursor-pointer transition-transform duration-150 hover:-translate-y-0.5 active:scale-[0.98] overflow-hidden shadow-xl ${
+                className={`group relative text-left flex flex-col justify-between p-3.5 sm:p-5 rounded-2xl border bg-gradient-to-b ${style.bg} ${style.border} ${animClass} cursor-pointer transition-transform duration-150 hover:-translate-y-0.5 active:scale-[0.98] overflow-hidden shadow-xl ${
                   isDimmed ? 'opacity-40 pointer-events-none' : ''
                 }`}
               >
-                {/* Top Rarity Color Accent Bar */}
                 <div className={`absolute top-0 left-0 right-0 h-1 ${style.stripBg}`} />
 
-                {/* Top Meta Row */}
-                <div className="relative z-10 flex items-center justify-between gap-1.5 pb-2 border-b border-white/10 w-full">
-                  <div className="flex items-center gap-1.5 min-w-0">
-                    <span className={`px-1.5 py-0.5 rounded border text-[9px] font-mono font-black uppercase tracking-wider shrink-0 ${style.badge}`}>
+                {/* Clean Unboxed Top Metadata Line */}
+                <div className="relative z-10 flex items-center justify-between gap-2 pb-2 border-b border-white/10 w-full text-[10.5px] font-mono">
+                  <div className="flex items-center gap-1.5 min-w-0 truncate">
+                    <span className={`font-bold uppercase tracking-wider ${style.labelColor}`}>
                       {style.label}
                     </span>
-                    <span className="text-[9px] font-mono text-slate-400 uppercase truncate">
-                      {categoryLabel}
-                    </span>
+                    <span className="text-white/25" aria-hidden="true">·</span>
+                    <span className="text-slate-400 uppercase truncate">{categoryLabel}</span>
                   </div>
 
                   {stack > 0 ? (
-                    <span className="px-1.5 py-0.5 rounded bg-amber-500/15 border border-amber-400/30 text-amber-300 text-[9.5px] font-mono font-bold shrink-0">
+                    <span className="text-amber-300 font-bold tabular-nums shrink-0">
                       NV.{stack}→{stack + 1}
                     </span>
                   ) : (
-                    <span className="px-1.5 py-0.5 rounded bg-white/5 text-slate-400 text-[9.5px] font-mono font-bold shrink-0">
-                      [{idx + 1}]
-                    </span>
+                    <span className="text-slate-400 font-bold shrink-0">[{idx + 1}]</span>
                   )}
                 </div>
 
-                {/* Icon + Title + Bonus Strip */}
-                <div className="relative z-10 flex landscape:flex-col sm:flex-col items-center gap-2.5 sm:gap-2 my-2 sm:my-3 w-full">
+                {/* Body: Horizontal on Portrait, Vertical Centered on Widescreen */}
+                <div className="relative z-10 flex landscape:flex-col sm:flex-col items-center gap-3 my-2.5 sm:my-4 w-full">
                   <div className="relative flex items-center justify-center shrink-0">
                     {isMythic && (
                       <div className="hidden sm:block absolute w-16 h-16 rounded-full border border-dashed border-cyan-300/60 animate-mythic-spin pointer-events-none" />
                     )}
                     <div
-                      className={`w-10 h-10 sm:w-14 sm:h-14 rounded-lg border-2 flex items-center justify-center shadow-md transition-transform duration-200 group-hover:scale-105 ${
+                      className={`w-12 h-12 sm:w-14 sm:h-14 rounded-xl border flex items-center justify-center shadow-md transition-transform duration-200 group-hover:scale-105 ${
                         isMythic ? 'animate-mythic-float' : ''
                       } ${style.iconBox}`}
                     >
-                      {getUpgradeIcon(option.icon, 'w-5 h-5 sm:w-7 sm:h-7')}
+                      {getUpgradeIcon(option.icon, 'w-6 h-6 sm:w-7 sm:h-7')}
                     </div>
                   </div>
 
                   <div className="flex-1 min-w-0 landscape:text-center sm:text-center w-full">
                     <h3
-                      className={`text-xs sm:text-sm md:text-base font-display font-black uppercase tracking-wide leading-tight mb-1 truncate sm:whitespace-normal ${
+                      className={`text-sm sm:text-base font-display font-bold uppercase tracking-wide leading-tight mb-1 truncate sm:whitespace-normal ${
                         isMythic
                           ? 'text-transparent bg-clip-text bg-gradient-to-r from-cyan-200 via-white to-fuchsia-200'
                           : 'text-white'
@@ -374,32 +356,31 @@ export const UpgradeScreen: React.FC<UpgradeScreenProps> = ({
 
                     {option.statBonus && (
                       <div
-                        className={`inline-block max-w-full truncate px-2 py-0.5 rounded bg-slate-950/90 border text-[9.5px] sm:text-[10.5px] font-mono-numbers font-bold tracking-wide mb-1 ${style.statBg}`}
+                        className={`text-xs font-mono-numbers font-bold tracking-wide mb-1 truncate ${style.statColor}`}
                       >
                         {option.statBonus}
                       </div>
                     )}
 
-                    <p className="text-[10.5px] sm:text-xs text-slate-300 leading-snug line-clamp-2 sm:line-clamp-3">
+                    <p className="text-xs text-slate-300 leading-snug line-clamp-2 sm:line-clamp-3">
                       {option.description}
                     </p>
                   </div>
                 </div>
 
-                {/* CTA Bar */}
+                {/* Tactile Selection Bar */}
                 <div
-                  className={`relative z-10 w-full py-1.5 sm:py-2 px-3 rounded-lg border flex items-center justify-center gap-1 text-[10.5px] sm:text-xs font-display font-black uppercase tracking-wider transition-colors ${style.cta}`}
+                  className={`relative z-10 w-full min-h-[40px] py-2 px-3 rounded-xl border flex items-center justify-center gap-1.5 text-xs font-display font-bold uppercase tracking-wider transition-colors ${style.cta}`}
                 >
                   <span>{isMythic ? 'Despertar Poder' : 'Instalar Upgrade'}</span>
-                  <ChevronRight className="w-3.5 h-3.5" />
+                  <ChevronRight className="w-4 h-4 shrink-0" />
                 </div>
               </button>
             );
           })}
         </div>
 
-        {/* Footer Controls Hint */}
-        <p className="hidden sm:block text-[10px] font-mono text-slate-500 uppercase tracking-widest text-center">
+        <p className="hidden sm:block text-[11px] font-mono text-slate-400 uppercase tracking-widest text-center">
           Toque no card, use [1] [2] [3] no teclado ou D-Pad + (A) no controle
         </p>
       </div>

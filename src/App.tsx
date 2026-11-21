@@ -91,8 +91,12 @@ interface FloatingText {
 
 const WEAPON_HOTBAR_ORDER: WeaponType[] = [
   WeaponType.GLOCK_19,
+  WeaponType.MP5_A5,
   WeaponType.BENELLI_M4,
+  WeaponType.FLAMETHROWER,
   WeaponType.SCAR_L,
+  WeaponType.AWM_SNIPER,
+  WeaponType.RPG_7,
 ];
 
 const INITIAL_WEAPONS: Record<WeaponType, WeaponStats> = {
@@ -109,6 +113,19 @@ const INITIAL_WEAPONS: Record<WeaponType, WeaponStats> = {
     color: '#fbbf24',
     unlocked: true,
   },
+  [WeaponType.MP5_A5]: {
+    type: WeaponType.MP5_A5,
+    name: 'HK MP5A5 9mm',
+    damage: 11,
+    fireRate: 13.5,
+    ammoCapacity: Infinity,
+    currentAmmo: Infinity,
+    bulletSpeed: 880,
+    spread: 0.048,
+    piercing: 1,
+    color: '#34d399',
+    unlocked: false,
+  },
   [WeaponType.BENELLI_M4]: {
     type: WeaponType.BENELLI_M4,
     name: 'Benelli M4 Super 90',
@@ -122,6 +139,19 @@ const INITIAL_WEAPONS: Record<WeaponType, WeaponStats> = {
     color: '#f87171',
     unlocked: false,
   },
+  [WeaponType.FLAMETHROWER]: {
+    type: WeaponType.FLAMETHROWER,
+    name: 'M2A1-7 Lança-Chamas',
+    damage: 14,
+    fireRate: 15.5,
+    ammoCapacity: Infinity,
+    currentAmmo: Infinity,
+    bulletSpeed: 540,
+    spread: 0.24,
+    piercing: 7,
+    color: '#f97316',
+    unlocked: false,
+  },
   [WeaponType.SCAR_L]: {
     type: WeaponType.SCAR_L,
     name: 'FN SCAR-L CQC',
@@ -133,6 +163,32 @@ const INITIAL_WEAPONS: Record<WeaponType, WeaponStats> = {
     spread: 0.03,
     piercing: 2,
     color: '#38bdf8',
+    unlocked: false,
+  },
+  [WeaponType.AWM_SNIPER]: {
+    type: WeaponType.AWM_SNIPER,
+    name: 'AWM .338 Lapua',
+    damage: 145,
+    fireRate: 1.15,
+    ammoCapacity: Infinity,
+    currentAmmo: Infinity,
+    bulletSpeed: 1580,
+    spread: 0.004,
+    piercing: 6,
+    color: '#c084fc',
+    unlocked: false,
+  },
+  [WeaponType.RPG_7]: {
+    type: WeaponType.RPG_7,
+    name: 'RPG-7V2 Lança-Foguetes',
+    damage: 185,
+    fireRate: 0.78,
+    ammoCapacity: Infinity,
+    currentAmmo: Infinity,
+    bulletSpeed: 760,
+    spread: 0.015,
+    piercing: 1,
+    color: '#fb923c',
     unlocked: false,
   },
 };
@@ -408,26 +464,15 @@ export function App() {
     }
 
     const totalHp = 100 + bonusHp;
-    const clonedWeapons: Record<WeaponType, WeaponStats> = {
-      [WeaponType.GLOCK_19]: {
-        ...INITIAL_WEAPONS[WeaponType.GLOCK_19],
-        damage: Math.round(INITIAL_WEAPONS[WeaponType.GLOCK_19].damage * damageMult),
-        fireRate: Number((INITIAL_WEAPONS[WeaponType.GLOCK_19].fireRate * fireRateMult).toFixed(2)),
-        unlocked: unlockedWeaponsRef.current.includes(WeaponType.GLOCK_19),
-      },
-      [WeaponType.BENELLI_M4]: {
-        ...INITIAL_WEAPONS[WeaponType.BENELLI_M4],
-        damage: Math.round(INITIAL_WEAPONS[WeaponType.BENELLI_M4].damage * damageMult),
-        fireRate: Number((INITIAL_WEAPONS[WeaponType.BENELLI_M4].fireRate * fireRateMult).toFixed(2)),
-        unlocked: unlockedWeaponsRef.current.includes(WeaponType.BENELLI_M4),
-      },
-      [WeaponType.SCAR_L]: {
-        ...INITIAL_WEAPONS[WeaponType.SCAR_L],
-        damage: Math.round(INITIAL_WEAPONS[WeaponType.SCAR_L].damage * damageMult),
-        fireRate: Number((INITIAL_WEAPONS[WeaponType.SCAR_L].fireRate * fireRateMult).toFixed(2)),
-        unlocked: unlockedWeaponsRef.current.includes(WeaponType.SCAR_L),
-      },
-    };
+    const clonedWeapons = {} as Record<WeaponType, WeaponStats>;
+    for (const wt of WEAPON_HOTBAR_ORDER) {
+      clonedWeapons[wt] = {
+        ...INITIAL_WEAPONS[wt],
+        damage: Math.round(INITIAL_WEAPONS[wt].damage * damageMult),
+        fireRate: Number((INITIAL_WEAPONS[wt].fireRate * fireRateMult).toFixed(2)),
+        unlocked: unlockedWeaponsRef.current.includes(wt),
+      };
+    }
 
     const startWeapon = unlockedWeaponsRef.current.includes(equippedWeaponRef.current)
       ? equippedWeaponRef.current
@@ -1014,9 +1059,10 @@ export function App() {
       }
 
       if (gameStateRef.current === GameState.PLAYING && !dyingStateRef.current.active) {
-        if (k === '1') switchWeapon(WeaponType.GLOCK_19);
-        else if (k === '2') switchWeapon(WeaponType.BENELLI_M4);
-        else if (k === '3') switchWeapon(WeaponType.SCAR_L);
+        const slotIdx = Number.parseInt(k, 10) - 1;
+        if (slotIdx >= 0 && slotIdx < WEAPON_HOTBAR_ORDER.length) {
+          switchWeapon(WEAPON_HOTBAR_ORDER[slotIdx]);
+        }
       }
     };
 
@@ -1703,6 +1749,7 @@ export function App() {
       let lightColor: 'amber' | 'orange' | 'cyan' = 'amber';
       let casingColor = '#f59e0b';
       let isShell = false;
+      let ejectCasing = true;
 
       if (p.currentWeapon === WeaponType.GLOCK_19) {
         barrelOffset = 17;
@@ -1737,6 +1784,41 @@ export function App() {
           maxDistance: 680,
           ownerAngle: shotAngle,
           weaponType: WeaponType.GLOCK_19,
+          isIgnite: hasPyroIgnite,
+        });
+      } else if (p.currentWeapon === WeaponType.MP5_A5) {
+        barrelOffset = 22;
+        muzzleColor = '#6ee7b7';
+        lightColor = 'cyan';
+        casingColor = '#fbbf24';
+        sound.playMp5();
+
+        cam.shake = Math.max(cam.shake, 2.5);
+        weaponRecoilRef.current = Math.min(10, weaponRecoilRef.current + 3.8);
+        cam.recoilVx -= Math.cos(p.angle) * 32;
+        cam.recoilVy -= Math.sin(p.angle) * 32;
+        weaponBloomRef.current = Math.min(0.1, weaponBloomRef.current + 0.008);
+        cam.trauma = Math.min(1, cam.trauma + 0.055);
+        cam.zoomImpulse -= 0.003;
+        cam.rollVel += (Math.random() > 0.5 ? 1 : -1) * 0.014;
+
+        const shotAngle = p.angle + (Math.random() - 0.5) * currentSpread;
+        const bx = p.x + Math.cos(p.angle) * (p.radius + barrelOffset);
+        const by = p.y + Math.sin(p.angle) * (p.radius + barrelOffset);
+        bulletsRef.current.push({
+          id: `mp5-${Math.random()}`,
+          x: bx,
+          y: by,
+          vx: Math.cos(shotAngle) * baseSpeed,
+          vy: Math.sin(shotAngle) * baseSpeed,
+          radius: 3.8,
+          damage: wStats.damage,
+          piercingRemaining: wStats.piercing,
+          color: wStats.color,
+          distanceTraveled: 0,
+          maxDistance: 720,
+          ownerAngle: shotAngle,
+          weaponType: WeaponType.MP5_A5,
           isIgnite: hasPyroIgnite,
         });
       } else if (p.currentWeapon === WeaponType.BENELLI_M4) {
@@ -1797,6 +1879,173 @@ export function App() {
             isIgnite: hasPyroIgnite,
           });
         }
+      } else if (p.currentWeapon === WeaponType.FLAMETHROWER) {
+        barrelOffset = 28;
+        muzzleColor = '#fb923c';
+        lightColor = 'orange';
+        ejectCasing = false;
+        sound.playFlamethrower();
+
+        cam.shake = Math.max(cam.shake, 1.8);
+        weaponRecoilRef.current = Math.min(6, weaponRecoilRef.current + 2.2);
+        cam.recoilVx -= Math.cos(p.angle) * 14;
+        cam.recoilVy -= Math.sin(p.angle) * 14;
+
+        const mx = p.x + Math.cos(p.angle) * (p.radius + barrelOffset);
+        const my = p.y + Math.sin(p.angle) * (p.radius + barrelOffset);
+
+        // Twin pressurized napalm puffs forming a sweeping cone
+        for (let puff = 0; puff < 2; puff++) {
+          const shotAngle = p.angle + (Math.random() - 0.5) * wStats.spread;
+          const flameSpeed = baseSpeed * (0.86 + Math.random() * 0.28);
+          bulletsRef.current.push({
+            id: `flame-${Math.random()}`,
+            x: mx + (Math.random() - 0.5) * 6,
+            y: my + (Math.random() - 0.5) * 6,
+            vx: Math.cos(shotAngle) * flameSpeed,
+            vy: Math.sin(shotAngle) * flameSpeed,
+            radius: 17,
+            damage: wStats.damage,
+            piercingRemaining: wStats.piercing,
+            color: '#f97316',
+            distanceTraveled: 0,
+            maxDistance: 315 + Math.random() * 45,
+            ownerAngle: shotAngle,
+            weaponType: WeaponType.FLAMETHROWER,
+            isIgnite: true,
+            isFlame: true,
+            burnDuration: 4.2,
+            hitZombieIds: [],
+          });
+        }
+
+        // Nozzle ignition embers & hot flame wisps
+        for (let f = 0; f < 3; f++) {
+          const fa = p.angle + (Math.random() - 0.5) * 0.45;
+          const fs = 190 + Math.random() * 210;
+          particlesRef.current.push({
+            id: `flp-${Math.random()}`,
+            x: mx,
+            y: my,
+            vx: Math.cos(fa) * fs,
+            vy: Math.sin(fa) * fs,
+            drag: 2.6,
+            radius: 6 + Math.random() * 6,
+            growthSpeed: 28,
+            color: f === 0 ? '#fef08a' : '#f97316',
+            alpha: 0.85,
+            decay: 3.1,
+            type: 'FLAME',
+          });
+        }
+      } else if (p.currentWeapon === WeaponType.AWM_SNIPER) {
+        barrelOffset = 34;
+        muzzleColor = '#f5d0fe';
+        lightColor = 'amber';
+        casingColor = '#f59e0b';
+        sound.playAwmSniper();
+
+        cam.shake = Math.max(cam.shake, 13.5);
+        weaponRecoilRef.current = Math.min(12, weaponRecoilRef.current + 11.0);
+        cam.recoilVx -= Math.cos(p.angle) * 140;
+        cam.recoilVy -= Math.sin(p.angle) * 140;
+        weaponBloomRef.current = Math.min(0.08, weaponBloomRef.current + 0.02);
+        cam.trauma = Math.min(1, cam.trauma + 0.34);
+        cam.zoomImpulse -= 0.022;
+        cam.rollVel += (Math.random() > 0.5 ? 1 : -1) * 0.065;
+
+        const mx = p.x + Math.cos(p.angle) * (p.radius + barrelOffset);
+        const my = p.y + Math.sin(p.angle) * (p.radius + barrelOffset);
+        particlesRef.current.push({
+          id: `sw-awm-${Math.random()}`,
+          x: mx,
+          y: my,
+          vx: 0,
+          vy: 0,
+          radius: 10,
+          growthSpeed: 360,
+          color: '#e9d5ff',
+          alpha: 0.82,
+          decay: 4.2,
+          type: 'SHOCKWAVE_HEAT',
+        });
+
+        const shotAngle = p.angle + (Math.random() - 0.5) * currentSpread * 0.35;
+        bulletsRef.current.push({
+          id: `awm-${Math.random()}`,
+          x: mx,
+          y: my,
+          vx: Math.cos(shotAngle) * baseSpeed,
+          vy: Math.sin(shotAngle) * baseSpeed,
+          radius: 5.5,
+          damage: wStats.damage,
+          piercingRemaining: wStats.piercing,
+          color: wStats.color,
+          distanceTraveled: 0,
+          maxDistance: 1280,
+          ownerAngle: shotAngle,
+          weaponType: WeaponType.AWM_SNIPER,
+          isIgnite: hasPyroIgnite,
+          hitZombieIds: [],
+        });
+      } else if (p.currentWeapon === WeaponType.RPG_7) {
+        barrelOffset = 32;
+        muzzleColor = '#fb923c';
+        lightColor = 'orange';
+        ejectCasing = false;
+        sound.playRocketLaunch();
+
+        cam.shake = Math.max(cam.shake, 11.5);
+        weaponRecoilRef.current = Math.min(12, weaponRecoilRef.current + 10.5);
+        cam.recoilVx -= Math.cos(p.angle) * 125;
+        cam.recoilVy -= Math.sin(p.angle) * 125;
+        cam.trauma = Math.min(1, cam.trauma + 0.28);
+        cam.zoomImpulse -= 0.018;
+        cam.rollVel += (Math.random() > 0.5 ? 1 : -1) * 0.05;
+
+        // Venturi backblast smoke & embers behind the operator
+        const backX = p.x - Math.cos(p.angle) * 18;
+        const backY = p.y - Math.sin(p.angle) * 18;
+        for (let bb = 0; bb < 5; bb++) {
+          const ba = p.angle + Math.PI + (Math.random() - 0.5) * 0.7;
+          const bs = 110 + Math.random() * 110;
+          particlesRef.current.push({
+            id: `bb-${Math.random()}`,
+            x: backX,
+            y: backY,
+            vx: Math.cos(ba) * bs,
+            vy: Math.sin(ba) * bs,
+            drag: 4,
+            radius: 7 + Math.random() * 6,
+            growthSpeed: 22,
+            color: bb < 2 ? '#fb923c' : 'rgba(203, 213, 225, 0.45)',
+            alpha: 0.7,
+            decay: 2.4,
+            type: bb < 2 ? 'FLAME' : 'SMOKE',
+          });
+        }
+
+        const mx = p.x + Math.cos(p.angle) * (p.radius + barrelOffset);
+        const my = p.y + Math.sin(p.angle) * (p.radius + barrelOffset);
+        const shotAngle = p.angle + (Math.random() - 0.5) * currentSpread;
+        bulletsRef.current.push({
+          id: `rpg-${Math.random()}`,
+          x: mx,
+          y: my,
+          vx: Math.cos(shotAngle) * baseSpeed,
+          vy: Math.sin(shotAngle) * baseSpeed,
+          radius: 7,
+          damage: wStats.damage,
+          piercingRemaining: 1,
+          color: wStats.color,
+          distanceTraveled: 0,
+          maxDistance: 1050,
+          ownerAngle: shotAngle,
+          weaponType: WeaponType.RPG_7,
+          isIgnite: true,
+          burnDuration: 3.0,
+          explosionRadius: 155,
+        });
       } else {
         // WeaponType.SCAR_L
         barrelOffset = 24;
@@ -1846,6 +2095,7 @@ export function App() {
           ownerAngle: shotAngle,
           weaponType: WeaponType.SCAR_L,
           isIgnite: hasPyroIgnite,
+          hitZombieIds: [],
         });
       }
 
@@ -1903,10 +2153,17 @@ export function App() {
       const my = p.y + Math.sin(p.angle) * (p.radius + barrelOffset);
       muzzleFlashRef.current = 1.0;
 
+      const flashRad =
+        p.currentWeapon === WeaponType.BENELLI_M4 ||
+        p.currentWeapon === WeaponType.AWM_SNIPER ||
+        p.currentWeapon === WeaponType.FLAMETHROWER
+          ? 200
+          : 135;
+
       flashLightsRef.current.push({
         x: mx,
         y: my,
-        radius: p.currentWeapon === WeaponType.BENELLI_M4 ? 190 : 135,
+        radius: flashRad,
         color: lightColor,
         alpha: 0.5,
         decay: 8.5,
@@ -1918,7 +2175,12 @@ export function App() {
         y: my,
         vx: Math.cos(p.angle) * 35,
         vy: Math.sin(p.angle) * 35,
-        radius: p.currentWeapon === WeaponType.BENELLI_M4 ? 13 : 9,
+        radius:
+          p.currentWeapon === WeaponType.BENELLI_M4 || p.currentWeapon === WeaponType.AWM_SNIPER
+            ? 14
+            : p.currentWeapon === WeaponType.FLAMETHROWER
+              ? 12
+              : 9,
         color: muzzleColor,
         alpha: 0.95,
         decay: 14,
@@ -1926,7 +2188,7 @@ export function App() {
         rotation: p.angle,
       });
 
-      // Gunpowder smoke puff
+      // Gunpowder / combustion smoke puff
       particlesRef.current.push({
         id: `gunsmoke-${Math.random()}`,
         x: mx,
@@ -1943,24 +2205,32 @@ export function App() {
         rotation: Math.random() * Math.PI * 2,
       });
 
-      // Spent brass / shotgun hull ejection to the right side
-      const ejectAngle = p.angle + Math.PI * 0.5 + (Math.random() - 0.5) * 0.35;
-      const ejectSpeed = 88 + Math.random() * 48;
-      particlesRef.current.push({
-        id: `casing-${Math.random()}`,
-        x: p.x + Math.cos(p.angle) * 10,
-        y: p.y + Math.sin(p.angle) * 10,
-        vx: Math.cos(ejectAngle) * ejectSpeed,
-        vy: Math.sin(ejectAngle) * ejectSpeed,
-        drag: 5.2,
-        radius: isShell ? 2.2 : p.currentWeapon === WeaponType.SCAR_L ? 1.8 : 1.5,
-        color: casingColor,
-        alpha: 1,
-        decay: 1.55,
-        type: 'CASING',
-        rotation: Math.random() * Math.PI * 2,
-        rotSpeed: (Math.random() - 0.5) * 18,
-      });
+      // Spent brass / shotgun hull ejection to the right side (skipped for Flamethrower & RPG-7)
+      if (ejectCasing) {
+        const ejectAngle = p.angle + Math.PI * 0.5 + (Math.random() - 0.5) * 0.35;
+        const ejectSpeed = 88 + Math.random() * 48;
+        particlesRef.current.push({
+          id: `casing-${Math.random()}`,
+          x: p.x + Math.cos(p.angle) * 10,
+          y: p.y + Math.sin(p.angle) * 10,
+          vx: Math.cos(ejectAngle) * ejectSpeed,
+          vy: Math.sin(ejectAngle) * ejectSpeed,
+          drag: 5.2,
+          radius: isShell
+            ? 2.2
+            : p.currentWeapon === WeaponType.AWM_SNIPER
+              ? 2.4
+              : p.currentWeapon === WeaponType.SCAR_L
+                ? 1.8
+                : 1.5,
+          color: casingColor,
+          alpha: 1,
+          decay: 1.55,
+          type: 'CASING',
+          rotation: Math.random() * Math.PI * 2,
+          rotSpeed: (Math.random() - 0.5) * 18,
+        });
+      }
     };
 
     const updateGame = (dt: number, nowMs: number) => {
@@ -2517,7 +2787,15 @@ export function App() {
       cam.shake = Math.max(0, cam.shake - dt * 26);
 
       // Lead camera smoothly ahead in aim direction
-      const aimLeadDist = 42 + (p.currentWeapon === WeaponType.SCAR_L ? 22 : 0);
+      const weaponLead =
+        p.currentWeapon === WeaponType.AWM_SNIPER
+          ? 58
+          : p.currentWeapon === WeaponType.RPG_7
+            ? 34
+            : p.currentWeapon === WeaponType.SCAR_L
+              ? 22
+              : 0;
+      const aimLeadDist = 42 + weaponLead;
       const targetCamX = p.x + Math.cos(p.angle) * aimLeadDist - width / 2;
       const targetCamY = p.y + Math.sin(p.angle) * aimLeadDist - height / 2;
       const camFollow = 1 - Math.exp(-8.5 * dt);
@@ -2555,6 +2833,116 @@ export function App() {
       // ==========================================
       // BULLETS SIMULATION & COLLISIONS
       // ==========================================
+      const detonateRocket = (
+        rx: number,
+        ry: number,
+        baseDamage: number,
+        blastRadius: number
+      ) => {
+        sound.playExplosion();
+        cam.shake = Math.max(cam.shake, 16);
+        cam.trauma = Math.min(1, cam.trauma + 0.48);
+        cam.zoomImpulse -= 0.025;
+
+        particlesRef.current.push({
+          id: `rpg-exp-${Math.random()}`,
+          x: rx,
+          y: ry,
+          vx: 0,
+          vy: 0,
+          radius: blastRadius * 0.65,
+          color: '#fb923c',
+          alpha: 0.96,
+          decay: 1.9,
+          type: 'EXPLOSION',
+        });
+        particlesRef.current.push({
+          id: `rpg-ring-${Math.random()}`,
+          x: rx,
+          y: ry,
+          vx: 0,
+          vy: 0,
+          radius: 18,
+          growthSpeed: 420,
+          color: '#fef08a',
+          alpha: 0.9,
+          decay: 2.6,
+          type: 'FIRE_RING',
+        });
+        for (let di = 0; di < 12; di++) {
+          const da = Math.random() * Math.PI * 2;
+          const ds = 120 + Math.random() * 240;
+          particlesRef.current.push({
+            id: `rpg-deb-${Math.random()}`,
+            x: rx,
+            y: ry,
+            vx: Math.cos(da) * ds,
+            vy: Math.sin(da) * ds,
+            drag: 3.4,
+            radius: 3.5 + Math.random() * 4.5,
+            color: di % 2 === 0 ? '#f97316' : '#fef08a',
+            alpha: 0.92,
+            decay: 2.2,
+            type: di % 3 === 0 ? 'BLAST_DEBRIS' : 'FLAME',
+          });
+        }
+        flashLightsRef.current.push({
+          x: rx,
+          y: ry,
+          radius: blastRadius * 1.9,
+          color: 'orange',
+          alpha: 0.85,
+          decay: 4.5,
+        });
+
+        if (getWaterDepth(rx, ry) > 0.45) {
+          threeRendererRef.current?.triggerWaterRipple(rx, ry, 2.2);
+          sound.playWaterSplash(true);
+          for (let ws = 0; ws < 7; ws++) {
+            const wa = Math.random() * Math.PI * 2;
+            const wsp = 60 + Math.random() * 140;
+            particlesRef.current.push({
+              id: `rpg-wat-${Math.random()}`,
+              x: rx,
+              y: ry,
+              z: 10,
+              vx: Math.cos(wa) * wsp,
+              vy: Math.sin(wa) * wsp,
+              vz: 110 + Math.random() * 90,
+              drag: 3.2,
+              radius: 3.2,
+              color: '#e0f2fe',
+              alpha: 0.9,
+              decay: 1.8,
+              type: 'WATER_SPLASH',
+            });
+          }
+        }
+
+        const rSq = blastRadius * blastRadius;
+        for (let zi = zombiesRef.current.length - 1; zi >= 0; zi--) {
+          const oz = zombiesRef.current[zi];
+          if (oz.isDead) continue;
+          const dx = oz.x - rx;
+          const dy = oz.y - ry;
+          const dSq = dx * dx + dy * dy;
+          if (dSq <= rSq) {
+            const dist = Math.sqrt(dSq);
+            const falloff = 0.45 + 0.55 * (1 - dist / blastRadius);
+            const isCrit = Math.random() < (p.critChance || 0);
+            const dmg = baseDamage * falloff * (isCrit ? p.critMultiplier || 2.0 : 1);
+            const pushAngle = Math.atan2(dy, dx);
+            damageZombie(oz, dmg, isCrit, pushAngle);
+            if (!oz.isDead) {
+              oz.knockbackX += Math.cos(pushAngle) * 420 * falloff;
+              oz.knockbackY += Math.sin(pushAngle) * 420 * falloff;
+              oz.isOnFire = true;
+              oz.burnTimer = Math.max(oz.burnTimer || 0, 2.8);
+            }
+          }
+        }
+      };
+
       for (let bi = bulletsRef.current.length - 1; bi >= 0; bi--) {
         const b = bulletsRef.current[bi];
 
@@ -2590,6 +2978,64 @@ export function App() {
         b.y += b.vy * dt;
         b.distanceTraveled += stepDist;
 
+        // RPG rocket smoke plume in flight
+        if (b.weaponType === WeaponType.RPG_7 && Math.random() < 0.72 && particlesRef.current.length < 220) {
+          particlesRef.current.push({
+            id: `rpg-tr-${Math.random()}`,
+            x: b.x - Math.cos(b.ownerAngle) * 14,
+            y: b.y - Math.sin(b.ownerAngle) * 14,
+            vx: (Math.random() - 0.5) * 28,
+            vy: (Math.random() - 0.5) * 28,
+            drag: 3.5,
+            radius: 6.5,
+            growthSpeed: 18,
+            color: 'rgba(226, 232, 240, 0.45)',
+            alpha: 0.5,
+            decay: 2.1,
+            type: 'SMOKE',
+          });
+        }
+
+        // Flamethrower expanding turbulence & steam hiss if extinguished in deep water
+        if (b.isFlame) {
+          if (getWaterDepth(b.x, b.y) > 0.65) {
+            if (particlesRef.current.length < 220) {
+              particlesRef.current.push({
+                id: `fsteam-${Math.random()}`,
+                x: b.x,
+                y: b.y,
+                vx: (Math.random() - 0.5) * 36,
+                vy: (Math.random() - 0.5) * 36,
+                drag: 2.5,
+                radius: 9,
+                growthSpeed: 28,
+                color: 'rgba(226, 232, 240, 0.5)',
+                alpha: 0.52,
+                decay: 2.2,
+                type: 'SMOKE',
+              });
+            }
+            bulletsRef.current.splice(bi, 1);
+            continue;
+          }
+          if (Math.random() < 0.25 && particlesRef.current.length < 220) {
+            particlesRef.current.push({
+              id: `fsmoke-${Math.random()}`,
+              x: b.x,
+              y: b.y,
+              vx: b.vx * 0.14 + (Math.random() - 0.5) * 35,
+              vy: b.vy * 0.14 + (Math.random() - 0.5) * 35,
+              drag: 2.8,
+              radius: 7,
+              growthSpeed: 22,
+              color: 'rgba(51, 65, 85, 0.4)',
+              alpha: 0.36,
+              decay: 1.9,
+              type: 'SMOKE',
+            });
+          }
+        }
+
         if (
           b.distanceTraveled >= b.maxDistance ||
           b.x < -40 ||
@@ -2597,7 +3043,14 @@ export function App() {
           b.y < -40 ||
           b.y > ARENA_SIZE + 40
         ) {
-          if (!b.isRay && b.distanceTraveled >= b.maxDistance && getWaterDepth(b.x, b.y) > 0.6) {
+          if (b.explosionRadius) {
+            detonateRocket(b.x, b.y, b.damage, b.explosionRadius);
+          } else if (
+            !b.isRay &&
+            !b.isFlame &&
+            b.distanceTraveled >= b.maxDistance &&
+            getWaterDepth(b.x, b.y) > 0.6
+          ) {
             threeRendererRef.current?.triggerWaterRipple(b.x, b.y, b.isShrapnel ? 0.42 : 0.68);
             if (particlesRef.current.length < 180) {
               particlesRef.current.push({
@@ -2637,9 +3090,14 @@ export function App() {
         }
 
         if (!b.isRay && !b.isVoidLance) {
-          const forestHit = checkForestBulletHit(b.x, b.y, b.radius);
+          const forestHit = checkForestBulletHit(b.x, b.y, b.isFlame ? 6 : b.radius);
           if (forestHit) {
-            const sparkColor = forestHit === 'WOOD' ? '#92400e' : '#cbd5e1';
+            if (b.explosionRadius) {
+              detonateRocket(b.x, b.y, b.damage, b.explosionRadius);
+              bulletsRef.current.splice(bi, 1);
+              continue;
+            }
+            const sparkColor = b.isFlame ? '#f97316' : forestHit === 'WOOD' ? '#92400e' : '#cbd5e1';
             for (let sp = 0; sp < 4; sp++) {
               const sa = b.ownerAngle + Math.PI + (Math.random() - 0.5) * 1.4;
               const ss = 65 + Math.random() * 110;
@@ -2673,18 +3131,32 @@ export function App() {
 
         // Player bullet vs zombies
         let bulletRemoved = false;
+        const hitScale = b.isFlame
+          ? b.radius * (1 + Math.min(1, b.distanceTraveled / Math.max(1, b.maxDistance)) * 0.7)
+          : b.radius;
         for (let zi = zombiesRef.current.length - 1; zi >= 0; zi--) {
           const z = zombiesRef.current[zi];
           if (z.isDead) continue;
-          const hitR = z.radius + b.radius;
+          if (b.hitZombieIds && b.hitZombieIds.includes(z.id)) continue;
+
+          const hitR = z.radius + hitScale;
           if ((b.x - z.x) ** 2 + (b.y - z.y) ** 2 <= hitR * hitR) {
+            if (b.explosionRadius) {
+              detonateRocket(b.x, b.y, b.damage, b.explosionRadius);
+              bulletsRef.current.splice(bi, 1);
+              bulletRemoved = true;
+              break;
+            }
+
+            if (b.hitZombieIds) b.hitZombieIds.push(z.id);
+
             const isCrit = Math.random() < (p.critChance || 0);
             const finalDmg = isCrit ? b.damage * (p.critMultiplier || 2.0) : b.damage;
             damageZombie(z, finalDmg, isCrit, b.ownerAngle);
 
             if (b.isIgnite) {
               z.isOnFire = true;
-              z.burnTimer = 2.6;
+              z.burnTimer = Math.max(z.burnTimer || 0, b.burnDuration || 2.6);
             }
 
             // Voltaic chain lightning perk
@@ -3158,11 +3630,12 @@ export function App() {
         ctx.restore();
       }
 
-      // Compact Island & Ocean Tactical Radar Minimap
-      if (gameStateRef.current === GameState.PLAYING && !ds.active && width >= 480) {
-        const radarR = 46;
-        const rx = width - radarR - 18;
-        const ry = 108 + radarR;
+      // Compact Island & Ocean Tactical Radar Minimap (widescreen & portrait safe)
+      if (gameStateRef.current === GameState.PLAYING && !ds.active && width >= 350) {
+        const isPortraitNarrow = width < 540;
+        const radarR = isPortraitNarrow ? 34 : 46;
+        const rx = width - radarR - (isPortraitNarrow ? 12 : 18);
+        const ry = (isPortraitNarrow ? 64 : 76) + radarR;
         const radarRange = 1780;
         const scale = radarR / radarRange;
 

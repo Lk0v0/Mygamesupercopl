@@ -17,8 +17,12 @@ export type GraphicsQuality = 'ULTRA_LOW' | 'LOW' | 'MEDIUM' | 'HIGH';
 
 export enum WeaponType {
   GLOCK_19 = 'GLOCK_19',
+  MP5_A5 = 'MP5_A5',
   BENELLI_M4 = 'BENELLI_M4',
+  FLAMETHROWER = 'FLAMETHROWER',
   SCAR_L = 'SCAR_L',
+  AWM_SNIPER = 'AWM_SNIPER',
+  RPG_7 = 'RPG_7',
 }
 
 export interface WeaponStats {
@@ -214,6 +218,10 @@ export interface Bullet {
   isVoidLance?: boolean;
   isShrapnel?: boolean;
   isIgnite?: boolean;
+  isFlame?: boolean;
+  burnDuration?: number;
+  explosionRadius?: number;
+  hitZombieIds?: string[];
   homingStrength?: number;
   weaponType?: WeaponType;
 }

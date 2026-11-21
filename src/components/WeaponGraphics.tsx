@@ -280,5 +280,255 @@ export const WeaponIllustration: React.FC<WeaponGraphicProps> = ({
           <path d="M110 22.8 H117 V24.3 H113 V25.3 H117 V26.8 H113 V27.5 H117 V28.6 H110 Z" fill="#1e293b" stroke="#94a3b8" strokeWidth="0.7" />
         </svg>
       );
+
+    case WeaponType.MP5_A5:
+      return (
+        <svg viewBox="0 0 120 72" fill="none" className={className}>
+          <defs>
+            <linearGradient id="mp5-body" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#475569" />
+              <stop offset="50%" stopColor="#1e293b" />
+              <stop offset="100%" stopColor="#0f172a" />
+            </linearGradient>
+          </defs>
+
+          {/* Retractable A3/A5 Collapsible Wire Stock */}
+          <rect x="6" y="25.5" width="3.2" height="19" rx="1" fill="#0f172a" stroke="#64748b" strokeWidth="0.8" />
+          <line x1="9" y1="28" x2="29" y2="28" stroke="#64748b" strokeWidth="2.2" />
+          <line x1="9" y1="36.5" x2="29" y2="36.5" stroke="#475569" strokeWidth="1.6" />
+
+          {/* Upper Stamped Receiver + Cocking Tube */}
+          <rect x="28" y="22.5" width="46" height="9.5" rx="1.8" fill="url(#mp5-body)" stroke="#64748b" strokeWidth="0.9" />
+          <rect x="52" y="19.5" width="24" height="3.2" rx="1.2" fill="#334155" stroke="#94a3b8" strokeWidth="0.7" />
+          <circle cx="57" cy="21" r="1.4" fill="#94a3b8" />
+
+          {/* Aimpoint Micro T-2 Optic */}
+          <rect x="35" y="13.5" width="13" height="6.8" rx="1.2" fill="#0f172a" stroke="#64748b" strokeWidth="0.8" />
+          <rect x="38" y="20.3" width="7" height="2.2" fill="#334155" />
+          <circle cx="41.5" cy="16.9" r="1.3" fill="#34d399" />
+
+          {/* Navy Polymer Lower + Angled Grip */}
+          <path
+            d="M30 32 H54 V38 H42 L39 54 C38.5 55.6 37 56.5 35.2 56.5 H31.5 C30 56.5 29.2 55 29.8 53.2 L33.5 37 H30 Z"
+            fill="#0f172a"
+            stroke="#475569"
+            strokeWidth="0.9"
+          />
+          <rect x="42" y="36.5" width="9" height="5.5" rx="1" fill="#020617" stroke="#334155" strokeWidth="0.8" />
+          <circle cx="38" cy="34.5" r="1.4" fill="#ef4444" />
+
+          {/* Signature Curved 30-Round 9mm Magazine */}
+          <path
+            d="M52 38 H60 C60 46 62 53 66 59 L59 61 C54.5 54 52 46 52 38 Z"
+            fill="#1e293b"
+            stroke="#64748b"
+            strokeWidth="0.9"
+          />
+          <line x1="55.5" y1="44" x2="58.5" y2="55" stroke="#34d399" strokeWidth="1" opacity="0.65" />
+
+          {/* Tropical Ribbed Forearm + Vertical Foregrip */}
+          <path d="M62 24 H84 V33.5 H62 Z" fill="#1e293b" stroke="#475569" strokeWidth="0.9" />
+          {[66, 70, 74, 78].map((rx) => (
+            <line key={rx} x1={rx} y1="25.5" x2={rx} y2="32" stroke="#0f172a" strokeWidth="1.2" />
+          ))}
+          <rect x="70" y="33.5" width="6.5" height="12" rx="1.4" fill="#0f172a" stroke="#475569" strokeWidth="0.8" />
+
+          {/* Front Hooded Sight + Tactical Suppressor */}
+          <path d="M81 22.5 L82.5 17 H85 L86.5 22.5 Z" fill="#334155" stroke="#94a3b8" strokeWidth="0.7" />
+          <rect x="87" y="23.5" width="26" height="7" rx="1.5" fill="#0f172a" stroke="#64748b" strokeWidth="0.9" />
+          <line x1="92" y1="23.5" x2="92" y2="30.5" stroke="#334155" strokeWidth="1.1" />
+          <line x1="108" y1="23.5" x2="108" y2="30.5" stroke="#34d399" strokeWidth="1" opacity="0.75" />
+        </svg>
+      );
+
+    case WeaponType.FLAMETHROWER:
+      return (
+        <svg viewBox="0 0 120 72" fill="none" className={className}>
+          <defs>
+            <linearGradient id="flame-tank" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stopColor="#9a3412" />
+              <stop offset="45%" stopColor="#ea580c" />
+              <stop offset="100%" stopColor="#7c2d12" />
+            </linearGradient>
+            <linearGradient id="flame-metal" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#64748b" />
+              <stop offset="100%" stopColor="#1e293b" />
+            </linearGradient>
+          </defs>
+
+          {/* Pressurized Twin Napalm & Nitrogen Backpack Cylinders */}
+          <rect x="4" y="15" width="12" height="39" rx="5.5" fill="url(#flame-tank)" stroke="#fb923c" strokeWidth="0.9" />
+          <rect x="17" y="17" width="10" height="36" rx="4.8" fill="#365314" stroke="#84cc16" strokeWidth="0.8" opacity="0.92" />
+          {/* Hazard Bands + Pressure Gauge */}
+          <rect x="4.5" y="26" width="11" height="4" fill="#fbbf24" opacity="0.85" />
+          <circle cx="10" cy="13" r="3" fill="#0f172a" stroke="#94a3b8" strokeWidth="0.8" />
+          <line x1="10" y1="13" x2="11.8" y2="11.4" stroke="#ef4444" strokeWidth="1" />
+
+          {/* Braided High-Pressure Fuel Hose */}
+          <path
+            d="M15 48 C22 57, 34 56, 40 44"
+            stroke="#334155"
+            strokeWidth="3.6"
+            strokeLinecap="round"
+          />
+          <path
+            d="M15 48 C22 57, 34 56, 40 44"
+            stroke="#fb923c"
+            strokeWidth="1.2"
+            strokeDasharray="3 3"
+            strokeLinecap="round"
+          />
+
+          {/* Heavy Ignition Wand Body */}
+          <rect x="32" y="26" width="44" height="10" rx="2" fill="url(#flame-metal)" stroke="#94a3b8" strokeWidth="0.9" />
+          {/* Rear Trigger Grip + Front Valve Handle */}
+          <path
+            d="M36 36 H44 L41.5 52 C41 53.5 39.5 54 38 54 H34.5 C33.2 54 32.5 52.8 33 51 Z"
+            fill="#0f172a"
+            stroke="#64748b"
+            strokeWidth="0.9"
+          />
+          <rect x="44.5" y="36" width="6" height="5" fill="#b91c1c" />
+          <rect x="64" y="36" width="7" height="12" rx="1.4" fill="#0f172a" stroke="#64748b" strokeWidth="0.8" />
+
+          {/* Underslung Fuel Regulator + Perforated Heat Shroud */}
+          <rect x="76" y="27.5" width="23" height="6.8" rx="1.2" fill="#334155" stroke="#94a3b8" strokeWidth="0.8" />
+          {[79, 83.5, 88, 92.5].map((hx) => (
+            <circle key={hx} cx={hx} cy="30.9" r="1.4" fill="#020617" />
+          ))}
+
+          {/* Brass Igniter Nozzle + Pilot Flame */}
+          <rect x="99" y="28.2" width="7" height="5.4" rx="0.8" fill="#d97706" stroke="#fde68a" strokeWidth="0.7" />
+          <path d="M101 33.6 L104 37.5 H108" stroke="#64748b" strokeWidth="1.2" strokeLinecap="round" />
+          {/* Glowing Pilot Flame Plume */}
+          <path
+            d="M106 30.8 C110 25.5, 116 26.5, 118.5 30.8 C116 35.5, 110 36, 106 30.8 Z"
+            fill="#f97316"
+            opacity="0.92"
+          />
+          <path
+            d="M107 30.8 C109.5 28, 113 28.5, 115 30.8 C113 33.2, 109.5 33.5, 107 30.8 Z"
+            fill="#fde047"
+          />
+        </svg>
+      );
+
+    case WeaponType.AWM_SNIPER:
+      return (
+        <svg viewBox="0 0 120 72" fill="none" className={className}>
+          <defs>
+            <linearGradient id="awm-olive" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#65a30d" />
+              <stop offset="55%" stopColor="#4d7c0f" />
+              <stop offset="100%" stopColor="#365314" />
+            </linearGradient>
+          </defs>
+
+          {/* Thumbhole Precision Rifle Stock */}
+          <path
+            d="M4 27.5 H32 L34 38 L22 49 H13 C12 49 11.5 47 12.2 44.5 L15 38 H4 Z"
+            fill="url(#awm-olive)"
+            stroke="#1a2e05"
+            strokeWidth="0.9"
+          />
+          <rect x="3" y="27.5" width="2.5" height="17" rx="0.8" fill="#0f172a" />
+          <rect x="10" y="24.8" width="12" height="2.7" rx="1" fill="#1e293b" stroke="#64748b" strokeWidth="0.6" />
+          {/* Thumbhole Cutout */}
+          <ellipse cx="23.5" cy="36" rx="4.2" ry="3.4" fill="#020617" stroke="#365314" strokeWidth="0.8" />
+
+          {/* Chassis Receiver + Forend */}
+          <path
+            d="M32 25.5 H72 V34.5 H32 Z"
+            fill="url(#awm-olive)"
+            stroke="#1a2e05"
+            strokeWidth="0.9"
+          />
+          {/* Steel Bolt Action Assembly */}
+          <rect x="35" y="21.5" width="22" height="4.2" fill="#0f172a" stroke="#64748b" strokeWidth="0.8" />
+          <path d="M40 23.5 L36.5 29.5" stroke="#cbd5e1" strokeWidth="1.6" strokeLinecap="round" />
+          <circle cx="36.2" cy="30" r="1.7" fill="#cbd5e1" />
+
+          {/* 5-Round .338 Lapua Box Magazine */}
+          <rect x="44" y="34.5" width="11" height="10" rx="1" fill="#1e293b" stroke="#64748b" strokeWidth="0.8" />
+
+          {/* High-Magnification Schmidt & Bender PMII Scope */}
+          <rect x="38" y="17.8" width="4" height="3.8" fill="#1e293b" />
+          <rect x="52" y="17.8" width="4" height="3.8" fill="#1e293b" />
+          <path
+            d="M29 12.5 H36 L38 14 H56 L59 11.8 H67 V18.8 H59 L56 16.8 H38 L36 18.2 H29 Z"
+            fill="#0f172a"
+            stroke="#94a3b8"
+            strokeWidth="0.8"
+          />
+          <line x1="66.5" y1="12.5" x2="66.5" y2="18.1" stroke="#c084fc" strokeWidth="1.6" />
+
+          {/* Folding Front Bipod */}
+          <line x1="68" y1="34.5" x2="77" y2="48" stroke="#334155" strokeWidth="2.2" strokeLinecap="round" />
+          <line x1="68" y1="34.5" x2="62" y2="48" stroke="#1e293b" strokeWidth="2" strokeLinecap="round" />
+          <circle cx="77" cy="48.5" r="1.6" fill="#64748b" />
+
+          {/* Long Free-Float Fluted Barrel + Dual-Baffle Muzzle Brake */}
+          <rect x="72" y="26.4" width="35" height="3.8" fill="#334155" stroke="#94a3b8" strokeWidth="0.7" />
+          <rect x="107" y="25" width="10" height="6.6" rx="0.8" fill="#0f172a" stroke="#94a3b8" strokeWidth="0.8" />
+          <rect x="109.5" y="26" width="2" height="4.6" fill="#475569" />
+          <rect x="113" y="26" width="2" height="4.6" fill="#475569" />
+        </svg>
+      );
+
+    case WeaponType.RPG_7:
+      return (
+        <svg viewBox="0 0 120 72" fill="none" className={className}>
+          <defs>
+            <linearGradient id="rpg-tube" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#64748b" />
+              <stop offset="50%" stopColor="#334155" />
+              <stop offset="100%" stopColor="#1e293b" />
+            </linearGradient>
+            <linearGradient id="rpg-wood" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#b45309" />
+              <stop offset="100%" stopColor="#78350f" />
+            </linearGradient>
+            <linearGradient id="rpg-warhead" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stopColor="#3f6212" />
+              <stop offset="70%" stopColor="#65a30d" />
+              <stop offset="100%" stopColor="#94a3b8" />
+            </linearGradient>
+          </defs>
+
+          {/* Flared Rear Venturi Exhaust Bell */}
+          <path
+            d="M4 25 L14 28 V36 L4 39 Z"
+            fill="#0f172a"
+            stroke="#64748b"
+            strokeWidth="0.9"
+          />
+
+          {/* Main 40mm Steel Launch Tube */}
+          <rect x="14" y="28" width="76" height="8" fill="url(#rpg-tube)" stroke="#94a3b8" strokeWidth="0.8" />
+
+          {/* Wooden Heat Shield Sleeves */}
+          <rect x="26" y="26.8" width="24" height="10.4" rx="1.6" fill="url(#rpg-wood)" stroke="#451a03" strokeWidth="0.8" />
+          <rect x="52" y="27.2" width="14" height="9.6" rx="1.4" fill="url(#rpg-wood)" stroke="#451a03" strokeWidth="0.8" />
+
+          {/* PGO-7 Optical Sight */}
+          <path d="M58 20.5 H68 V26.8 H60 Z" fill="#1e293b" stroke="#64748b" strokeWidth="0.8" />
+          <circle cx="67.5" cy="22.8" r="1.8" fill="#fb923c" />
+
+          {/* Forward Firing Grip + Trigger Housing + Rear Support Grip */}
+          <path d="M68 36 H75 L73 51 C72.5 52.5 71 53 69.5 53 H67 C65.8 53 65 51.8 65.5 50 Z" fill="#0f172a" stroke="#64748b" strokeWidth="0.9" />
+          <rect x="44" y="37" width="6.5" height="12" rx="1.4" fill="#0f172a" stroke="#64748b" strokeWidth="0.8" />
+
+          {/* Iconic Protruding PG-7V High-Explosive Warhead */}
+          <rect x="90" y="29" width="6" height="6" fill="#475569" />
+          <path
+            d="M96 29.5 L103 24 L117 31.2 V32.8 L103 40 L96 34.5 Z"
+            fill="url(#rpg-warhead)"
+            stroke="#365314"
+            strokeWidth="0.9"
+          />
+          <rect x="102.5" y="24.5" width="2.4" height="15" fill="#fbbf24" opacity="0.9" />
+          <circle cx="117" cy="32" r="1.6" fill="#cbd5e1" />
+        </svg>
+      );
   }
 };
